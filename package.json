@@ -1,31 +1,77 @@
 {
     "name": "react-native-version-bumper",
     "displayName": "React Native Version Bumper",
-    "description": "Bump React Native App Versions",
+    "description": "Bump React Native app versions for Android, iOS, and package.json with semantic versioning and Git integration",
     "version": "0.0.1",
+    "publisher": "sandipshiwakoti",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/sandipshiwakoti/react-native-version-bumper"
+    },
     "engines": {
         "vscode": "^1.101.2"
     },
     "categories": [
         "Other"
     ],
-    "activationEvents": [],
+    "keywords": [
+        "react-native",
+        "version",
+        "bump",
+        "semantic versioning",
+        "android",
+        "ios",
+        "git",
+        "automation"
+    ],
+    "activationEvents": [
+        "onStartupFinished"
+    ],
     "main": "./out/extension.js",
     "contributes": {
         "commands": [
             {
-                "command": "react-native-version-bumper.helloWorld",
-                "title": "Hello World"
+                "command": "react-native-version-bumper.bumpAppVersion",
+                "title": "Bump App Version 📱",
+                "category": "RN Version Bumper"
+            },
+            {
+                "command": "react-native-version-bumper.bumpVersionAndCommit",
+                "title": "Bump App Version with Commit/Tag 🔄",
+                "category": "RN Version Bumper"
+            },
+            {
+                "command": "react-native-version-bumper.showVersions",
+                "title": "Show Current Versions 👀",
+                "category": "RN Version Bumper"
             }
-        ]
+        ],
+        "menus": {
+            "commandPalette": [
+                {
+                    "command": "react-native-version-bumper.bumpAppVersion",
+                    "when": "workspaceFolderCount > 0"
+                },
+                {
+                    "command": "react-native-version-bumper.bumpVersionAndCommit",
+                    "when": "workspaceFolderCount > 0"
+                },
+                {
+                    "command": "react-native-version-bumper.showVersions",
+                    "when": "workspaceFolderCount > 0"
+                }
+            ]
+        }
     },
     "scripts": {
-        "vscode:prepublish": "pnpm run compile",
+        "vscode:prepublish": "yarn run compile",
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
-        "pretest": "pnpm run compile && pnpm run lint",
-        "lint": "eslint src",
-        "test": "vscode-test"
+        "pretest": "yarn run compile && yarn run lint",
+        "lint": "eslint src --ext ts",
+        "test": "vscode-test",
+        "package": "vsce package",
+        "publish": "vsce publish"
     },
     "devDependencies": {
         "@types/vscode": "^1.101.2",
@@ -36,6 +82,7 @@
         "eslint": "^9.25.1",
         "typescript": "^5.8.3",
         "@vscode/test-cli": "^0.0.11",
-        "@vscode/test-electron": "^2.5.2"
+        "@vscode/test-electron": "^2.5.2",
+        "@vscode/vsce": "^2.22.0"
     }
 }

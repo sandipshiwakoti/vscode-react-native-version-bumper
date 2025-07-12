@@ -1,71 +1,175 @@
-# react-native-version-bumper README
+# React Native Version Bumper
 
-This is the README for your extension "react-native-version-bumper". After writing up a brief description, we recommend including the following sections.
+🚀 A comprehensive VS Code extension for managing React Native app versions with semantic versioning and Git integration.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+### 🎯 Multi-Platform Support
+- **React Native CLI** projects (Android & iOS)
+- **Package.json** version management
 
-For example if there is an image subfolder under your extension project workspace:
+### 📱 Platform-Specific Version Handling
 
-\!\[feature X\]\(images/feature-x.png\)
+#### Android
+- Automatically increments `versionCode` by 1
+- Updates `versionName` using semantic versioning
+- Supports `build.gradle` files
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+#### iOS
+- Handles both `Info.plist` and `project.pbxproj` configurations
+- Auto-detects whether to use variables or hardcoded values
+- Updates `CFBundleVersion`/`CURRENT_PROJECT_VERSION` and `CFBundleShortVersionString`/`MARKETING_VERSION`
 
-## Requirements
+### 🔄 Git Integration
+- Automatic commit with customizable messages
+- Optional Git tag creation (e.g., `v1.2.3`)
+- User-confirmed push to remote repository to prevent unintended production deployments
+- Staging of all version-related changes
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+### 📊 Version Management
+- Real-time version display in status bar (shows project name and version)
+- Comprehensive version overview panel
+- Project type auto-detection
+- Semantic versioning (major.minor.patch)
 
-## Extension Settings
+## Commands
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+### 📱 Bump App Version
+- Interactive version bumping for native platforms and optionally package.json
+- Steps:
+  1. Choose bump type (Patch, Minor, Major)
+  2. Choose whether to include package.json
+  3. Updates all relevant version files
 
-For example:
+### 🔄 Bump Version and Commit
+- Extends "Bump App Version" with Git operations
+- Steps:
+  1. Choose bump type (Patch, Minor, Major)
+  2. Choose whether to include package.json
+  3. Confirm Git commit (if not auto-enabled)
+  4. Optionally create Git tag (if not enabled)
+  5. Confirm push to remote repository
+- Creates descriptive commit messages and tags
 
-This extension contributes the following settings:
+### 👀 Show Current Versions
+- Displays all current version information in a formatted webview panel
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+## Usage
 
-## Known Issues
+### Quick Start
+1. Open your React Native project in VS Code
+2. Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on Mac) to open the command palette
+3. Type "Version Bumper" to see available commands
+4. Select the appropriate command for your needs
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+### Status Bar Integration
+The extension shows the project name and current package.json version in the status bar (e.g., `my-app: v1.0.0`). Click to view detailed version information for all platforms.
 
-## Release Notes
+### Git Workflow
+Use the "Bump Version and Commit" command for Git operations:
+1. Select bump type and package.json inclusion
+2. Confirm commit (if not auto-enabled in settings)
+3. Choose to create a Git tag (if not enabled in settings)
+4. Confirm pushing to remote repository to prevent unintended production deployments
+5. Changes are staged, committed, tagged (if selected), and pushed (if confirmed)
 
-Users appreciate release notes as you update your extension.
+## Configuration
 
-### 1.0.0
+Access settings via `File > Preferences > Settings` and search for "React Native Version Bumper".
 
-Initial release of ...
+### Available Settings
 
-### 1.0.1
+| Setting                                      | Default                              | Description                                              |
+| -------------------------------------------- | ------------------------------------ | -------------------------------------------------------- |
+| `reactNativeVersionBumper.autoCommit`        | `false`                              | Automatically commit version changes to Git              |
+| `reactNativeVersionBumper.commitMessage`     | `"chore: bump version to {version}"` | Git commit message template                              |
+| `reactNativeVersionBumper.createTags`        | `false`                              | Automatically create Git tags for version bumps          |
+| `reactNativeVersionBumper.pushToRemote`      | `false`                              | Enable push to remote (still requires user confirmation) |
+| `reactNativeVersionBumper.showInStatusBar`   | `true`                               | Show project name and version in the status bar          |
+| `reactNativeVersionBumper.confirmMajorBumps` | `true`                               | Show confirmation dialog for major version bumps         |
 
-Fixed issue #.
+### Example Configuration
 
-### 1.1.0
+```json
+{
+  "reactNativeVersionBumper.autoCommit": true,
+  "reactNativeVersionBumper.commitMessage": "🚀 Release v{version}",
+  "reactNativeVersionBumper.createTags": true,
+  "reactNativeVersionBumper.pushToRemote": true,
+  "reactNativeVersionBumper.showInStatusBar": true
+}
+```
 
-Added features X, Y, and Z.
+## Project Structure Support
 
----
+### React Native CLI Projects
+```
+project/
+├── android/
+│   └── app/
+│       └── build.gradle
+├── ios/
+│   ├── ProjectName/
+│   │   └── Info.plist
+│   └── ProjectName.xcodeproj/
+│       └── project.pbxproj
+└── package.json
+```
 
-## Following extension guidelines
+## Version Bump Examples
 
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
+### Before
+```
+Android: versionCode 74, versionName "2.36.6"
+iOS: CFBundleVersion 91, CFBundleShortVersionString "2.36.2"
+Package.json: "version": "2.36.6"
+```
 
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
+### After Minor Bump
+```
+Android: versionCode 75, versionName "2.37.0"
+iOS: CFBundleVersion 92, CFBundleShortVersionString "2.37.0"
+Package.json: "version": "2.37.0"
+```
 
-## Working with Markdown
+## Advanced Features
 
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
+### Auto-Detection
+- Detects project type based on folder structure
+- **React Native CLI**: Has `android/` and `ios/` folders
 
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
+### Error Handling
+- Comprehensive error messages with solutions
+- Graceful handling of missing files
+- Partial success reporting
 
-## For more information
+### Results Display
+- Formatted webview panel showing:
+  - ✅ Successful operations with before/after values
+  - ❌ Failed operations with error details
+  - 📊 Summary of operations completed
 
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
+## Troubleshooting
 
-**Enjoy!**
+### Common Issues
+
+**Android build.gradle not found**
+- Ensure `android/app/build.gradle` exists
+- Verify standard React Native structure
+
+**iOS project not found**
+- Confirm `ios/` folder and `.xcodeproj` file exist
+
+**Git operations failing**
+- Verify Git is installed and the project is a Git repository
+- Check repository permissions
+- Ensure remote repository is configured
+- Confirm push operations to avoid unintended production deployments
+
+## Contributing
+
+Contributions are welcome! Submit issues, feature requests, or pull requests on [GitHub](https://github.com/your-username/react-native-version-bumper).
+
+## License
+
+MIT License - see LICENSE file for details.
