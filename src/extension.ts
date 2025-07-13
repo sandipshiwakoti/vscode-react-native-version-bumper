@@ -34,7 +34,6 @@ interface GitConfig {
 let statusBarItem: vscode.StatusBarItem;
 
 export function activate(context: vscode.ExtensionContext) {
-    // Create status bar item
     statusBarItem = vscode.window.createStatusBarItem(
         vscode.StatusBarAlignment.Left,
         100
@@ -43,14 +42,13 @@ export function activate(context: vscode.ExtensionContext) {
     updateStatusBar();
     statusBarItem.show();
 
-    // Register commands
     const commands = [
         vscode.commands.registerCommand(
             "react-native-version-bumper.bumpAppVersion",
             () => bumpAppVersion(false)
         ),
         vscode.commands.registerCommand(
-            "react-native-version-bumper.bumpVersionAndCommit",
+            "react-native-version-bumper.bumpAppVersionWithGit",
             () => bumpAppVersion(true)
         ),
         vscode.commands.registerCommand(
@@ -61,10 +59,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(statusBarItem, ...commands);
 
-    // Update status bar when workspace changes
-    vscode.workspace.onDidChangeWorkspaceFolders(() => {
-        updateStatusBar();
-    });
+    vscode.workspace.onDidChangeWorkspaceFolders(() => updateStatusBar());
 }
 
 async function bumpAppVersion(withGit: boolean) {
@@ -75,7 +70,6 @@ async function bumpAppVersion(withGit: boolean) {
     const iosVersion = versions.ios ? versions.ios.version : "0.0.0";
     const packageJsonVersion = versions.packageJson || "0.0.0";
 
-    // Calculate bumped versions for each type
     const bumpPatchVersion = (version: string) =>
         bumpSemanticVersion(version, "patch");
     const bumpMinorVersion = (version: string) =>
@@ -110,7 +104,6 @@ async function bumpAppVersion(withGit: boolean) {
         ],
         { placeHolder: "Include package.json version bump?" }
     );
-
     if (includePackageJson === undefined) return;
 
     if (includePackageJson.value) {
@@ -145,7 +138,6 @@ async function updateStatusBar() {
     const config = vscode.workspace.getConfiguration(
         "reactNativeVersionBumper"
     );
-
     if (!config.get("showInStatusBar", true)) {
         statusBarItem.hide();
         return;
@@ -156,7 +148,6 @@ async function updateStatusBar() {
         const packageVersion = versions.packageJson || "N/A";
         const workspaceFolders = vscode.workspace.workspaceFolders;
         let projectName = "Version Bumper";
-
         if (workspaceFolders) {
             const packageJsonPath = path.join(
                 workspaceFolders[0].uri.fsPath,
@@ -169,7 +160,6 @@ async function updateStatusBar() {
                 projectName = packageJson.name || "Version Bumper";
             }
         }
-
         statusBarItem.text = `📱 ${projectName}: v${packageVersion}`;
         statusBarItem.tooltip = "Click to show all versions";
         statusBarItem.show();
@@ -193,9 +183,8 @@ async function bumpVersion(
 
     const rootPath = workspaceFolders[0].uri.fsPath;
     const projectType = await detectProjectType(rootPath);
-
-    // Show progress
     const results: BumpResult[] = [];
+
     return vscode.window.withProgress(
         {
             location: vscode.ProgressLocation.Notification,
@@ -204,7 +193,6 @@ async function bumpVersion(
         },
         async (progress) => {
             progress.report({ increment: 0 });
-
             const tasks: Promise<BumpResult>[] = [];
 
             if (includePackageJson) {
@@ -239,12 +227,9 @@ async function bumpVersion(
                         newVersion: "",
                         message: `Unsupported project type: ${projectType}`,
                     });
-                    break;
             }
 
             progress.report({ increment: 20 });
-
-            // Execute all tasks
             const taskResults = await Promise.allSettled(tasks);
             let completedTasks = 0;
 
@@ -264,13 +249,11 @@ async function bumpVersion(
                 }
             });
 
-            // Dynamic progress based on completed tasks
-            const totalTasks = tasks.length || 1; // Avoid division by zero
+            const totalTasks = tasks.length || 1;
             progress.report({
                 increment: Math.min(60 * (completedTasks / totalTasks), 60),
             });
 
-            // Handle Git operations if requested
             if (withGit) {
                 try {
                     await handleGitOperations(rootPath, type, results);
@@ -297,13 +280,8 @@ async function bumpVersion(
             }
 
             progress.report({ increment: 100 });
-
-            // Show results
             showBumpResults(type, results);
-
-            // Update status bar
             updateStatusBar();
-
             return results;
         }
     );
@@ -312,14 +290,9 @@ async function bumpVersion(
 async function detectProjectType(rootPath: string): Promise<ProjectType> {
     const androidPath = path.join(rootPath, "android");
     const iosPath = path.join(rootPath, "ios");
-
     const hasAndroid = fs.existsSync(androidPath);
     const hasIos = fs.existsSync(iosPath);
-
-    if (hasAndroid && hasIos) {
-        return "react-native";
-    }
-    return "react-native";
+    return hasAndroid && hasIos ? "react-native" : "react-native";
 }
 
 async function bumpPackageJsonVersion(
@@ -327,10 +300,8 @@ async function bumpPackageJsonVersion(
     type: BumpType
 ): Promise<BumpResult> {
     const packageJsonPath = path.join(rootPath, "package.json");
-
-    if (!fs.existsSync(packageJsonPath)) {
+    if (!fs.existsSync(packageJsonPath))
         throw new Error("package.json not found");
-    }
 
     const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
     const oldVersion = packageJson.version || "0.0.0";
@@ -362,23 +333,18 @@ async function bumpAndroidVersion(
         "app",
         "build.gradle"
     );
-
-    if (!fs.existsSync(buildGradlePath)) {
+    if (!fs.existsSync(buildGradlePath))
         throw new Error("Android build.gradle not found");
-    }
 
     const content = fs.readFileSync(buildGradlePath, "utf8");
     const lines = content.split("\n");
+    let versionCode = 0,
+        versionName = "",
+        versionCodeLineIndex = -1,
+        versionNameLineIndex = -1;
 
-    let versionCode = 0;
-    let versionName = "";
-    let versionCodeLineIndex = -1;
-    let versionNameLineIndex = -1;
-
-    // Find version lines
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
-
         if (line.startsWith("versionCode")) {
             const match = line.match(/versionCode\s+(\d+)/);
             if (match) {
@@ -386,7 +352,6 @@ async function bumpAndroidVersion(
                 versionCodeLineIndex = i;
             }
         }
-
         if (line.startsWith("versionName")) {
             const match = line.match(/versionName\s+["']([^"']+)["']/);
             if (match) {
@@ -396,26 +361,20 @@ async function bumpAndroidVersion(
         }
     }
 
-    if (versionCodeLineIndex === -1 || versionNameLineIndex === -1) {
+    if (versionCodeLineIndex === -1 || versionNameLineIndex === -1)
         throw new Error("Could not find version information in build.gradle");
-    }
 
-    // Bump versions
     const newVersionCode = versionCode + 1;
     const newVersionName = bumpSemanticVersion(versionName, type);
 
-    // Update lines
     lines[versionCodeLineIndex] = lines[versionCodeLineIndex].replace(
         /versionCode\s+\d+/,
         `versionCode ${newVersionCode}`
     );
-
     lines[versionNameLineIndex] = lines[versionNameLineIndex].replace(
         /versionName\s+["'][^"']+["']/,
         `versionName "${newVersionName}"`
     );
-
-    // Write back to file
     fs.writeFileSync(buildGradlePath, lines.join("\n"), "utf8");
 
     return {
@@ -432,39 +391,29 @@ async function bumpIOSVersion(
     type: BumpType
 ): Promise<BumpResult> {
     const iosPath = path.join(rootPath, "ios");
+    if (!fs.existsSync(iosPath)) throw new Error("iOS project not found");
 
-    if (!fs.existsSync(iosPath)) {
-        throw new Error("iOS project not found");
-    }
-
-    // Check if Info.plist uses variables or hardcoded values
     const plistUsesVariables = await checkIfPlistUsesVariables(iosPath);
-
-    let oldBuildNumber = "";
-    let oldVersion = "";
-    let newBuildNumber = "";
-    let newVersion = "";
+    let oldBuildNumber = "",
+        oldVersion = "",
+        newBuildNumber = "",
+        newVersion = "";
 
     if (plistUsesVariables) {
-        // Read from project.pbxproj
         const iosContents = fs.readdirSync(iosPath);
         const xcodeprojDir = iosContents.find((item) =>
             item.endsWith(".xcodeproj")
         );
-
-        if (!xcodeprojDir) {
-            throw new Error("Xcode project file not found");
-        }
+        if (!xcodeprojDir) throw new Error("Xcode project file not found");
 
         const pbxprojPath = path.join(iosPath, xcodeprojDir, "project.pbxproj");
-        if (!fs.existsSync(pbxprojPath)) {
+        if (!fs.existsSync(pbxprojPath))
             throw new Error("project.pbxproj not found");
-        }
 
         const content = fs.readFileSync(pbxprojPath, "utf8");
         const lines = content.split("\n");
-        let currentProjectVersion = 0;
-        let marketingVersion = "";
+        let currentProjectVersion = 0,
+            marketingVersion = "";
 
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i].trim();
@@ -480,52 +429,45 @@ async function bumpIOSVersion(
             }
         }
 
-        if (!currentProjectVersion || !marketingVersion) {
+        if (!currentProjectVersion || !marketingVersion)
             throw new Error(
                 "No MARKETING_VERSION or CURRENT_PROJECT_VERSION found in project.pbxproj"
             );
-        }
 
         oldBuildNumber = currentProjectVersion.toString();
         oldVersion = marketingVersion;
         newBuildNumber = (currentProjectVersion + 1).toString();
         newVersion = bumpSemanticVersion(marketingVersion, type);
 
-        // Update project.pbxproj
         for (let i = 0; i < lines.length; i++) {
-            if (lines[i].includes("CURRENT_PROJECT_VERSION")) {
+            if (lines[i].includes("CURRENT_PROJECT_VERSION"))
                 lines[i] = lines[i].replace(
                     /CURRENT_PROJECT_VERSION\s*=\s*\d+;/,
                     `CURRENT_PROJECT_VERSION = ${newBuildNumber};`
                 );
-            }
-            if (lines[i].includes("MARKETING_VERSION")) {
+            if (lines[i].includes("MARKETING_VERSION"))
                 lines[i] = lines[i].replace(
                     /MARKETING_VERSION\s*=\s*[^;]+;/,
                     `MARKETING_VERSION = ${newVersion};`
                 );
-            }
         }
         fs.writeFileSync(pbxprojPath, lines.join("\n"), "utf8");
     } else {
-        // Read from Info.plist
         const plistPath = await findInfoPlistPath(iosPath);
-        if (!plistPath) {
-            throw new Error("Info.plist not found in iOS project");
-        }
+        if (!plistPath) throw new Error("Info.plist not found in iOS project");
 
         const content = fs.readFileSync(plistPath, "utf8");
         const lines = content.split("\n");
-
-        let bundleVersionLineIndex = -1;
-        let bundleShortVersionLineIndex = -1;
+        let bundleVersionLineIndex = -1,
+            bundleShortVersionLineIndex = -1;
 
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i].trim();
             if (line.includes("<key>CFBundleVersion</key>")) {
                 if (i + 1 < lines.length) {
-                    const nextLine = lines[i + 1].trim();
-                    const match = nextLine.match(/<string>(\d+)<\/string>/);
+                    const match = lines[i + 1]
+                        .trim()
+                        .match(/<string>(\d+)<\/string>/);
                     if (match) {
                         oldBuildNumber = match[1];
                         bundleVersionLineIndex = i + 1;
@@ -534,8 +476,9 @@ async function bumpIOSVersion(
             }
             if (line.includes("<key>CFBundleShortVersionString</key>")) {
                 if (i + 1 < lines.length) {
-                    const nextLine = lines[i + 1].trim();
-                    const match = nextLine.match(/<string>([^<]+)<\/string>/);
+                    const match = lines[i + 1]
+                        .trim()
+                        .match(/<string>([^<]+)<\/string>/);
                     if (match) {
                         oldVersion = match[1];
                         bundleShortVersionLineIndex = i + 1;
@@ -544,14 +487,10 @@ async function bumpIOSVersion(
             }
         }
 
-        if (
-            bundleVersionLineIndex === -1 ||
-            bundleShortVersionLineIndex === -1
-        ) {
+        if (bundleVersionLineIndex === -1 || bundleShortVersionLineIndex === -1)
             throw new Error(
                 "Could not find CFBundleVersion or CFBundleShortVersionString in Info.plist"
             );
-        }
 
         newBuildNumber = (parseInt(oldBuildNumber) + 1).toString();
         newVersion = bumpSemanticVersion(oldVersion, type);
@@ -563,7 +502,6 @@ async function bumpIOSVersion(
         lines[bundleShortVersionLineIndex] = lines[
             bundleShortVersionLineIndex
         ].replace(/<string>[^<]+<\/string>/, `<string>${newVersion}</string>`);
-
         fs.writeFileSync(plistPath, lines.join("\n"), "utf8");
     }
 
@@ -578,237 +516,115 @@ async function bumpIOSVersion(
 
 async function checkIfPlistUsesVariables(iosPath: string): Promise<boolean> {
     const plistPath = await findInfoPlistPath(iosPath);
-
-    if (!plistPath) {
-        return false;
-    }
+    if (!plistPath) return false;
 
     const content = fs.readFileSync(plistPath, "utf8");
-    const usesMarketingVersion = content.includes("$(MARKETING_VERSION)");
-    const usesCurrentProjectVersion = content.includes(
-        "$(CURRENT_PROJECT_VERSION)"
+    return (
+        content.includes("$(MARKETING_VERSION)") ||
+        content.includes("$(CURRENT_PROJECT_VERSION)")
     );
-
-    return usesMarketingVersion || usesCurrentProjectVersion;
 }
 
 async function findInfoPlistPath(iosPath: string): Promise<string | null> {
     const possiblePlistPaths = [path.join(iosPath, "Info.plist")];
-
     try {
         const iosContents = fs.readdirSync(iosPath);
-        const projectDirs = iosContents.filter((item) => {
-            const itemPath = path.join(iosPath, item);
-            return (
-                fs.statSync(itemPath).isDirectory() &&
+        const projectDirs = iosContents.filter(
+            (item) =>
+                fs.statSync(path.join(iosPath, item)).isDirectory() &&
                 !item.endsWith(".xcodeproj") &&
                 !item.endsWith(".xcworkspace")
+        );
+        projectDirs.forEach((dir) =>
+            possiblePlistPaths.push(path.join(iosPath, dir, "Info.plist"))
+        );
+    } catch (error) {}
+
+    return (
+        possiblePlistPaths.find((checkPath) => fs.existsSync(checkPath)) || null
+    );
+}
+
+// Helper function to get the latest git tag version
+async function getLatestGitTagVersion(rootPath: string): Promise<string> {
+    try {
+        // First, try to get the latest tag using git describe
+        try {
+            const { stdout } = await execAsync(
+                "git describe --tags --abbrev=0",
+                { cwd: rootPath }
             );
-        });
+            const latestTag = stdout.trim();
 
-        projectDirs.forEach((dir) => {
-            possiblePlistPaths.push(path.join(iosPath, dir, "Info.plist"));
-        });
+            if (latestTag) {
+                // Extract version number from tag (handles v1.2.3 or 1.2.3 format)
+                const versionMatch = latestTag.match(/v?(\d+\.\d+\.\d+)/);
+                if (versionMatch) {
+                    console.log(
+                        `Found latest tag: ${latestTag}, extracted version: ${versionMatch[1]}`
+                    );
+                    return versionMatch[1];
+                }
+            }
+        } catch (describeError) {
+            console.log("git describe failed, trying git tag list approach");
+        }
+
+        // Fallback: Get all tags and sort them
+        const { stdout } = await execAsync("git tag -l", { cwd: rootPath });
+        const tags = stdout
+            .trim()
+            .split("\n")
+            .filter((tag) => tag.trim());
+
+        if (tags.length === 0) {
+            console.log("No tags found, using 0.0.0");
+            return "0.0.0";
+        }
+
+        // Filter and sort tags that match semantic versioning
+        const versionTags = tags
+            .map((tag) => {
+                const match = tag.match(/v?(\d+\.\d+\.\d+)/);
+                return match
+                    ? {
+                          tag,
+                          version: match[1],
+                          parts: match[1].split(".").map(Number),
+                      }
+                    : null;
+            })
+            .filter(Boolean)
+            .sort((a, b) => {
+                if (!a || !b) return 0;
+                // Sort by major, minor, patch
+                for (let i = 0; i < 3; i++) {
+                    if (a?.parts[i] !== b?.parts[i]) {
+                        return b?.parts[i] - a?.parts[i]; // Descending order
+                    }
+                }
+                return 0;
+            });
+
+        if (versionTags.length > 0) {
+            console.log(
+                `Found ${versionTags.length} version tags, latest: ${versionTags[0]?.tag} (${versionTags[0]?.version})`
+            );
+            return versionTags[0]!.version;
+        }
+
+        console.log("No valid version tags found, using 0.0.0");
+        return "0.0.0";
     } catch (error) {
-        // Continue with default paths if directory reading fails
-    }
-
-    for (const checkPath of possiblePlistPaths) {
-        if (fs.existsSync(checkPath)) {
-            return checkPath;
+        console.log("Git tag command failed, falling back to package.json");
+        // If git tag command fails, fallback to package.json
+        try {
+            const versions = await getCurrentVersions();
+            return versions.packageJson || "0.0.0";
+        } catch {
+            return "0.0.0";
         }
     }
-
-    return null;
-}
-
-async function updateProjectPbxproj(
-    iosPath: string,
-    type: BumpType
-): Promise<BumpResult> {
-    const iosContents = fs.readdirSync(iosPath);
-    const xcodeprojDir = iosContents.find((item) =>
-        item.endsWith(".xcodeproj")
-    );
-
-    if (!xcodeprojDir) {
-        throw new Error("Xcode project file not found");
-    }
-
-    const pbxprojPath = path.join(iosPath, xcodeprojDir, "project.pbxproj");
-
-    if (!fs.existsSync(pbxprojPath)) {
-        throw new Error("project.pbxproj not found");
-    }
-
-    const content = fs.readFileSync(pbxprojPath, "utf8");
-    const lines = content.split("\n");
-
-    let currentProjectVersion = 0;
-    let marketingVersion = "";
-    const updatedLines = [...lines];
-    let foundVersions = false;
-
-    // Find and update versions
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-
-        if (line.includes("CURRENT_PROJECT_VERSION")) {
-            const match = line.match(/CURRENT_PROJECT_VERSION\s*=\s*(\d+);/);
-            if (match) {
-                currentProjectVersion = parseInt(match[1]);
-                const newCurrentProjectVersion = currentProjectVersion + 1;
-                updatedLines[i] = lines[i].replace(
-                    /CURRENT_PROJECT_VERSION\s*=\s*\d+;/,
-                    `CURRENT_PROJECT_VERSION = ${newCurrentProjectVersion};`
-                );
-                foundVersions = true;
-            }
-        }
-
-        if (line.includes("MARKETING_VERSION")) {
-            const match = line.match(/MARKETING_VERSION\s*=\s*([^;]+);/);
-            if (match) {
-                marketingVersion = match[1].replace(/['"]/g, "");
-                const newMarketingVersion = bumpSemanticVersion(
-                    marketingVersion,
-                    type
-                );
-                updatedLines[i] = lines[i].replace(
-                    /MARKETING_VERSION\s*=\s*[^;]+;/,
-                    `MARKETING_VERSION = ${newMarketingVersion};`
-                );
-                foundVersions = true;
-            }
-        }
-    }
-
-    if (!foundVersions) {
-        throw new Error(
-            "No MARKETING_VERSION or CURRENT_PROJECT_VERSION found in project.pbxproj"
-        );
-    }
-
-    fs.writeFileSync(pbxprojPath, updatedLines.join("\n"), "utf8");
-
-    const newCurrentProjectVersion = currentProjectVersion + 1;
-    const newMarketingVersion = bumpSemanticVersion(marketingVersion, type);
-
-    return {
-        platform: "iOS",
-        success: true,
-        oldVersion: `${currentProjectVersion} (${marketingVersion})`,
-        newVersion: `${newCurrentProjectVersion} (${newMarketingVersion})`,
-        message: `Build Number: ${currentProjectVersion} → ${newCurrentProjectVersion} \nVersion: ${marketingVersion} → ${newMarketingVersion}`,
-    };
-}
-
-async function updateInfoPlist(
-    iosPath: string,
-    type: BumpType
-): Promise<BumpResult> {
-    const plistPath = await findInfoPlistPath(iosPath);
-
-    if (!plistPath) {
-        throw new Error("Info.plist not found in iOS project");
-    }
-
-    const content = fs.readFileSync(plistPath, "utf8");
-    const lines = content.split("\n");
-
-    let bundleVersion = "";
-    let bundleShortVersionString = "";
-    let bundleVersionLineIndex = -1;
-    let bundleShortVersionLineIndex = -1;
-
-    // Find version lines
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-
-        if (line.includes("<key>CFBundleVersion</key>")) {
-            if (i + 1 < lines.length) {
-                const nextLine = lines[i + 1].trim();
-                const match = nextLine.match(/<string>(\d+)<\/string>/);
-                if (match) {
-                    bundleVersion = match[1];
-                    bundleVersionLineIndex = i + 1;
-                }
-            }
-        }
-
-        if (line.includes("<key>CFBundleShortVersionString</key>")) {
-            if (i + 1 < lines.length) {
-                const nextLine = lines[i + 1].trim();
-                const match = nextLine.match(/<string>([^<]+)<\/string>/);
-                if (match) {
-                    bundleShortVersionString = match[1];
-                    bundleShortVersionLineIndex = i + 1;
-                }
-            }
-        }
-    }
-
-    if (bundleVersionLineIndex === -1 || bundleShortVersionLineIndex === -1) {
-        throw new Error(
-            "Could not find CFBundleVersion or CFBundleShortVersionString in Info.plist"
-        );
-    }
-
-    // Bump versions
-    const newBundleVersion = (parseInt(bundleVersion) + 1).toString();
-    const newBundleShortVersionString = bumpSemanticVersion(
-        bundleShortVersionString,
-        type
-    );
-
-    // Update lines
-    lines[bundleVersionLineIndex] = lines[bundleVersionLineIndex].replace(
-        /<string>\d+<\/string>/,
-        `<string>${newBundleVersion}</string>`
-    );
-
-    lines[bundleShortVersionLineIndex] = lines[
-        bundleShortVersionLineIndex
-    ].replace(
-        /<string>[^<]+<\/string>/,
-        `<string>${newBundleShortVersionString}</string>`
-    );
-
-    // Write back to file
-    fs.writeFileSync(plistPath, lines.join("\n"), "utf8");
-
-    return {
-        platform: "iOS",
-        success: true,
-        oldVersion: `${bundleVersion} (${bundleShortVersionString})`,
-        newVersion: `${newBundleVersion} (${newBundleShortVersionString})`,
-        message: `Build Number: ${bundleVersion} → ${newBundleVersion} \nVersion: ${bundleShortVersionString} → ${newBundleShortVersionString}`,
-    };
-}
-
-function bumpSemanticVersion(version: string, type: BumpType): string {
-    const versionParts = version.split(".").map((part) => parseInt(part) || 0);
-
-    while (versionParts.length < 3) {
-        versionParts.push(0);
-    }
-
-    switch (type) {
-        case "major":
-            versionParts[0] += 1;
-            versionParts[1] = 0;
-            versionParts[2] = 0;
-            break;
-        case "minor":
-            versionParts[1] += 1;
-            versionParts[2] = 0;
-            break;
-        case "patch":
-            versionParts[2] += 1;
-            break;
-    }
-
-    return versionParts.join(".");
 }
 
 async function handleGitOperations(
@@ -829,24 +645,7 @@ async function handleGitOperations(
         pushToRemote: config.get("pushToRemote", false),
     };
 
-    let shouldCommit = gitConfig.autoCommit;
-    if (!shouldCommit) {
-        const response = await vscode.window.showQuickPick(
-            [
-                { label: "Yes", value: true },
-                { label: "No", value: false },
-            ],
-            { placeHolder: "Commit version changes to Git?" }
-        );
-        shouldCommit = response?.value ?? false;
-    }
-
-    if (!shouldCommit) {
-        return;
-    }
-
     try {
-        // Collect versions from all platforms
         const versionMap: { [platform: string]: string } = {};
         const versionSources = results
             .filter((r) => r.success && r.newVersion)
@@ -854,11 +653,8 @@ async function handleGitOperations(
 
         versionSources.forEach((source) => {
             let platformKey = source.platform;
-            if (source.platform.startsWith("Android")) {
-                platformKey = "Android";
-            } else if (source.platform.startsWith("iOS")) {
-                platformKey = "iOS";
-            }
+            if (source.platform.startsWith("Android")) platformKey = "Android";
+            else if (source.platform.startsWith("iOS")) platformKey = "iOS";
             const versionMatch = source.newVersion.match(/\(([^)]+)\)/);
             const semanticVersion = versionMatch
                 ? versionMatch[1]
@@ -866,59 +662,112 @@ async function handleGitOperations(
             versionMap[platformKey] = semanticVersion;
         });
 
-        // Collect only app versions (Android and iOS, excluding package.json)
-        const appVersions: { version: string; label: string }[] = [];
-        if (versionMap["Android"]) {
-            appVersions.push({
-                version: versionMap["Android"],
-                label: "android",
-            });
-        }
-        if (versionMap["iOS"]) {
-            appVersions.push({ version: versionMap["iOS"], label: "ios" });
-        }
-
-        // Generate commit message
-        let commitMessage;
-        if (appVersions.length === 0) {
-            const customVersion = await vscode.window.showInputBox({
-                placeHolder: "Enter version for commit (e.g., 18.0.0)",
-                prompt: "No app version found. Please provide a version for the commit message.",
-                validateInput: (value) =>
-                    value.match(/^\d+\.\d+\.\d+$/)
-                        ? null
-                        : "Please enter a valid semantic version (e.g., 18.0.0)",
-            });
-            if (!customVersion) {
-                commitMessage = "chore: bump version (manual commit)";
-            } else {
-                commitMessage = gitConfig.commitMessage.replace(
-                    "{version}",
-                    customVersion
-                );
-            }
+        let defaultBranchName = "version-bump/";
+        if (versionMap["Android"] && versionMap["iOS"]) {
+            defaultBranchName +=
+                versionMap["Android"] === versionMap["iOS"]
+                    ? `v${versionMap["Android"]}`
+                    : `android-v${versionMap["Android"]}-ios-v${versionMap["iOS"]}`;
+        } else if (versionMap["Android"]) {
+            defaultBranchName += `android-v${versionMap["Android"]}`;
+        } else if (versionMap["iOS"]) {
+            defaultBranchName += `ios-v${versionMap["iOS"]}`;
         } else {
-            const uniqueVersions = new Set(appVersions.map((v) => v.version));
-            if (uniqueVersions.size === 1) {
-                const version = appVersions[0].version;
-                commitMessage = `chore: bump app version to v${version}`;
-            } else {
-                const versionStrings = appVersions.map(
-                    (v) => `v${v.version} for ${v.label}`
+            defaultBranchName += "manual";
+        }
+
+        // STEP 1: Ask about committing changes first
+        let shouldCommit = gitConfig.autoCommit;
+        if (!shouldCommit) {
+            const response = await vscode.window.showQuickPick(
+                [
+                    { label: "Yes", value: true },
+                    { label: "No", value: false },
+                ],
+                { placeHolder: "Commit version changes to Git?" }
+            );
+            shouldCommit = response?.value ?? false;
+        }
+
+        if (!shouldCommit) return;
+
+        // STEP 2: Ask if user wants to create a new branch
+        const createBranchResponse = await vscode.window.showQuickPick(
+            [
+                { label: "Yes", value: true },
+                { label: "No", value: false },
+            ],
+            { placeHolder: "Create a new branch for these changes?" }
+        );
+
+        const shouldCreateBranch = createBranchResponse?.value ?? false;
+        let branchName: string | undefined;
+
+        if (shouldCreateBranch) {
+            // STEP 3: Ask for branch name
+            branchName = await vscode.window.showInputBox({
+                placeHolder: "Enter branch name",
+                prompt: "Provide a name for the new branch",
+                value: defaultBranchName,
+            });
+
+            if (!branchName) {
+                vscode.window.showErrorMessage("Branch name is required");
+                return;
+            }
+
+            // STEP 4: Create the branch
+            try {
+                await execAsync(`git checkout -b ${branchName}`, {
+                    cwd: rootPath,
+                });
+            } catch (error) {
+                const errorMessage =
+                    error instanceof Error ? error.message : "Unknown error";
+                vscode.window.showErrorMessage(
+                    `Failed to create branch: ${errorMessage}`
                 );
-                commitMessage = `chore: bump app version to ${versionStrings.join(" and ")}`;
+                return;
             }
         }
 
-        // Stage all changes
+        // STEP 5: Add changes and ask for commit message
         await execAsync("git add .", { cwd: rootPath });
 
-        // Commit changes
-        await execAsync(`git commit -m "${commitMessage}"`, { cwd: rootPath });
+        let commitMessage;
+        if (versionMap["Android"] && versionMap["iOS"]) {
+            commitMessage =
+                versionMap["Android"] === versionMap["iOS"]
+                    ? `chore: bump app version to v${versionMap["Android"]}`
+                    : `chore: bump app version to v${versionMap["Android"]} for android and v${versionMap["iOS"]} for ios`;
+        } else if (versionMap["Android"]) {
+            commitMessage = `chore: bump app version to v${versionMap["Android"]} for android`;
+        } else if (versionMap["iOS"]) {
+            commitMessage = `chore: bump app version to v${versionMap["iOS"]} for ios`;
+        } else {
+            commitMessage = "chore: bump version (manual commit)";
+        }
 
-        // Handle tagging
+        // Allow user to customize commit message
+        const customCommitMessage = await vscode.window.showInputBox({
+            placeHolder: "Enter commit message",
+            prompt: "Customize the commit message or press Enter to use the default",
+            value: commitMessage,
+        });
+
+        if (!customCommitMessage) {
+            vscode.window.showErrorMessage("Commit message is required");
+            return;
+        }
+
+        await execAsync(`git commit -m "${customCommitMessage}"`, {
+            cwd: rootPath,
+        });
+
+        // STEP 6: Ask about creating tags
         let shouldTag = gitConfig.createTags;
         let tagVersion: string | undefined;
+
         if (!shouldTag) {
             const response = await vscode.window.showQuickPick(
                 [
@@ -930,11 +779,12 @@ async function handleGitOperations(
             shouldTag = response?.value ?? false;
         }
 
-        let tagSuccess = false;
+        let tagSuccess = false,
+            tagName = "";
         if (shouldTag) {
-            const versions = await getCurrentVersions();
-            const packageJsonVersion = versions.packageJson || "0.0.0";
-            const [major, minor, patch] = packageJsonVersion
+            // Get the latest git tag version instead of package.json version
+            const latestTagVersion = await getLatestGitTagVersion(rootPath);
+            const [major, minor, patch] = latestTagVersion
                 .split(".")
                 .map(Number);
 
@@ -957,8 +807,7 @@ async function handleGitOperations(
             const selectedVersion = await vscode.window.showQuickPick(
                 tagOptions,
                 {
-                    placeHolder:
-                        "Select bumped version for Git tag or enter custom",
+                    placeHolder: `Select version to bump from current: v${latestTagVersion}`,
                 }
             );
             tagVersion =
@@ -974,7 +823,7 @@ async function handleGitOperations(
                     : selectedVersion?.value;
 
             if (tagVersion) {
-                const tagName = `v${tagVersion}`;
+                tagName = `v${tagVersion}`;
                 try {
                     await execAsync(`git tag ${tagName}`, { cwd: rootPath });
                     tagSuccess = true;
@@ -1006,9 +855,7 @@ async function handleGitOperations(
             }
         }
 
-        // Handle pushing to remote
-        let pushSuccess = false;
-        let pushError: string | undefined;
+        // STEP 7: Ask about pushing to remote
         let shouldPush = gitConfig.pushToRemote;
         if (!shouldPush) {
             const pushResponse = await vscode.window.showQuickPick(
@@ -1023,36 +870,44 @@ async function handleGitOperations(
 
         if (shouldPush) {
             try {
-                await execAsync("git push", { cwd: rootPath });
-                pushSuccess = true;
-                if (shouldTag && tagVersion) {
-                    await execAsync("git push --tags", { cwd: rootPath });
+                if (shouldCreateBranch && branchName) {
+                    await execAsync(`git push origin ${branchName}`, {
+                        cwd: rootPath,
+                    });
+                } else {
+                    // Push to current branch if no new branch was created
+                    await execAsync(`git push`, {
+                        cwd: rootPath,
+                    });
                 }
+                if (shouldTag && tagSuccess)
+                    await execAsync(`git push origin ${tagName}`, {
+                        cwd: rootPath,
+                    });
             } catch (caughtError: unknown) {
-                console.log("Raw Caught Error:", caughtError);
-                pushError =
+                const pushError =
                     caughtError instanceof Error
                         ? caughtError.message
-                        : caughtError?.toString() || "Unknown push error";
-                console.log("Assigned pushError:", pushError);
+                        : "Unknown push error";
+                vscode.window.showErrorMessage(`Push failed: ${pushError}`);
             }
         }
 
-        // Add Git result with multi-line message including all operation statuses
-        let gitMessage = `Commit: ✅ Changes committed with message: "${commitMessage}"`;
-        if (shouldTag && tagVersion !== undefined) {
-            gitMessage += `<br>Tag: ${tagSuccess ? "✅" : "❌"} Tagged v${tagVersion}`;
-        }
-        if (shouldPush) {
-            gitMessage += `<br>Push: ${pushSuccess ? "✅" : "❌"} ${pushSuccess ? "Pushed successfully" : `Failed - ${pushError}`}`;
-        }
+        let gitMessage =
+            shouldCreateBranch && branchName
+                ? `Branch: ✅ Created and switched to branch "${branchName}"<br>Commit: ✅ Changes committed with message: "${customCommitMessage}"`
+                : `Commit: ✅ Changes committed with message: "${customCommitMessage}"`;
+        if (shouldTag && tagName)
+            gitMessage += `<br>Tag: ${tagSuccess ? "✅" : "❌"} Tagged ${tagName}`;
+        if (shouldPush)
+            gitMessage += `<br>Push: ${shouldPush ? "✅" : "❌"} Pushed ${shouldCreateBranch ? "branch and tag" : "changes and tag"} to remote`;
+
         results.push({
             platform: "Git",
-            success: !shouldPush || (shouldPush && pushSuccess),
+            success: true,
             oldVersion: "",
-            newVersion: tagVersion || "",
+            newVersion: "",
             message: gitMessage,
-            error: pushError || undefined,
         });
     } catch (error: unknown) {
         const errorMessage =
@@ -1071,24 +926,18 @@ async function handleGitOperations(
 
 async function getCurrentVersions(): Promise<ProjectVersions> {
     const workspaceFolders = vscode.workspace.workspaceFolders;
-    if (!workspaceFolders) {
-        throw new Error("No workspace folder found");
-    }
+    if (!workspaceFolders) throw new Error("No workspace folder found");
 
     const rootPath = workspaceFolders[0].uri.fsPath;
     const versions: ProjectVersions = {};
 
     try {
-        // Package.json version
         const packageJsonPath = path.join(rootPath, "package.json");
-        if (fs.existsSync(packageJsonPath)) {
-            const packageJson = JSON.parse(
+        if (fs.existsSync(packageJsonPath))
+            versions.packageJson = JSON.parse(
                 fs.readFileSync(packageJsonPath, "utf8")
-            );
-            versions.packageJson = packageJson.version;
-        }
+            ).version;
 
-        // Android version
         const buildGradlePath = path.join(
             rootPath,
             "android",
@@ -1101,27 +950,21 @@ async function getCurrentVersions(): Promise<ProjectVersions> {
             const versionNameMatch = content.match(
                 /versionName\s+["']([^"']+)["']/
             );
-
-            if (versionCodeMatch && versionNameMatch) {
+            if (versionCodeMatch && versionNameMatch)
                 versions.android = {
                     versionCode: parseInt(versionCodeMatch[1]),
                     versionName: versionNameMatch[1],
                 };
-            }
         }
 
-        // iOS version
         const iosPath = path.join(rootPath, "ios");
         if (fs.existsSync(iosPath)) {
             const plistUsesVariables = await checkIfPlistUsesVariables(iosPath);
-
             if (plistUsesVariables) {
-                // Read from project.pbxproj
                 const iosContents = fs.readdirSync(iosPath);
                 const xcodeprojDir = iosContents.find((item) =>
                     item.endsWith(".xcodeproj")
                 );
-
                 if (xcodeprojDir) {
                     const pbxprojPath = path.join(
                         iosPath,
@@ -1136,17 +979,14 @@ async function getCurrentVersions(): Promise<ProjectVersions> {
                         const versionMatch = content.match(
                             /MARKETING_VERSION\s*=\s*([^;]+);/
                         );
-
-                        if (buildNumberMatch && versionMatch) {
+                        if (buildNumberMatch && versionMatch)
                             versions.ios = {
                                 buildNumber: buildNumberMatch[1],
                                 version: versionMatch[1].replace(/['"]/g, ""),
                             };
-                        }
                     }
                 }
             } else {
-                // Read from Info.plist
                 const plistPath = await findInfoPlistPath(iosPath);
                 if (plistPath) {
                     const content = fs.readFileSync(plistPath, "utf8");
@@ -1156,19 +996,15 @@ async function getCurrentVersions(): Promise<ProjectVersions> {
                     const bundleShortVersionMatch = content.match(
                         /<key>CFBundleShortVersionString<\/key>\s*<string>([^<]+)<\/string>/
                     );
-
-                    if (bundleVersionMatch && bundleShortVersionMatch) {
+                    if (bundleVersionMatch && bundleShortVersionMatch)
                         versions.ios = {
                             buildNumber: bundleVersionMatch[1],
                             version: bundleShortVersionMatch[1],
                         };
-                    }
                 }
             }
         }
-    } catch (error) {
-        // Ignore errors and return partial versions
-    }
+    } catch (error) {}
 
     return versions;
 }
@@ -1184,18 +1020,12 @@ async function showCurrentVersions() {
 
         const rootPath = workspaceFolders[0].uri.fsPath;
         const projectType = await detectProjectType(rootPath);
-
-        // Create webview panel for better formatting
         const panel = vscode.window.createWebviewPanel(
             "currentVersions",
             "Current Versions",
             vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true,
-            }
+            { enableScripts: true, retainContextWhenHidden: true }
         );
-
         panel.webview.html = generateVersionsHTML(versions, projectType);
     } catch (error) {
         vscode.window.showErrorMessage(`Error getting versions: ${error}`);
@@ -1339,12 +1169,8 @@ function showBumpResults(type: BumpType, results: BumpResult[]) {
         "versionBumpResults",
         `Version Bump Results - ${type.charAt(0).toUpperCase() + type.slice(1)}`,
         vscode.ViewColumn.One,
-        {
-            enableScripts: true,
-            retainContextWhenHidden: true,
-        }
+        { enableScripts: true, retainContextWhenHidden: true }
     );
-
     panel.webview.html = generateResultsHTML(type, results);
 }
 
@@ -1527,8 +1353,27 @@ function generateResultsHTML(type: BumpType, results: BumpResult[]): string {
     return html;
 }
 
-export function deactivate() {
-    if (statusBarItem) {
-        statusBarItem.dispose();
+function bumpSemanticVersion(version: string, type: BumpType): string {
+    const versionParts = version.split(".").map((part) => parseInt(part) || 0);
+    while (versionParts.length < 3) versionParts.push(0);
+
+    switch (type) {
+        case "major":
+            versionParts[0] += 1;
+            versionParts[1] = 0;
+            versionParts[2] = 0;
+            break;
+        case "minor":
+            versionParts[1] += 1;
+            versionParts[2] = 0;
+            break;
+        case "patch":
+            versionParts[2] += 1;
+            break;
     }
+    return versionParts.join(".");
+}
+
+export function deactivate() {
+    if (statusBarItem) statusBarItem.dispose();
 }

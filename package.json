@@ -36,8 +36,8 @@
                 "category": "RN Version Bumper"
             },
             {
-                "command": "react-native-version-bumper.bumpVersionAndCommit",
-                "title": "Bump App Version with Commit/Tag 🔄",
+                "command": "react-native-version-bumper.bumpAppVersionWithGit",
+                "title": "Bump App Version with Git 🔄",
                 "category": "RN Version Bumper"
             },
             {
@@ -53,7 +53,7 @@
                     "when": "workspaceFolderCount > 0"
                 },
                 {
-                    "command": "react-native-version-bumper.bumpVersionAndCommit",
+                    "command": "react-native-version-bumper.bumpAppVersionWithGit",
                     "when": "workspaceFolderCount > 0"
                 },
                 {
