@@ -825,7 +825,7 @@ async function findInfoPlistPath(iosPath: string): Promise<string | null> {
         projectDirs.forEach((dir) =>
             possiblePlistPaths.push(path.join(iosPath, dir, "Info.plist"))
         );
-    } catch (error) {}
+    } catch (error) { }
 
     return (
         possiblePlistPaths.find((checkPath) => fs.existsSync(checkPath)) || null
@@ -910,10 +910,10 @@ async function getLatestGitTagVersion(rootPath: string): Promise<string> {
                 const match = tag.match(/v?(\d+\.\d+\.\d+)/);
                 return match
                     ? {
-                          tag,
-                          version: match[1],
-                          parts: match[1].split(".").map(Number),
-                      }
+                        tag,
+                        version: match[1],
+                        parts: match[1].split(".").map(Number),
+                    }
                     : null;
             })
             .filter(Boolean)
@@ -1580,7 +1580,7 @@ async function getCurrentVersions(): Promise<ProjectVersions> {
                             versions.ios = {
                                 buildNumber:
                                     buildNumberMatch[
-                                        buildNumberMatch.length - 1
+                                    buildNumberMatch.length - 1
                                     ],
                                 version: versionMatch[
                                     versionMatch.length - 1
@@ -1770,10 +1770,93 @@ function showBumpResults(type: BumpType, results: BumpResult[]) {
         vscode.ViewColumn.One,
         { enableScripts: true, retainContextWhenHidden: true }
     );
-    panel.webview.html = generateResultsHTML(type, results);
+
+    // Extract Git operation results
+    const gitResult = results.find(r => r.platform === "Git");
+    let tagName = "";
+    let branchName = "";
+    let hasCommit = false;
+
+    if (gitResult && gitResult.success) {
+        // Extract tag name if a tag was created
+        const tagMatch = gitResult.message.match(/Tagged ([\w.-]+)/i);
+        if (tagMatch) {
+            tagName = tagMatch[1];
+        }
+
+        // Extract branch name if a branch was created
+        const branchMatch = gitResult.message.match(/branch "([^"]+)"/i);
+        if (branchMatch) {
+            branchName = branchMatch[1];
+        }
+
+        // Check if commit was created
+        hasCommit = gitResult.message.includes("Commit: ✅");
+    }
+
+    panel.webview.html = generateResultsHTML(type, results, tagName, branchName, hasCommit);
+
+    // Handle messages from the webview
+    panel.webview.onDidReceiveMessage(
+        async (message) => {
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            if (!workspaceFolders) {
+                vscode.window.showErrorMessage("No workspace folder found");
+                return;
+            }
+
+            const rootPath = workspaceFolders[0].uri.fsPath;
+
+            // Get repository URL from Git instead of package.json
+            let repoUrl = "";
+            try {
+                // Try to get the remote URL from Git
+                const { stdout } = await execAsync("git config --get remote.origin.url", {
+                    cwd: rootPath
+                });
+
+                repoUrl = stdout.trim();
+
+                // Clean up the URL if it's a git URL
+                repoUrl = repoUrl.replace(/\.git$/, "").replace(/^git\+/, "");
+                if (repoUrl.startsWith("git@github.com:")) {
+                    repoUrl = repoUrl.replace("git@github.com:", "https://github.com/");
+                }
+            } catch (error) {
+                console.error("Error getting Git remote URL:", error);
+                vscode.window.showErrorMessage("Could not determine repository URL from Git. Make sure you have a remote configured.");
+                return;
+            }
+
+            if (!repoUrl) {
+                vscode.window.showErrorMessage("Repository URL not found. Make sure you have a Git remote configured.");
+                return;
+            }
+
+            switch (message.command) {
+                case "createRelease":
+                    if (tagName) {
+                        const releaseUrl = `${repoUrl}/releases/new?tag=${tagName}`;
+                        vscode.env.openExternal(vscode.Uri.parse(releaseUrl));
+                    }
+                    break;
+
+                case "createPR":
+                    if (branchName && hasCommit) {
+                        // For GitHub, the URL format is typically:
+                        // https://github.com/owner/repo/compare/branchName?expand=1
+                        const prUrl = `${repoUrl}/compare/${branchName}?expand=1`;
+                        vscode.env.openExternal(vscode.Uri.parse(prUrl));
+                    }
+                    break;
+            }
+        },
+        undefined,
+        []
+    );
 }
 
-function generateResultsHTML(type: BumpType, results: BumpResult[]): string {
+function generateResultsHTML(type: BumpType, results: BumpResult[], tagName: string = "", branchName: string = "", hasCommit: boolean = false): string {
     const successCount = results.filter((r) => r.success).length;
     const totalCount = results.length;
     const hasErrors = results.some((r) => !r.success);
@@ -1902,6 +1985,29 @@ function generateResultsHTML(type: BumpType, results: BumpResult[]): string {
                     text-transform: uppercase;
                     margin-left: 10px;
                 }
+                .action-buttons {
+                    margin-top: 20px;
+                    display: flex;
+                    gap: 10px;
+                }
+                .action-button {
+                    background-color: var(--vscode-button-background);
+                    color: var(--vscode-button-foreground);
+                    border: none;
+                    padding: 8px 12px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-weight: 500;
+                    display: inline-flex;
+                    align-items: center;
+                }
+                .action-button:hover {
+                    background-color: var(--vscode-button-hoverBackground);
+                }
+                .action-button:disabled {
+                    opacity: 0.6;
+                    cursor: not-allowed;
+                }
             </style>
         </head>
         <body>
@@ -1933,16 +2039,65 @@ function generateResultsHTML(type: BumpType, results: BumpResult[]): string {
                     <span class="result-platform">${result.platform}</span>
                     <span class="result-icon" style="margin-left: auto;">${statusIcon}</span>
                 </div>
-                ${
-                    result.message
-                        ? `<div class="result-message">${result.message}</div>`
-                        : result.error
-                          ? `<div class="result-error-message">❌ ${result.error}</div>`
-                          : ""
-                }
+                ${result.message
+                ? `<div class="result-message">${result.message}</div>`
+                : result.error
+                    ? `<div class="result-error-message">❌ ${result.error}</div>`
+                    : ""
+            }
             </div>
         `;
     });
+
+    // Add action buttons if tag or branch+commit were created
+    if (tagName || (branchName && hasCommit)) {
+        html += `<div class="action-buttons">`;
+
+        if (tagName) {
+            html += `
+                <button class="action-button" id="createReleaseBtn">
+                    <span class="emoji">🏷️</span> Create new release for ${tagName}
+                </button>
+            `;
+        }
+
+        if (branchName && hasCommit) {
+            html += `
+                <button class="action-button" id="createPRBtn">
+                    <span class="emoji">🔀</span> Create PR for branch ${branchName}
+                </button>
+            `;
+        }
+
+        html += `</div>`;
+    }
+
+    // Add script to handle button clicks
+    html += `
+        <script>
+            const vscode = acquireVsCodeApi();
+            
+            document.addEventListener('DOMContentLoaded', () => {
+                const createReleaseBtn = document.getElementById('createReleaseBtn');
+                if (createReleaseBtn) {
+                    createReleaseBtn.addEventListener('click', () => {
+                        vscode.postMessage({
+                            command: 'createRelease'
+                        });
+                    });
+                }
+                
+                const createPRBtn = document.getElementById('createPRBtn');
+                if (createPRBtn) {
+                    createPRBtn.addEventListener('click', () => {
+                        vscode.postMessage({
+                            command: 'createPR'
+                        });
+                    });
+                }
+            });
+        </script>
+    `;
 
     html += `
         </body>
