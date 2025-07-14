@@ -63,6 +63,9 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 async function bumpAppVersion(withGit: boolean) {
+    const config = vscode.workspace.getConfiguration(
+        "reactNativeVersionBumper"
+    );
     const versions = await getCurrentVersions();
     const androidVersion = versions.android
         ? versions.android.versionName
@@ -77,65 +80,82 @@ async function bumpAppVersion(withGit: boolean) {
     const bumpMajorVersion = (version: string) =>
         bumpSemanticVersion(version, "major");
 
+    const platforms: string[] = [];
+    if (!config.get("skipAndroid")) {
+        platforms.push(`Android: v${androidVersion}`);
+    }
+    if (!config.get("skipIOS")) {
+        platforms.push(`iOS: v${iosVersion}`);
+    }
+    const platformLabel =
+        platforms.length > 0 ? platforms.join(", ") : "No platforms";
+
     const bumpType = await vscode.window.showQuickPick(
         [
             {
-                label: `🔧 Patch (Android: v${bumpPatchVersion(androidVersion)}, iOS: v${bumpPatchVersion(iosVersion)})`,
+                label: `🔧 Patch (${platformLabel})`,
                 value: "patch",
             },
             {
-                label: `⬆️ Minor (Android: v${bumpMinorVersion(androidVersion)}, iOS: v${bumpMinorVersion(iosVersion)})`,
+                label: `⬆️ Minor (${platformLabel})`,
                 value: "minor",
             },
             {
-                label: `🚀 Major (Android: v${bumpMajorVersion(androidVersion)}, iOS: v${bumpMajorVersion(iosVersion)})`,
+                label: `🚀 Major (${platformLabel})`,
                 value: "major",
             },
         ],
-        { placeHolder: "Select version bump type" }
+        { placeHolder: "Select version bump type for Android and iOS" }
     );
 
     if (!bumpType) {
         return;
     }
 
-    const includePackageJson = await vscode.window.showQuickPick(
-        [
-            { label: "Yes", value: true },
-            { label: "No", value: false },
-        ],
-        { placeHolder: "Include package.json version bump?" }
-    );
-    if (includePackageJson === undefined) {
-        return;
-    }
-
-    if (includePackageJson.value) {
-        const packageBumpType = await vscode.window.showQuickPick(
+    let includePackageJson: { value: boolean } | undefined = { value: false };
+    let packageBumpType: BumpType = bumpType.value as BumpType;
+    if (!config.get("skipPackageJson")) {
+        includePackageJson = await vscode.window.showQuickPick(
             [
-                {
-                    label: `🔧 Patch (v${bumpPatchVersion(packageJsonVersion)})`,
-                    value: "patch",
-                },
-                {
-                    label: `⬆️ Minor (v${bumpMinorVersion(packageJsonVersion)})`,
-                    value: "minor",
-                },
-                {
-                    label: `🚀 Major (v${bumpMajorVersion(packageJsonVersion)})`,
-                    value: "major",
-                },
+                { label: "Yes", value: true },
+                { label: "No", value: false },
             ],
-            { placeHolder: "Select package.json version bump type" }
+            { placeHolder: "Include package.json version bump?" }
         );
-        if (!packageBumpType) {
+        if (includePackageJson === undefined) {
             return;
+        }
+
+        if (includePackageJson.value) {
+            const packageBumpTypeSelection = await vscode.window.showQuickPick(
+                [
+                    {
+                        label: `🔧 Patch (v${bumpPatchVersion(packageJsonVersion)})`,
+                        value: "patch",
+                    },
+                    {
+                        label: `⬆️ Minor (v${bumpMinorVersion(packageJsonVersion)})`,
+                        value: "minor",
+                    },
+                    {
+                        label: `🚀 Major (v${bumpMajorVersion(packageJsonVersion)})`,
+                        value: "major",
+                    },
+                ],
+                { placeHolder: "Select package.json version bump type" }
+            );
+            if (packageBumpTypeSelection) {
+                packageBumpType = packageBumpTypeSelection.value as BumpType;
+            } else {
+                return;
+            }
         }
     }
 
     await bumpVersion(
         bumpType.value as BumpType,
         includePackageJson.value,
+        packageBumpType,
         withGit
     );
 }
@@ -179,8 +199,12 @@ async function updateStatusBar() {
 async function bumpVersion(
     type: BumpType,
     includePackageJson: boolean,
+    packageBumpType: BumpType,
     withGit: boolean
 ): Promise<BumpResult[]> {
+    const config = vscode.workspace.getConfiguration(
+        "reactNativeVersionBumper"
+    );
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders) {
         vscode.window.showErrorMessage("No workspace folder found");
@@ -190,6 +214,17 @@ async function bumpVersion(
     const rootPath = workspaceFolders[0].uri.fsPath;
     const projectType = await detectProjectType(rootPath);
     const results: BumpResult[] = [];
+
+    if (
+        config.get("skipPackageJson") &&
+        config.get("skipAndroid") &&
+        config.get("skipIOS")
+    ) {
+        vscode.window.showWarningMessage(
+            "All version bump operations (package.json, Android, iOS) are skipped. No changes will be made."
+        );
+        return [];
+    }
 
     return vscode.window.withProgress(
         {
@@ -201,9 +236,11 @@ async function bumpVersion(
             progress.report({ increment: 0 });
             const tasks: Promise<BumpResult>[] = [];
 
-            if (includePackageJson) {
+            if (includePackageJson && !config.get("skipPackageJson")) {
                 try {
-                    tasks.push(bumpPackageJsonVersion(rootPath, type));
+                    tasks.push(
+                        bumpPackageJsonVersion(rootPath, packageBumpType)
+                    );
                 } catch (error) {
                     const errorMessage =
                         error instanceof Error
@@ -214,7 +251,7 @@ async function bumpVersion(
                         success: false,
                         oldVersion: "",
                         newVersion: "",
-                        message: "Package.json bumping not implemented",
+                        message: "Package.json bumping failed",
                         error: errorMessage,
                     });
                 }
@@ -222,8 +259,12 @@ async function bumpVersion(
 
             switch (projectType) {
                 case "react-native":
-                    tasks.push(bumpAndroidVersion(rootPath, type));
-                    tasks.push(bumpIOSVersion(rootPath, type));
+                    if (!config.get("skipAndroid")) {
+                        tasks.push(bumpAndroidVersion(rootPath, type));
+                    }
+                    if (!config.get("skipIOS")) {
+                        tasks.push(bumpIOSVersion(rootPath, type));
+                    }
                     break;
                 default:
                     results.push({
@@ -260,7 +301,7 @@ async function bumpVersion(
                 increment: Math.min(60 * (completedTasks / totalTasks), 60),
             });
 
-            if (withGit) {
+            if (withGit && tasks.length > 0) {
                 try {
                     await handleGitOperations(rootPath, type, results);
                     progress.report({ increment: 90 });
@@ -281,12 +322,14 @@ async function bumpVersion(
                         `Git operation failed: ${errorMessage}`
                     );
                 }
-            } else {
-                progress.report({ increment: 90 });
+            } else if (tasks.length === 0) {
+                return results;
             }
 
             progress.report({ increment: 100 });
-            showBumpResults(type, results);
+            if (results.length > 0) {
+                showBumpResults(type, results);
+            }
             updateStatusBar();
             return results;
         }
@@ -334,14 +377,16 @@ async function bumpAndroidVersion(
     rootPath: string,
     type: BumpType
 ): Promise<BumpResult> {
-    const buildGradlePath = path.join(
-        rootPath,
-        "android",
-        "app",
-        "build.gradle"
+    const config = vscode.workspace.getConfiguration(
+        "reactNativeVersionBumper"
     );
+    const buildGradleConfigPath = config.get(
+        "android.buildGradlePath",
+        path.join("android", "app", "build.gradle")
+    );
+    const buildGradlePath = path.join(rootPath, buildGradleConfigPath);
     if (!fs.existsSync(buildGradlePath)) {
-        throw new Error("Android build.gradle not found");
+        throw new Error(`Android build.gradle not found at ${buildGradlePath}`);
     }
 
     const content = fs.readFileSync(buildGradlePath, "utf8");
@@ -389,9 +434,9 @@ async function bumpAndroidVersion(
     return {
         platform: "Android",
         success: true,
-        oldVersion: `${versionCode} (${versionName})`,
-        newVersion: `${newVersionCode} (${newVersionName})`,
-        message: `Version Code: ${versionCode} → ${newVersionCode} \nVersion Name: ${versionName} → ${newVersionName}`,
+        oldVersion: `${versionName} (${versionCode})`,
+        newVersion: `${newVersionName} (${newVersionCode})`,
+        message: `Version Name: ${versionName} → ${newVersionName}\nVersion Code: ${versionCode} → ${newVersionCode}`,
     };
 }
 
@@ -399,6 +444,9 @@ async function bumpIOSVersion(
     rootPath: string,
     type: BumpType
 ): Promise<BumpResult> {
+    const config = vscode.workspace.getConfiguration(
+        "reactNativeVersionBumper"
+    );
     const iosPath = path.join(rootPath, "ios");
     if (!fs.existsSync(iosPath)) {
         throw new Error("iOS project not found");
@@ -474,9 +522,15 @@ async function bumpIOSVersion(
         }
         fs.writeFileSync(pbxprojPath, lines.join("\n"), "utf8");
     } else {
-        const plistPath = await findInfoPlistPath(iosPath);
+        let plistPath: string | null | undefined =
+            config.get("ios.infoPlistPath");
         if (!plistPath) {
-            throw new Error("Info.plist not found in iOS project");
+            plistPath = await findInfoPlistPath(iosPath);
+        }
+        if (!plistPath || !fs.existsSync(plistPath)) {
+            throw new Error(
+                `Info.plist not found at ${plistPath || "default location"}`
+            );
         }
 
         const content = fs.readFileSync(plistPath, "utf8");
@@ -535,9 +589,9 @@ async function bumpIOSVersion(
     return {
         platform: "iOS",
         success: true,
-        oldVersion: `${oldBuildNumber} (${oldVersion})`,
-        newVersion: `${newBuildNumber} (${newVersion})`,
-        message: `Build Number: ${oldBuildNumber} → ${newBuildNumber} \nVersion: ${oldVersion} → ${newVersion}`,
+        oldVersion: `${oldVersion} (${oldBuildNumber})`,
+        newVersion: `${newVersion} (${newBuildNumber})`,
+        message: `Build Number: ${oldBuildNumber} → ${newBuildNumber}\nVersion: ${oldVersion} → ${newVersion}`,
     };
 }
 
@@ -574,10 +628,50 @@ async function findInfoPlistPath(iosPath: string): Promise<string | null> {
     );
 }
 
-// Helper function to get the latest git tag version
+function replacePlaceholders(
+    template: string,
+    values: Record<string, string>
+): string {
+    return template.replace(
+        /{([a-zA-Z]+)}/g,
+        (match, key) => values[key] || ""
+    );
+}
+
+function getPlaceholderValues(
+    type: BumpType,
+    results: BumpResult[],
+    mainVersion: string | undefined,
+    versionMap: { [platform: string]: string },
+    buildNumberMap: { [platform: string]: string }
+): Record<string, string> {
+    const platforms = results
+        .filter(
+            (r) =>
+                r.success &&
+                r.newVersion &&
+                (r.platform === "Android" || r.platform === "iOS")
+        )
+        .map(
+            (r) =>
+                `${r.platform.toLowerCase()} to v${versionMap[r.platform]} (${buildNumberMap[r.platform]})`
+        )
+        .join(" and ");
+    const date = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    return {
+        type,
+        platforms,
+        version: mainVersion || "manual",
+        date,
+        androidVersion: versionMap["Android"] || "unknown",
+        iosVersion: versionMap["iOS"] || "unknown",
+        androidBuildNumber: buildNumberMap["Android"] || "N/A",
+        iosBuildNumber: buildNumberMap["iOS"] || "N/A",
+    };
+}
+
 async function getLatestGitTagVersion(rootPath: string): Promise<string> {
     try {
-        // First, try to get the latest tag using git describe
         try {
             const { stdout } = await execAsync(
                 "git describe --tags --abbrev=0",
@@ -586,20 +680,17 @@ async function getLatestGitTagVersion(rootPath: string): Promise<string> {
             const latestTag = stdout.trim();
 
             if (latestTag) {
-                // Extract version number from tag (handles v1.2.3 or 1.2.3 format)
                 const versionMatch = latestTag.match(/v?(\d+\.\d+\.\d+)/);
                 if (versionMatch) {
-                    console.log(
-                        `Found latest tag: ${latestTag}, extracted version: ${versionMatch[1]}`
-                    );
                     return versionMatch[1];
                 }
             }
         } catch (describeError) {
-            console.log("git describe failed, trying git tag list approach");
+            console.log(
+                "getLatestGitTagVersion: git describe failed, trying git tag list approach"
+            );
         }
 
-        // Fallback: Get all tags and sort them
         const { stdout } = await execAsync("git tag -l", { cwd: rootPath });
         const tags = stdout
             .trim()
@@ -607,11 +698,9 @@ async function getLatestGitTagVersion(rootPath: string): Promise<string> {
             .filter((tag) => tag.trim());
 
         if (tags.length === 0) {
-            console.log("No tags found, using 0.0.0");
             return "0.0.0";
         }
 
-        // Filter and sort tags that match semantic versioning
         const versionTags = tags
             .map((tag) => {
                 const match = tag.match(/v?(\d+\.\d+\.\d+)/);
@@ -628,30 +717,24 @@ async function getLatestGitTagVersion(rootPath: string): Promise<string> {
                 if (!a || !b) {
                     return 0;
                 }
-                // Sort by major, minor, patch
                 for (let i = 0; i < 3; i++) {
                     if (a?.parts[i] !== b?.parts[i]) {
-                        return b?.parts[i] - a?.parts[i]; // Descending order
+                        return b?.parts[i] - a?.parts[i];
                     }
                 }
                 return 0;
             });
 
         if (versionTags.length > 0) {
-            console.log(
-                `Found ${versionTags.length} version tags, latest: ${versionTags[0]?.tag} (${versionTags[0]?.version})`
-            );
             return versionTags[0]!.version;
         }
 
-        console.log("No valid version tags found, using 0.0.0");
         return "0.0.0";
     } catch (error) {
-        console.log("Git tag command failed, falling back to package.json");
-        // If git tag command fails, fallback to package.json
         try {
             const versions = await getCurrentVersions();
-            return versions.packageJson || "0.0.0";
+            const fallbackVersion = versions.packageJson || "0.0.0";
+            return fallbackVersion;
         } catch {
             return "0.0.0";
         }
@@ -666,52 +749,71 @@ async function handleGitOperations(
     const config = vscode.workspace.getConfiguration(
         "reactNativeVersionBumper"
     );
-    const gitConfig: GitConfig = {
-        autoCommit: config.get("autoCommit", false),
-        commitMessage: config.get(
-            "commitMessage",
-            "chore: bump version to {version}"
-        ),
-        createTags: config.get("createTags", false),
-        pushToRemote: config.get("pushToRemote", false),
-    };
 
     try {
+        const skipAndroid = config.get("skipAndroid", false);
+        const skipIOS = config.get("skipIOS", false);
+        const skipPackageJson = config.get("skipPackageJson", false);
+
         const versionMap: { [platform: string]: string } = {};
+        const buildNumberMap: { [platform: string]: string } = {};
+
         const versionSources = results
-            .filter((r) => r.success && r.newVersion)
+            .filter(
+                (r) =>
+                    r.success &&
+                    r.newVersion &&
+                    ((r.platform === "Android" && !skipAndroid) ||
+                        (r.platform === "iOS" && !skipIOS) ||
+                        (r.platform === "Package.json" && !skipPackageJson))
+            )
             .map((r) => ({ platform: r.platform, newVersion: r.newVersion }));
 
         versionSources.forEach((source) => {
-            let platformKey = source.platform;
-            if (source.platform.startsWith("Android")) {
-                platformKey = "Android";
-            } else if (source.platform.startsWith("iOS")) {
-                platformKey = "iOS";
+            const platformKey = source.platform;
+            let semanticVersion = "0.0.0";
+            let buildNumber = "N/A";
+
+            const versionMatch = source.newVersion.match(
+                /^v?([\d.]+)(?:\s*\((\d+)\))?/
+            );
+            if (versionMatch) {
+                semanticVersion = versionMatch[1];
+                buildNumber = versionMatch[2] || "N/A";
+            } else {
+                const result = results.find(
+                    (r) => r.platform === source.platform
+                );
+                if (result && result.oldVersion) {
+                    const oldVersionMatch = result.oldVersion.match(
+                        /^v?([\d.]+)(?:\s*\((\d+)\))?/
+                    );
+                    if (oldVersionMatch) {
+                        semanticVersion = oldVersionMatch[1];
+                        buildNumber =
+                            source.newVersion.match(/(\d+)/)?.[1] || "N/A";
+                    }
+                } else {
+                    buildNumber =
+                        source.newVersion.match(/(\d+)/)?.[1] || "N/A";
+                }
             }
-            const versionMatch = source.newVersion.match(/\(([^)]+)\)/);
-            const semanticVersion = versionMatch
-                ? versionMatch[1]
-                : source.newVersion.split(" ")[0];
+
             versionMap[platformKey] = semanticVersion;
+            buildNumberMap[platformKey] = buildNumber;
         });
 
-        let defaultBranchName = "version-bump/";
-        if (versionMap["Android"] && versionMap["iOS"]) {
-            defaultBranchName +=
-                versionMap["Android"] === versionMap["iOS"]
-                    ? `v${versionMap["Android"]}`
-                    : `android-v${versionMap["Android"]}-ios-v${versionMap["iOS"]}`;
-        } else if (versionMap["Android"]) {
-            defaultBranchName += `android-v${versionMap["Android"]}`;
-        } else if (versionMap["iOS"]) {
-            defaultBranchName += `ios-v${versionMap["iOS"]}`;
-        } else {
-            defaultBranchName += "manual";
-        }
+        const mainVersion = await getLatestGitTagVersion(rootPath);
 
-        // STEP 1: Ask about committing changes first
-        let shouldCommit = gitConfig.autoCommit;
+        const placeholderValues = getPlaceholderValues(
+            type,
+            results,
+            mainVersion,
+            versionMap,
+            buildNumberMap
+        );
+
+        let shouldCommit = config.get("git.autoCommit", false);
         if (!shouldCommit) {
             const response = await vscode.window.showQuickPick(
                 [
@@ -727,34 +829,81 @@ async function handleGitOperations(
             return;
         }
 
-        // STEP 2: Ask if user wants to create a new branch
-        const createBranchResponse = await vscode.window.showQuickPick(
-            [
-                { label: "Yes", value: true },
-                { label: "No", value: false },
-            ],
-            { placeHolder: "Create a new branch for these changes?" }
-        );
-
-        const shouldCreateBranch = createBranchResponse?.value ?? false;
+        let shouldCreateBranch = config.get("git.autoCreateBranch", false);
         let branchName: string | undefined;
+        if (!config.get("git.skipBranch") && !shouldCreateBranch) {
+            const createBranchResponse = await vscode.window.showQuickPick(
+                [
+                    { label: "Yes", value: true },
+                    { label: "No", value: false },
+                ],
+                { placeHolder: "Create a new branch for these changes?" }
+            );
+            shouldCreateBranch = createBranchResponse?.value ?? false;
+        }
 
         if (shouldCreateBranch) {
-            // STEP 3: Ask for branch name
-            branchName = await vscode.window.showInputBox({
-                placeHolder: "Enter branch name",
-                prompt: "Provide a name for the new branch",
-                value: defaultBranchName,
-            });
+            let defaultBranchName = "version-bump/";
+            if (
+                !skipAndroid &&
+                !skipIOS &&
+                versionMap["Android"] &&
+                versionMap["iOS"]
+            ) {
+                defaultBranchName += `android-v${versionMap["Android"]}-ios-v${versionMap["iOS"]}`;
+            } else if (!skipAndroid && versionMap["Android"]) {
+                defaultBranchName += `android-v${versionMap["Android"]}`;
+            } else if (!skipIOS && versionMap["iOS"]) {
+                defaultBranchName += `ios-v${versionMap["iOS"]}`;
+            } else if (!skipPackageJson && versionMap["Package.json"]) {
+                defaultBranchName += `v${versionMap["Package.json"]}`;
+            } else {
+                defaultBranchName += `v${mainVersion}`;
+            }
+
+            const branchNameTemplate = config.get("git.branchNameTemplate", "");
+            let customBranchName = defaultBranchName;
+            if (branchNameTemplate) {
+                customBranchName = replacePlaceholders(
+                    branchNameTemplate,
+                    placeholderValues
+                );
+                const isValidBranchName =
+                    customBranchName !== branchNameTemplate &&
+                    customBranchName !== "version-bump/" &&
+                    customBranchName !== "" &&
+                    !customBranchName.includes("unknown") &&
+                    (!versionMap["Android"] ||
+                        skipAndroid ||
+                        customBranchName.includes(versionMap["Android"])) &&
+                    (!versionMap["iOS"] ||
+                        skipIOS ||
+                        customBranchName.includes(versionMap["iOS"])) &&
+                    (!versionMap["Package.json"] ||
+                        skipPackageJson ||
+                        customBranchName.includes(versionMap["Package.json"]));
+                if (!isValidBranchName) {
+                    customBranchName = defaultBranchName;
+                }
+            }
+
+            if (config.get("git.autoCreateBranch")) {
+                branchName = customBranchName;
+            } else {
+                branchName = await vscode.window.showInputBox({
+                    placeHolder: "Enter branch name",
+                    prompt: "Provide a name for the new branch",
+                    value: customBranchName,
+                });
+            }
 
             if (!branchName) {
                 vscode.window.showErrorMessage("Branch name is required");
                 return;
             }
 
-            // STEP 4: Create the branch
             try {
-                await execAsync(`git checkout -b ${branchName}`, {
+                await execAsync(`git checkout -b "${branchName}"`, {
                     cwd: rootPath,
                 });
             } catch (error) {
@@ -767,29 +916,46 @@ async function handleGitOperations(
             }
         }
 
-        // STEP 5: Add changes and ask for commit message
         await execAsync("git add .", { cwd: rootPath });
-
-        let commitMessage;
-        if (versionMap["Android"] && versionMap["iOS"]) {
-            commitMessage =
-                versionMap["Android"] === versionMap["iOS"]
-                    ? `chore: bump app version to v${versionMap["Android"]}`
-                    : `chore: bump app version to v${versionMap["Android"]} for android and v${versionMap["iOS"]} for ios`;
-        } else if (versionMap["Android"]) {
-            commitMessage = `chore: bump app version to v${versionMap["Android"]} for android`;
-        } else if (versionMap["iOS"]) {
-            commitMessage = `chore: bump app version to v${versionMap["iOS"]} for ios`;
-        } else {
-            commitMessage = "chore: bump version (manual commit)";
+        let commitMessage: string;
+        const platforms: string[] = [];
+        if (!skipAndroid && versionMap["Android"]) {
+            platforms.push(
+                `android to v${versionMap["Android"]} (${buildNumberMap["Android"]})`
+            );
         }
+        if (!skipIOS && versionMap["iOS"]) {
+            platforms.push(
+                `ios to v${versionMap["iOS"]} (${buildNumberMap["iOS"]})`
+            );
+        }
+        if (!skipPackageJson && versionMap["Package.json"]) {
+            platforms.push(`package.json to v${versionMap["Package.json"]}`);
+        }
+        commitMessage =
+            platforms.length > 0
+                ? `chore: bump ${platforms.join(" and ")}`
+                : `chore: bump version to v${mainVersion}`;
 
-        // Allow user to customize commit message
-        const customCommitMessage = await vscode.window.showInputBox({
-            placeHolder: "Enter commit message",
-            prompt: "Customize the commit message or press Enter to use the default",
-            value: commitMessage,
-        });
+        const commitMessageTemplate = config.get(
+            "git.commitMessageTemplate",
+            commitMessage
+        );
+        const defaultCommitMessage = replacePlaceholders(
+            commitMessageTemplate,
+            placeholderValues
+        );
+        let customCommitMessage: string | undefined;
+
+        if (config.get("git.autoCommit")) {
+            customCommitMessage = defaultCommitMessage;
+        } else {
+            customCommitMessage = await vscode.window.showInputBox({
+                placeHolder: "Enter commit message",
+                prompt: "Customize the commit message or press Enter to use the default",
+                value: defaultCommitMessage,
+            });
+        }
 
         if (!customCommitMessage) {
             vscode.window.showErrorMessage("Commit message is required");
@@ -800,11 +966,11 @@ async function handleGitOperations(
             cwd: rootPath,
         });
 
-        // STEP 6: Ask about creating tags
-        let shouldTag = gitConfig.createTags;
-        let tagVersion: string | undefined;
+        let shouldTag = config.get("git.autoCreateTag", false);
+        let tagSuccess = false,
+            tagName = "";
 
-        if (!shouldTag) {
+        if (!config.get("git.skipTag") && !shouldTag) {
             const response = await vscode.window.showQuickPick(
                 [
                     { label: "Yes", value: true },
@@ -815,85 +981,113 @@ async function handleGitOperations(
             shouldTag = response?.value ?? false;
         }
 
-        let tagSuccess = false,
-            tagName = "";
         if (shouldTag) {
-            // Get the latest git tag version instead of package.json version
-            const latestTagVersion = await getLatestGitTagVersion(rootPath);
-            const [major, minor, patch] = latestTagVersion
-                .split(".")
-                .map(Number);
+            const currentTagVersion = await getLatestGitTagVersion(rootPath);
 
-            const tagOptions = [
-                {
-                    label: `🔧 Patch (v${major}.${minor}.${patch + 1})`,
-                    value: `${major}.${minor}.${patch + 1}`,
-                },
-                {
-                    label: `⬆️ Minor (v${major}.${minor + 1}.0)`,
-                    value: `${major}.${minor + 1}.0`,
-                },
-                {
-                    label: `🚀 Major (v${major + 1}.0.0)`,
-                    value: `${major + 1}.0.0`,
-                },
-                { label: "Custom version", value: "custom" },
-            ];
+            const bumpPatchTag = (version: string) =>
+                bumpSemanticVersion(version, "patch");
+            const bumpMinorTag = (version: string) =>
+                bumpSemanticVersion(version, "minor");
+            const bumpMajorTag = (version: string) =>
+                bumpSemanticVersion(version, "major");
 
-            const selectedVersion = await vscode.window.showQuickPick(
-                tagOptions,
-                {
-                    placeHolder: `Select version to bump from current: v${latestTagVersion}`,
-                }
+            const tagBumpType = await vscode.window.showQuickPick(
+                [
+                    {
+                        label: `🔧 Patch (v${bumpPatchTag(currentTagVersion)})`,
+                        value: "patch",
+                    },
+                    {
+                        label: `⬆️ Minor (v${bumpMinorTag(currentTagVersion)})`,
+                        value: "minor",
+                    },
+                    {
+                        label: `🚀 Major (v${bumpMajorTag(currentTagVersion)})`,
+                        value: "major",
+                    },
+                    {
+                        label: "✏️ Custom Version",
+                        value: "custom",
+                    },
+                ],
+                { placeHolder: "Select tag version bump type" }
             );
-            tagVersion =
-                selectedVersion?.value === "custom"
-                    ? await vscode.window.showInputBox({
-                          placeHolder: "Enter version for tag (e.g., 3.2.1)",
-                          prompt: "Provide a custom version for the Git tag",
-                          validateInput: (value) =>
-                              value.match(/^\d+\.\d+\.\d+$/)
-                                  ? null
-                                  : "Invalid version",
-                      })
-                    : selectedVersion?.value;
 
-            if (tagVersion) {
-                tagName = `v${tagVersion}`;
-                try {
-                    await execAsync(`git tag ${tagName}`, { cwd: rootPath });
-                    tagSuccess = true;
-                } catch (tagError: unknown) {
-                    if (
-                        tagError instanceof Error &&
-                        tagError.message.includes("already exists")
-                    ) {
-                        const overwrite = await vscode.window.showQuickPick(
-                            [
-                                { label: "Yes", value: true },
-                                { label: "No", value: false },
-                            ],
-                            {
-                                placeHolder: `Tag ${tagName} already exists. Overwrite?`,
-                            }
-                        );
-                        if (overwrite?.value) {
-                            await execAsync(`git tag -d ${tagName}`, {
-                                cwd: rootPath,
-                            });
-                            await execAsync(`git tag ${tagName}`, {
-                                cwd: rootPath,
-                            });
-                            tagSuccess = true;
+            if (!tagBumpType) {
+                return;
+            }
+
+            let newTagVersion: string;
+            if (tagBumpType.value === "custom") {
+                const customVersion = await vscode.window.showInputBox({
+                    placeHolder: "Enter custom version (e.g., 1.2.3)",
+                    prompt: "Enter the custom version for the tag",
+                    value: currentTagVersion,
+                    validateInput: (value) => {
+                        if (!value) {
+                            return "Version is required";
                         }
+                        if (!/^\d+\.\d+\.\d+$/.test(value)) {
+                            return "Version must be in format x.y.z (e.g., 1.2.3)";
+                        }
+                        return null;
+                    },
+                });
+
+                if (!customVersion) {
+                    return;
+                }
+                newTagVersion = customVersion;
+            } else {
+                newTagVersion = bumpSemanticVersion(
+                    currentTagVersion,
+                    tagBumpType.value as BumpType
+                );
+            }
+
+            const tagNameTemplate = config.get(
+                "git.tagNameTemplate",
+                "v{version}"
+            );
+            tagName = replacePlaceholders(tagNameTemplate, {
+                ...placeholderValues,
+                version: newTagVersion,
+            });
+
+            try {
+                await execAsync(`git tag ${tagName}`, { cwd: rootPath });
+                tagSuccess = true;
+            } catch (tagError: unknown) {
+                if (
+                    tagError instanceof Error &&
+                    tagError.message.includes("already exists")
+                ) {
+                    const overwrite = await vscode.window.showQuickPick(
+                        [
+                            { label: "Yes", value: true },
+                            { label: "No", value: false },
+                        ],
+                        {
+                            placeHolder: `Tag ${tagName} already exists. Overwrite?`,
+                        }
+                    );
+                    if (overwrite?.value) {
+                        await execAsync(`git tag -d ${tagName}`, {
+                            cwd: rootPath,
+                        });
+                        await execAsync(`git tag ${tagName}`, {
+                            cwd: rootPath,
+                        });
+                        tagSuccess = true;
                     }
+                } else {
+                    throw tagError;
                 }
             }
         }
 
-        // STEP 7: Ask about pushing to remote
-        let shouldPush = gitConfig.pushToRemote;
-        if (!shouldPush) {
+        let shouldPush = !config.get("git.skipPush");
+        if (shouldPush) {
             const pushResponse = await vscode.window.showQuickPick(
                 [
                     { label: "Yes", value: true },
@@ -907,14 +1101,11 @@ async function handleGitOperations(
         if (shouldPush) {
             try {
                 if (shouldCreateBranch && branchName) {
-                    await execAsync(`git push origin ${branchName}`, {
+                    await execAsync(`git push origin "${branchName}"`, {
                         cwd: rootPath,
                     });
                 } else {
-                    // Push to current branch if no new branch was created
-                    await execAsync(`git push`, {
-                        cwd: rootPath,
-                    });
+                    await execAsync(`git push`, { cwd: rootPath });
                 }
                 if (shouldTag && tagSuccess) {
                     await execAsync(`git push origin ${tagName}`, {
@@ -1147,7 +1338,6 @@ function generateVersionsHTML(
             </div>
     `;
 
-    // Package.json section
     html += `
         <div class="version-section">
             <div class="version-title"><span class="emoji">📦</span>Package.json</div>
@@ -1157,7 +1347,6 @@ function generateVersionsHTML(
         </div>
     `;
 
-    // Android section
     if (versions.android) {
         html += `
             <div class="version-section">
@@ -1179,7 +1368,6 @@ function generateVersionsHTML(
         `;
     }
 
-    // iOS section
     if (versions.ios) {
         html += `
             <div class="version-section">
@@ -1331,7 +1519,7 @@ function generateResultsHTML(type: BumpType, results: BumpResult[]): string {
                     border-radius: 4px;
                     margin-top: 8px;
                     font-size: 14px;
-                    white-space: pre-wrap; /* Preserve newlines and spaces */
+                    white-space: pre-wrap;
                 }
                 .result-error-message {
                     color: var(--vscode-errorForeground);
@@ -1365,7 +1553,7 @@ function generateResultsHTML(type: BumpType, results: BumpResult[]): string {
         const iconMap: { [key in PlatformKey]: string } = {
             "Package.json": "📦",
             Android: "🤖",
-            iOS: "🍎", // Unified iOS icon
+            iOS: "🍎",
             Git: "🔄",
         };
 
