@@ -80,28 +80,33 @@ async function bumpAppVersion(withGit: boolean) {
     const bumpMajorVersion = (version: string) =>
         bumpSemanticVersion(version, "major");
 
-    const platforms: string[] = [];
-    if (!config.get("skipAndroid")) {
-        platforms.push(`Android: v${androidVersion}`);
-    }
-    if (!config.get("skipIOS")) {
-        platforms.push(`iOS: v${iosVersion}`);
-    }
-    const platformLabel =
-        platforms.length > 0 ? platforms.join(", ") : "No platforms";
+    const getPlatformLabel = (bumpType: BumpType) => {
+        const platforms: string[] = [];
+        if (!config.get("skipAndroid") && versions.android) {
+            platforms.push(
+                `Android: v${bumpSemanticVersion(androidVersion, bumpType)}`
+            );
+        }
+        if (!config.get("skipIOS") && versions.ios) {
+            platforms.push(
+                `iOS: v${bumpSemanticVersion(iosVersion, bumpType)}`
+            );
+        }
+        return platforms.length > 0 ? platforms.join(", ") : "No platforms";
+    };
 
     const bumpType = await vscode.window.showQuickPick(
         [
             {
-                label: `🔧 Patch (${platformLabel})`,
+                label: `🔧 Patch (${getPlatformLabel("patch")})`,
                 value: "patch",
             },
             {
-                label: `⬆️ Minor (${platformLabel})`,
+                label: `⬆️ Minor (${getPlatformLabel("minor")})`,
                 value: "minor",
             },
             {
-                label: `🚀 Major (${platformLabel})`,
+                label: `🚀 Major (${getPlatformLabel("major")})`,
                 value: "major",
             },
         ],
@@ -453,7 +458,9 @@ async function bumpIOSVersion(
     }
 
     let plistPath: string | null | undefined = config.get("ios.infoPlistPath");
-    if (!plistPath) {
+    if (plistPath) {
+        plistPath = path.join(rootPath, plistPath);
+    } else {
         plistPath = await findInfoPlistPath(iosPath);
     }
     if (!plistPath || !fs.existsSync(plistPath)) {
@@ -462,30 +469,38 @@ async function bumpIOSVersion(
         );
     }
 
-    const plistUsesVariables = await checkIfPlistUsesVariables(iosPath);
+    const plistContent = fs.readFileSync(plistPath, "utf8");
+    const plistLines = plistContent.split("\n");
+
+    const plistUsesVariables = /\$\([^)]+\)/.test(plistContent);
+
     let oldBuildNumber = "",
         oldVersion = "",
         newBuildNumber = "",
         newVersion = "";
 
-    const plistContent = fs.readFileSync(plistPath, "utf8");
-    const plistLines = plistContent.split("\n");
-
     if (plistUsesVariables) {
-        const iosContents = fs.readdirSync(iosPath);
-        const xcodeprojDir = iosContents.find((item) =>
-            item.endsWith(".xcodeproj")
+        let pbxprojPath: string | null | undefined = config.get(
+            "ios.projectPbxprojPath"
         );
-        if (!xcodeprojDir) {
-            throw new Error("Xcode project file not found");
+        if (pbxprojPath) {
+            pbxprojPath = path.join(rootPath, pbxprojPath);
+        } else {
+            const iosContents = fs.readdirSync(iosPath);
+            const xcodeprojDir = iosContents.find((item) =>
+                item.endsWith(".xcodeproj")
+            );
+            if (!xcodeprojDir) {
+                throw new Error("Xcode project file not found");
+            }
+
+            pbxprojPath = path.join(iosPath, xcodeprojDir, "project.pbxproj");
         }
 
-        const pbxprojPath = path.join(iosPath, xcodeprojDir, "project.pbxproj");
         if (!fs.existsSync(pbxprojPath)) {
             throw new Error("project.pbxproj not found");
         }
 
-        // Extract variable names from Info.plist
         let versionVarName = "";
         let buildVarName = "";
         for (let i = 0; i < plistLines.length; i++) {
@@ -507,50 +522,223 @@ async function bumpIOSVersion(
         }
 
         if (!versionVarName || !buildVarName) {
-            throw new Error("Could not extract variable names from Info.plist");
+            let bundleVersionLineIndex = -1,
+                bundleShortVersionLineIndex = -1;
+
+            for (let i = 0; i < plistLines.length; i++) {
+                const line = plistLines[i].trim();
+                if (line.includes("<key>CFBundleVersion</key>")) {
+                    if (i + 1 < plistLines.length) {
+                        const match = plistLines[i + 1]
+                            .trim()
+                            .match(/<string>([^<]+)<\/string>/);
+                        if (match) {
+                            oldBuildNumber = match[1];
+                            bundleVersionLineIndex = i + 1;
+                        }
+                    }
+                }
+                if (line.includes("<key>CFBundleShortVersionString</key>")) {
+                    if (i + 1 < plistLines.length) {
+                        const match = plistLines[i + 1]
+                            .trim()
+                            .match(/<string>([^<]+)<\/string>/);
+                        if (match) {
+                            oldVersion = match[1];
+                            bundleShortVersionLineIndex = i + 1;
+                        }
+                    }
+                }
+            }
+
+            if (
+                bundleVersionLineIndex === -1 ||
+                bundleShortVersionLineIndex === -1
+            ) {
+                throw new Error(
+                    "Could not find CFBundleVersion or CFBundleShortVersionString in Info.plist"
+                );
+            }
+
+            newBuildNumber = (parseInt(oldBuildNumber) + 1).toString();
+            newVersion = bumpSemanticVersion(oldVersion, type);
+
+            plistLines[bundleVersionLineIndex] = plistLines[
+                bundleVersionLineIndex
+            ].replace(
+                /<string>[^<]+<\/string>/,
+                `<string>${newBuildNumber}</string>`
+            );
+            plistLines[bundleShortVersionLineIndex] = plistLines[
+                bundleShortVersionLineIndex
+            ].replace(
+                /<string>[^<]+<\/string>/,
+                `<string>${newVersion}</string>`
+            );
+            fs.writeFileSync(plistPath, plistLines.join("\n"), "utf8");
+
+            return {
+                platform: "iOS",
+                success: true,
+                oldVersion: `${oldVersion} (${oldBuildNumber})`,
+                newVersion: `${newVersion} (${newBuildNumber})`,
+                message: `Build Number: ${oldBuildNumber} → ${newBuildNumber}\nVersion: ${oldVersion} → ${newVersion}`,
+            };
         }
 
-        // Read and update project.pbxproj
-        const pbxContent = fs.readFileSync(pbxprojPath, "utf8");
+        let pbxContent = fs.readFileSync(pbxprojPath, "utf8");
         const pbxLines = pbxContent.split("\n");
+
+        let foundVersion = false;
+        let foundBuildNumber = false;
 
         for (let i = 0; i < pbxLines.length; i++) {
             const line = pbxLines[i].trim();
-            if (line.includes(`${versionVarName} =`)) {
-                const match = line.match(
+
+            if (line.includes(versionVarName)) {
+                let match = line.match(
                     new RegExp(`${versionVarName}\\s*=\\s*([^;]+);`)
                 );
-                if (match) {
-                    oldVersion = match[1].replace(/['"]/g, "");
-                    newVersion = bumpSemanticVersion(oldVersion, type);
-                    pbxLines[i] = pbxLines[i].replace(
-                        new RegExp(`${versionVarName}\\s*=\\s*[^;]+;`),
-                        `${versionVarName} = ${newVersion};`
+                if (!match) {
+                    match = line.match(
+                        new RegExp(`${versionVarName}\\s*=\\s*"([^"]+)"`)
                     );
                 }
+                if (!match) {
+                    match = line.match(
+                        new RegExp(`${versionVarName}\\s*=\\s*'([^']+)'`)
+                    );
+                }
+
+                if (match) {
+                    oldVersion = match[1].replace(/['"]*/g, "");
+                    newVersion = bumpSemanticVersion(oldVersion, type);
+
+                    if (line.includes('"')) {
+                        pbxLines[i] = pbxLines[i].replace(
+                            new RegExp(`${versionVarName}\\s*=\\s*"[^"]+"`),
+                            `${versionVarName} = "${newVersion}"`
+                        );
+                    } else if (line.includes("'")) {
+                        pbxLines[i] = pbxLines[i].replace(
+                            new RegExp(`${versionVarName}\\s*=\\s*'[^']+\'`),
+                            `${versionVarName} = '${newVersion}'`
+                        );
+                    } else {
+                        pbxLines[i] = pbxLines[i].replace(
+                            new RegExp(`${versionVarName}\\s*=\\s*[^;]+;`),
+                            `${versionVarName} = ${newVersion};`
+                        );
+                    }
+                    foundVersion = true;
+                }
             }
-            if (line.includes(`${buildVarName} =`)) {
-                const match = line.match(
+
+            if (line.includes(buildVarName)) {
+                let match = line.match(
                     new RegExp(`${buildVarName}\\s*=\\s*(\\d+);`)
                 );
+                if (!match) {
+                    match = line.match(
+                        new RegExp(`${buildVarName}\\s*=\\s*"(\\d+)"`)
+                    );
+                }
+                if (!match) {
+                    match = line.match(
+                        new RegExp(`${buildVarName}\\s*=\\s*'(\\d+)'`)
+                    );
+                }
+
                 if (match) {
                     oldBuildNumber = match[1];
                     newBuildNumber = (parseInt(oldBuildNumber) + 1).toString();
-                    pbxLines[i] = pbxLines[i].replace(
-                        new RegExp(`${buildVarName}\\s*=\\s*\\d+;`),
-                        `${buildVarName} = ${newBuildNumber};`
-                    );
+
+                    if (line.includes('"')) {
+                        pbxLines[i] = pbxLines[i].replace(
+                            new RegExp(`${buildVarName}\\s*=\\s*"\\d+"`),
+                            `${buildVarName} = "${newBuildNumber}"`
+                        );
+                    } else if (line.includes("'")) {
+                        pbxLines[i] = pbxLines[i].replace(
+                            new RegExp(`${buildVarName}\\s*=\\s*'\\d+'`),
+                            `${buildVarName} = '${newBuildNumber}'`
+                        );
+                    } else {
+                        pbxLines[i] = pbxLines[i].replace(
+                            new RegExp(`${buildVarName}\\s*=\\s*\\d+;`),
+                            `${buildVarName} = ${newBuildNumber};`
+                        );
+                    }
+                    foundBuildNumber = true;
                 }
             }
         }
 
-        if (!oldVersion || !oldBuildNumber) {
+        if (!foundVersion || !foundBuildNumber) {
+            const versionRegex = new RegExp(
+                `${versionVarName}\\s*=\\s*([\\d\\.]+)`,
+                "g"
+            );
+            const buildRegex = new RegExp(
+                `${buildVarName}\\s*=\\s*(\\d+)`,
+                "g"
+            );
+
+            let versionMatch;
+            while (
+                !foundVersion &&
+                (versionMatch = versionRegex.exec(pbxContent))
+            ) {
+                oldVersion = versionMatch[1];
+                newVersion = bumpSemanticVersion(oldVersion, type);
+
+                pbxContent = pbxContent.replace(
+                    new RegExp(`${versionVarName}\\s*=\\s*${oldVersion}`, "g"),
+                    `${versionVarName} = ${newVersion}`
+                );
+                foundVersion = true;
+            }
+
+            let buildMatch;
+            while (
+                !foundBuildNumber &&
+                (buildMatch = buildRegex.exec(pbxContent))
+            ) {
+                oldBuildNumber = buildMatch[1];
+                newBuildNumber = (parseInt(oldBuildNumber) + 1).toString();
+
+                pbxContent = pbxContent.replace(
+                    new RegExp(
+                        `${buildVarName}\\s*=\\s*${oldBuildNumber}`,
+                        "g"
+                    ),
+                    `${buildVarName} = ${newBuildNumber}`
+                );
+                foundBuildNumber = true;
+            }
+
+            if (foundVersion || foundBuildNumber) {
+                fs.writeFileSync(pbxprojPath, pbxContent, "utf8");
+            }
+        } else {
+            fs.writeFileSync(pbxprojPath, pbxLines.join("\n"), "utf8");
+        }
+
+        if (!foundVersion && !foundBuildNumber) {
             throw new Error(
                 `Could not find ${versionVarName} or ${buildVarName} in project.pbxproj`
             );
         }
 
-        fs.writeFileSync(pbxprojPath, pbxLines.join("\n"), "utf8");
+        if (!foundVersion) {
+            oldVersion = "1.0.0";
+            newVersion = bumpSemanticVersion(oldVersion, type);
+        }
+
+        if (!foundBuildNumber) {
+            oldBuildNumber = "1";
+            newBuildNumber = "2";
+        }
     } else {
         let bundleVersionLineIndex = -1,
             bundleShortVersionLineIndex = -1;
@@ -621,7 +809,7 @@ async function checkIfPlistUsesVariables(iosPath: string): Promise<boolean> {
     }
 
     const content = fs.readFileSync(plistPath, "utf8");
-    return /\$\([^)]+\)/.test(content); // Check for any $(VARIABLE_NAME) pattern
+    return /\$\([^)]+\)/.test(content);
 }
 
 async function findInfoPlistPath(iosPath: string): Promise<string | null> {
@@ -673,7 +861,7 @@ function getPlaceholderValues(
                 `${r.platform.toLowerCase()} to v${versionMap[r.platform]} (${buildNumberMap[r.platform]})`
         )
         .join(" and ");
-    const date = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    const date = new Date().toISOString().split("T")[0];
     return {
         type,
         platforms,
@@ -766,6 +954,16 @@ async function handleGitOperations(
         "reactNativeVersionBumper"
     );
 
+    let branchCreated = false;
+    let branchName: string | undefined;
+    let commitSuccess = false;
+    let commitMessage = "";
+    let tagSuccess = false;
+    let tagName = "";
+    let pushSuccess = false;
+    let shouldTag = false;
+    let shouldPush = false;
+
     try {
         const skipAndroid = config.get("skipAndroid", false);
         const skipIOS = config.get("skipIOS", false);
@@ -846,7 +1044,6 @@ async function handleGitOperations(
         }
 
         let shouldCreateBranch = config.get("git.autoCreateBranch", false);
-        let branchName: string | undefined;
         if (!config.get("git.skipBranch") && !shouldCreateBranch) {
             const createBranchResponse = await vscode.window.showQuickPick(
                 [
@@ -922,12 +1119,20 @@ async function handleGitOperations(
                 await execAsync(`git checkout -b "${branchName}"`, {
                     cwd: rootPath,
                 });
+                branchCreated = true;
             } catch (error) {
                 const errorMessage =
                     error instanceof Error ? error.message : "Unknown error";
                 vscode.window.showErrorMessage(
                     `Failed to create branch: ${errorMessage}`
                 );
+                results.push({
+                    platform: "Git",
+                    success: false,
+                    oldVersion: "",
+                    newVersion: "",
+                    message: `Branch: ❌ Failed to create branch "${branchName}": ${errorMessage}`,
+                });
                 return;
             }
         }
@@ -978,14 +1183,26 @@ async function handleGitOperations(
             return;
         }
 
-        await execAsync(`git commit -m "${customCommitMessage}"`, {
-            cwd: rootPath,
-        });
+        try {
+            await execAsync(`git commit -m "${customCommitMessage}"`, {
+                cwd: rootPath,
+            });
+            commitSuccess = true;
+            commitMessage = customCommitMessage;
+        } catch (error) {
+            const errorMessage =
+                error instanceof Error ? error.message : "Unknown error";
+            results.push({
+                platform: "Git",
+                success: false,
+                oldVersion: "",
+                newVersion: "",
+                message: `${branchCreated ? `Branch: ✅ Created and switched to branch "${branchName}"<br>` : ""}Commit: ❌ Failed to commit changes: ${errorMessage}`,
+            });
+            return;
+        }
 
-        let shouldTag = config.get("git.autoCreateTag", false);
-        let tagSuccess = false,
-            tagName = "";
-
+        shouldTag = config.get("git.autoCreateTag", false);
         if (!config.get("git.skipTag") && !shouldTag) {
             const response = await vscode.window.showQuickPick(
                 [
@@ -1097,12 +1314,18 @@ async function handleGitOperations(
                         tagSuccess = true;
                     }
                 } else {
-                    throw tagError;
+                    results.push({
+                        platform: "Git",
+                        success: false,
+                        oldVersion: "",
+                        newVersion: "",
+                        message: `${branchCreated ? `Branch: ✅ Created and switched to branch "${branchName}"<br>` : ""}Commit: ✅ Changes committed with message: "${commitMessage}"<br>Tag: ❌ Failed to create tag: ${tagError instanceof Error ? tagError.message : "Unknown error"}`,
+                    });
                 }
             }
         }
 
-        let shouldPush = !config.get("git.skipPush");
+        shouldPush = !config.get("git.skipPush");
         if (shouldPush) {
             const pushResponse = await vscode.window.showQuickPick(
                 [
@@ -1128,24 +1351,50 @@ async function handleGitOperations(
                         cwd: rootPath,
                     });
                 }
+                pushSuccess = true;
             } catch (caughtError: unknown) {
                 const pushError =
                     caughtError instanceof Error
                         ? caughtError.message
                         : "Unknown push error";
+
+                let gitMessage = "";
+                if (branchCreated && branchName) {
+                    gitMessage += `Branch: ✅ Created and switched to branch "${branchName}"<br>`;
+                }
+                if (commitSuccess) {
+                    gitMessage += `Commit: ✅ Changes committed with message: "${commitMessage}"<br>`;
+                }
+                if (shouldTag) {
+                    gitMessage += `Tag: ${tagSuccess ? "✅" : "❌"} ${tagSuccess ? `Tagged ${tagName}` : "Failed to create tag"}<br>`;
+                }
+                gitMessage += `Push: ❌ Failed to push to remote: ${pushError}`;
+
+                results.push({
+                    platform: "Git",
+                    success: false,
+                    oldVersion: "",
+                    newVersion: "",
+                    message: gitMessage,
+                });
+
                 vscode.window.showErrorMessage(`Push failed: ${pushError}`);
+                return;
             }
         }
 
-        let gitMessage =
-            shouldCreateBranch && branchName
-                ? `Branch: ✅ Created and switched to branch "${branchName}"<br>Commit: ✅ Changes committed with message: "${customCommitMessage}"`
-                : `Commit: ✅ Changes committed with message: "${customCommitMessage}"`;
+        let gitMessage = "";
+        if (branchCreated && branchName) {
+            gitMessage += `Branch: ✅ Created and switched to branch "${branchName}"<br>`;
+        }
+        if (commitSuccess) {
+            gitMessage += `Commit: ✅ Changes committed with message: "${commitMessage}"`;
+        }
         if (shouldTag && tagName) {
-            gitMessage += `<br>Tag: ${tagSuccess ? "✅" : "❌"} Tagged ${tagName}`;
+            gitMessage += `<br>Tag: ${tagSuccess ? "✅" : "❌"} ${tagSuccess ? `Tagged ${tagName}` : "Failed to create tag"}`;
         }
         if (shouldPush) {
-            gitMessage += `<br>Push: ${shouldPush ? "✅" : "❌"} Pushed ${shouldCreateBranch ? "branch and tag" : "changes and tag"} to remote`;
+            gitMessage += `<br>Push: ${pushSuccess ? "✅" : "❌"} ${pushSuccess ? `Pushed ${shouldCreateBranch ? "branch and tag" : "changes and tag"} to remote` : "Failed to push to remote"}`;
         }
 
         results.push({
@@ -1158,15 +1407,27 @@ async function handleGitOperations(
     } catch (error: unknown) {
         const errorMessage =
             error instanceof Error ? error.message : "Unknown error";
+
+        let gitMessage = "";
+        if (branchCreated && branchName) {
+            gitMessage += `Branch: ✅ Created and switched to branch "${branchName}"<br>`;
+        }
+        if (commitSuccess) {
+            gitMessage += `Commit: ✅ Changes committed with message: "${commitMessage}"<br>`;
+        }
+        if (shouldTag) {
+            gitMessage += `Tag: ${tagSuccess ? "✅" : "❌"} ${tagSuccess ? `Tagged ${tagName}` : "Failed to create tag"}<br>`;
+        }
+        gitMessage += `Operation failed: ${errorMessage}`;
+
         results.push({
             platform: "Git",
             success: false,
             oldVersion: "",
             newVersion: "",
-            message: "Operation failed",
+            message: gitMessage,
             error: errorMessage,
         });
-        throw new Error(`Git operation failed: ${errorMessage}`);
     }
 }
 
@@ -1209,79 +1470,127 @@ async function getCurrentVersions(): Promise<ProjectVersions> {
 
         const iosPath = path.join(rootPath, "ios");
         if (fs.existsSync(iosPath)) {
-            const plistPath = await findInfoPlistPath(iosPath);
+            const config = vscode.workspace.getConfiguration(
+                "reactNativeVersionBumper"
+            );
+            const plistPath = config.get("ios.infoPlistPath")
+                ? path.join(rootPath, config.get("ios.infoPlistPath") as string)
+                : await findInfoPlistPath(iosPath);
             if (plistPath) {
-                const plistUsesVariables =
-                    await checkIfPlistUsesVariables(iosPath);
                 const plistContent = fs.readFileSync(plistPath, "utf8");
                 const plistLines = plistContent.split("\n");
+                const plistUsesVariables = /\$\([^)]+\)/.test(plistContent);
 
                 if (plistUsesVariables) {
-                    const iosContents = fs.readdirSync(iosPath);
-                    const xcodeprojDir = iosContents.find((item) =>
-                        item.endsWith(".xcodeproj")
-                    );
-                    if (xcodeprojDir) {
-                        const pbxprojPath = path.join(
-                            iosPath,
-                            xcodeprojDir,
-                            "project.pbxproj"
-                        );
-                        if (fs.existsSync(pbxprojPath)) {
-                            let versionVarName = "";
-                            let buildVarName = "";
-                            for (let i = 0; i < plistLines.length; i++) {
-                                const line = plistLines[i].trim();
-                                if (
-                                    line.includes(
-                                        "<key>CFBundleShortVersionString</key>"
-                                    )
-                                ) {
-                                    const nextLine = plistLines[i + 1].trim();
-                                    const match = nextLine.match(
-                                        /<string>\$\(([^)]+)\)<\/string>/
-                                    );
-                                    if (match) {
-                                        versionVarName = match[1];
-                                    }
-                                }
-                                if (
-                                    line.includes("<key>CFBundleVersion</key>")
-                                ) {
-                                    const nextLine = plistLines[i + 1].trim();
-                                    const match = nextLine.match(
-                                        /<string>\$\(([^)]+)\)<\/string>/
-                                    );
-                                    if (match) {
-                                        buildVarName = match[1];
-                                    }
-                                }
+                    let versionVarName = "";
+                    let buildVarName = "";
+                    for (let i = 0; i < plistLines.length; i++) {
+                        const line = plistLines[i].trim();
+                        if (
+                            line.includes(
+                                "<key>CFBundleShortVersionString</key>"
+                            )
+                        ) {
+                            const nextLine = plistLines[i + 1].trim();
+                            const match = nextLine.match(
+                                /<string>\$\(([^)]+)\)<\/string>/
+                            );
+                            if (match) {
+                                versionVarName = match[1];
                             }
+                        }
+                        if (line.includes("<key>CFBundleVersion</key>")) {
+                            const nextLine = plistLines[i + 1].trim();
+                            const match = nextLine.match(
+                                /<string>\$\(([^)]+)\)<\/string>/
+                            );
+                            if (match) {
+                                buildVarName = match[1];
+                            }
+                        }
+                    }
 
-                            const pbxContent = fs.readFileSync(
-                                pbxprojPath,
-                                "utf8"
+                    if (!versionVarName || !buildVarName) {
+                        const bundleVersionMatch = plistContent.match(
+                            /<key>CFBundleVersion<\/key>\s*<string>([^<]+)<\/string>/
+                        );
+                        const bundleShortVersionMatch = plistContent.match(
+                            /<key>CFBundleShortVersionString<\/key>\s*<string>([^<]+)<\/string>/
+                        );
+                        if (bundleVersionMatch && bundleShortVersionMatch) {
+                            versions.ios = {
+                                buildNumber: bundleVersionMatch[1],
+                                version: bundleShortVersionMatch[1],
+                            };
+                        }
+                        return versions;
+                    }
+
+                    let pbxprojPath: string | null | undefined = config.get(
+                        "ios.projectPbxprojPath"
+                    );
+                    if (pbxprojPath) {
+                        pbxprojPath = path.join(rootPath, pbxprojPath);
+                    } else {
+                        const iosContents = fs.readdirSync(iosPath);
+                        const xcodeprojDir = iosContents.find((item) =>
+                            item.endsWith(".xcodeproj")
+                        );
+                        if (xcodeprojDir) {
+                            pbxprojPath = path.join(
+                                iosPath,
+                                xcodeprojDir,
+                                "project.pbxproj"
                             );
-                            const buildNumberMatch = pbxContent.match(
-                                new RegExp(`${buildVarName}\\s*=\\s*(\\d+);`)
+                        }
+                    }
+
+                    if (pbxprojPath && fs.existsSync(pbxprojPath)) {
+                        let pbxContent = fs.readFileSync(pbxprojPath, "utf8");
+
+                        const buildNumberMatch =
+                            pbxContent.match(
+                                new RegExp(
+                                    `${buildVarName}\\s*=\\s*(["']?)(\\d+)\\1`,
+                                    "i"
+                                )
+                            ) ||
+                            pbxContent.match(
+                                new RegExp(
+                                    `${buildVarName}\\s*=\\s*(\\d+)`,
+                                    "i"
+                                )
                             );
-                            const versionMatch = pbxContent.match(
-                                new RegExp(`${versionVarName}\\s*=\\s*([^;]+);`)
+
+                        const versionMatch =
+                            pbxContent.match(
+                                new RegExp(
+                                    `${versionVarName}\\s*=\\s*(["']?)([^;"']+)\\1`,
+                                    "i"
+                                )
+                            ) ||
+                            pbxContent.match(
+                                new RegExp(
+                                    `${versionVarName}\\s*=\\s*([^;]+)`,
+                                    "i"
+                                )
                             );
-                            if (buildNumberMatch && versionMatch) {
-                                versions.ios = {
-                                    buildNumber: buildNumberMatch[1],
-                                    version: versionMatch[1].replace(
-                                        /['"]/g,
-                                        ""
-                                    ),
-                                };
-                            }
+
+                        if (buildNumberMatch && versionMatch) {
+                            versions.ios = {
+                                buildNumber:
+                                    buildNumberMatch[
+                                        buildNumberMatch.length - 1
+                                    ],
+                                version: versionMatch[
+                                    versionMatch.length - 1
+                                ].replace(/['"]*/g, ""),
+                            };
                         }
                     }
                 } else {
                     const bundleVersionMatch = plistContent.match(
-                        /<key>CFBundleVersion<\/key>\s*<string>(\d+)<\/string>/
+                        /<key>CFBundleVersion<\/key>\s*<string>([^<]+)<\/string>/
                     );
                     const bundleShortVersionMatch = plistContent.match(
                         /<key>CFBundleShortVersionString<\/key>\s*<string>([^<]+)<\/string>/
@@ -1295,7 +1604,9 @@ async function getCurrentVersions(): Promise<ProjectVersions> {
                 }
             }
         }
-    } catch (error) {}
+    } catch (error) {
+        console.error("Error in getCurrentVersions:", error);
+    }
 
     return versions;
 }

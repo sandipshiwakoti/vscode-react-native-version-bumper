@@ -90,6 +90,11 @@
                     "default": null,
                     "description": "Custom path to the iOS Info.plist file. If not set, the extension will attempt to find it."
                 },
+                "reactNativeVersionBumper.ios.projectPbxprojPath": {
+                    "type": "string",
+                    "default": null,
+                    "description": "Custom path to the iOS project.pbxproj file. If not set, the extension will attempt to find it based on the first .xcodeproj file in the ios directory."
+                },
                 "reactNativeVersionBumper.git.autoCommit": {
                     "type": "boolean",
                     "default": false,
