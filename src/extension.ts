@@ -452,11 +452,24 @@ async function bumpIOSVersion(
         throw new Error("iOS project not found");
     }
 
+    let plistPath: string | null | undefined = config.get("ios.infoPlistPath");
+    if (!plistPath) {
+        plistPath = await findInfoPlistPath(iosPath);
+    }
+    if (!plistPath || !fs.existsSync(plistPath)) {
+        throw new Error(
+            `Info.plist not found at ${plistPath || "default location"}`
+        );
+    }
+
     const plistUsesVariables = await checkIfPlistUsesVariables(iosPath);
     let oldBuildNumber = "",
         oldVersion = "",
         newBuildNumber = "",
         newVersion = "";
+
+    const plistContent = fs.readFileSync(plistPath, "utf8");
+    const plistLines = plistContent.split("\n");
 
     if (plistUsesVariables) {
         const iosContents = fs.readdirSync(iosPath);
@@ -472,77 +485,81 @@ async function bumpIOSVersion(
             throw new Error("project.pbxproj not found");
         }
 
-        const content = fs.readFileSync(pbxprojPath, "utf8");
-        const lines = content.split("\n");
-        let currentProjectVersion = 0,
-            marketingVersion = "";
+        // Extract variable names from Info.plist
+        let versionVarName = "";
+        let buildVarName = "";
+        for (let i = 0; i < plistLines.length; i++) {
+            const line = plistLines[i].trim();
+            if (line.includes("<key>CFBundleShortVersionString</key>")) {
+                const nextLine = plistLines[i + 1].trim();
+                const match = nextLine.match(/<string>\$\(([^)]+)\)<\/string>/);
+                if (match) {
+                    versionVarName = match[1];
+                }
+            }
+            if (line.includes("<key>CFBundleVersion</key>")) {
+                const nextLine = plistLines[i + 1].trim();
+                const match = nextLine.match(/<string>\$\(([^)]+)\)<\/string>/);
+                if (match) {
+                    buildVarName = match[1];
+                }
+            }
+        }
 
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
-            if (line.includes("CURRENT_PROJECT_VERSION")) {
+        if (!versionVarName || !buildVarName) {
+            throw new Error("Could not extract variable names from Info.plist");
+        }
+
+        // Read and update project.pbxproj
+        const pbxContent = fs.readFileSync(pbxprojPath, "utf8");
+        const pbxLines = pbxContent.split("\n");
+
+        for (let i = 0; i < pbxLines.length; i++) {
+            const line = pbxLines[i].trim();
+            if (line.includes(`${versionVarName} =`)) {
                 const match = line.match(
-                    /CURRENT_PROJECT_VERSION\s*=\s*(\d+);/
+                    new RegExp(`${versionVarName}\\s*=\\s*([^;]+);`)
                 );
                 if (match) {
-                    currentProjectVersion = parseInt(match[1]);
+                    oldVersion = match[1].replace(/['"]/g, "");
+                    newVersion = bumpSemanticVersion(oldVersion, type);
+                    pbxLines[i] = pbxLines[i].replace(
+                        new RegExp(`${versionVarName}\\s*=\\s*[^;]+;`),
+                        `${versionVarName} = ${newVersion};`
+                    );
                 }
             }
-            if (line.includes("MARKETING_VERSION")) {
-                const match = line.match(/MARKETING_VERSION\s*=\s*([^;]+);/);
+            if (line.includes(`${buildVarName} =`)) {
+                const match = line.match(
+                    new RegExp(`${buildVarName}\\s*=\\s*(\\d+);`)
+                );
                 if (match) {
-                    marketingVersion = match[1].replace(/['"]/g, "");
+                    oldBuildNumber = match[1];
+                    newBuildNumber = (parseInt(oldBuildNumber) + 1).toString();
+                    pbxLines[i] = pbxLines[i].replace(
+                        new RegExp(`${buildVarName}\\s*=\\s*\\d+;`),
+                        `${buildVarName} = ${newBuildNumber};`
+                    );
                 }
             }
         }
 
-        if (!currentProjectVersion || !marketingVersion) {
+        if (!oldVersion || !oldBuildNumber) {
             throw new Error(
-                "No MARKETING_VERSION or CURRENT_PROJECT_VERSION found in project.pbxproj"
+                `Could not find ${versionVarName} or ${buildVarName} in project.pbxproj`
             );
         }
 
-        oldBuildNumber = currentProjectVersion.toString();
-        oldVersion = marketingVersion;
-        newBuildNumber = (currentProjectVersion + 1).toString();
-        newVersion = bumpSemanticVersion(marketingVersion, type);
-
-        for (let i = 0; i < lines.length; i++) {
-            if (lines[i].includes("CURRENT_PROJECT_VERSION")) {
-                lines[i] = lines[i].replace(
-                    /CURRENT_PROJECT_VERSION\s*=\s*\d+;/,
-                    `CURRENT_PROJECT_VERSION = ${newBuildNumber};`
-                );
-            }
-            if (lines[i].includes("MARKETING_VERSION")) {
-                lines[i] = lines[i].replace(
-                    /MARKETING_VERSION\s*=\s*[^;]+;/,
-                    `MARKETING_VERSION = ${newVersion};`
-                );
-            }
-        }
-        fs.writeFileSync(pbxprojPath, lines.join("\n"), "utf8");
+        fs.writeFileSync(pbxprojPath, pbxLines.join("\n"), "utf8");
     } else {
-        let plistPath: string | null | undefined =
-            config.get("ios.infoPlistPath");
-        if (!plistPath) {
-            plistPath = await findInfoPlistPath(iosPath);
-        }
-        if (!plistPath || !fs.existsSync(plistPath)) {
-            throw new Error(
-                `Info.plist not found at ${plistPath || "default location"}`
-            );
-        }
-
-        const content = fs.readFileSync(plistPath, "utf8");
-        const lines = content.split("\n");
         let bundleVersionLineIndex = -1,
             bundleShortVersionLineIndex = -1;
 
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
+        for (let i = 0; i < plistLines.length; i++) {
+            const line = plistLines[i].trim();
             if (line.includes("<key>CFBundleVersion</key>")) {
-                if (i + 1 < lines.length) {
-                    const match = lines[i + 1]
+                if (i + 1 < plistLines.length) {
+                    const match = plistLines[i + 1]
                         .trim()
                         .match(/<string>(\d+)<\/string>/);
                     if (match) {
@@ -552,8 +569,8 @@ async function bumpIOSVersion(
                 }
             }
             if (line.includes("<key>CFBundleShortVersionString</key>")) {
-                if (i + 1 < lines.length) {
-                    const match = lines[i + 1]
+                if (i + 1 < plistLines.length) {
+                    const match = plistLines[i + 1]
                         .trim()
                         .match(/<string>([^<]+)<\/string>/);
                     if (match) {
@@ -576,14 +593,16 @@ async function bumpIOSVersion(
         newBuildNumber = (parseInt(oldBuildNumber) + 1).toString();
         newVersion = bumpSemanticVersion(oldVersion, type);
 
-        lines[bundleVersionLineIndex] = lines[bundleVersionLineIndex].replace(
+        plistLines[bundleVersionLineIndex] = plistLines[
+            bundleVersionLineIndex
+        ].replace(
             /<string>\d+<\/string>/,
             `<string>${newBuildNumber}</string>`
         );
-        lines[bundleShortVersionLineIndex] = lines[
+        plistLines[bundleShortVersionLineIndex] = plistLines[
             bundleShortVersionLineIndex
         ].replace(/<string>[^<]+<\/string>/, `<string>${newVersion}</string>`);
-        fs.writeFileSync(plistPath, lines.join("\n"), "utf8");
+        fs.writeFileSync(plistPath, plistLines.join("\n"), "utf8");
     }
 
     return {
@@ -602,10 +621,7 @@ async function checkIfPlistUsesVariables(iosPath: string): Promise<boolean> {
     }
 
     const content = fs.readFileSync(plistPath, "utf8");
-    return (
-        content.includes("$(MARKETING_VERSION)") ||
-        content.includes("$(CURRENT_PROJECT_VERSION)")
-    );
+    return /\$\([^)]+\)/.test(content); // Check for any $(VARIABLE_NAME) pattern
 }
 
 async function findInfoPlistPath(iosPath: string): Promise<string | null> {
@@ -1193,42 +1209,81 @@ async function getCurrentVersions(): Promise<ProjectVersions> {
 
         const iosPath = path.join(rootPath, "ios");
         if (fs.existsSync(iosPath)) {
-            const plistUsesVariables = await checkIfPlistUsesVariables(iosPath);
-            if (plistUsesVariables) {
-                const iosContents = fs.readdirSync(iosPath);
-                const xcodeprojDir = iosContents.find((item) =>
-                    item.endsWith(".xcodeproj")
-                );
-                if (xcodeprojDir) {
-                    const pbxprojPath = path.join(
-                        iosPath,
-                        xcodeprojDir,
-                        "project.pbxproj"
+            const plistPath = await findInfoPlistPath(iosPath);
+            if (plistPath) {
+                const plistUsesVariables =
+                    await checkIfPlistUsesVariables(iosPath);
+                const plistContent = fs.readFileSync(plistPath, "utf8");
+                const plistLines = plistContent.split("\n");
+
+                if (plistUsesVariables) {
+                    const iosContents = fs.readdirSync(iosPath);
+                    const xcodeprojDir = iosContents.find((item) =>
+                        item.endsWith(".xcodeproj")
                     );
-                    if (fs.existsSync(pbxprojPath)) {
-                        const content = fs.readFileSync(pbxprojPath, "utf8");
-                        const buildNumberMatch = content.match(
-                            /CURRENT_PROJECT_VERSION\s*=\s*(\d+);/
+                    if (xcodeprojDir) {
+                        const pbxprojPath = path.join(
+                            iosPath,
+                            xcodeprojDir,
+                            "project.pbxproj"
                         );
-                        const versionMatch = content.match(
-                            /MARKETING_VERSION\s*=\s*([^;]+);/
-                        );
-                        if (buildNumberMatch && versionMatch) {
-                            versions.ios = {
-                                buildNumber: buildNumberMatch[1],
-                                version: versionMatch[1].replace(/['"]/g, ""),
-                            };
+                        if (fs.existsSync(pbxprojPath)) {
+                            let versionVarName = "";
+                            let buildVarName = "";
+                            for (let i = 0; i < plistLines.length; i++) {
+                                const line = plistLines[i].trim();
+                                if (
+                                    line.includes(
+                                        "<key>CFBundleShortVersionString</key>"
+                                    )
+                                ) {
+                                    const nextLine = plistLines[i + 1].trim();
+                                    const match = nextLine.match(
+                                        /<string>\$\(([^)]+)\)<\/string>/
+                                    );
+                                    if (match) {
+                                        versionVarName = match[1];
+                                    }
+                                }
+                                if (
+                                    line.includes("<key>CFBundleVersion</key>")
+                                ) {
+                                    const nextLine = plistLines[i + 1].trim();
+                                    const match = nextLine.match(
+                                        /<string>\$\(([^)]+)\)<\/string>/
+                                    );
+                                    if (match) {
+                                        buildVarName = match[1];
+                                    }
+                                }
+                            }
+
+                            const pbxContent = fs.readFileSync(
+                                pbxprojPath,
+                                "utf8"
+                            );
+                            const buildNumberMatch = pbxContent.match(
+                                new RegExp(`${buildVarName}\\s*=\\s*(\\d+);`)
+                            );
+                            const versionMatch = pbxContent.match(
+                                new RegExp(`${versionVarName}\\s*=\\s*([^;]+);`)
+                            );
+                            if (buildNumberMatch && versionMatch) {
+                                versions.ios = {
+                                    buildNumber: buildNumberMatch[1],
+                                    version: versionMatch[1].replace(
+                                        /['"]/g,
+                                        ""
+                                    ),
+                                };
+                            }
                         }
                     }
-                }
-            } else {
-                const plistPath = await findInfoPlistPath(iosPath);
-                if (plistPath) {
-                    const content = fs.readFileSync(plistPath, "utf8");
-                    const bundleVersionMatch = content.match(
+                } else {
+                    const bundleVersionMatch = plistContent.match(
                         /<key>CFBundleVersion<\/key>\s*<string>(\d+)<\/string>/
                     );
-                    const bundleShortVersionMatch = content.match(
+                    const bundleShortVersionMatch = plistContent.match(
                         /<key>CFBundleShortVersionString<\/key>\s*<string>([^<]+)<\/string>/
                     );
                     if (bundleVersionMatch && bundleShortVersionMatch) {
