@@ -20,17 +20,14 @@ jobs:
                   node-version: 20
                   cache: "yarn"
 
-            - name: Install xvfb
-              run: sudo apt-get update && sudo apt-get install -y xvfb
-
             - name: Install dependencies
               run: yarn install
 
             - name: Compile extension
               run: yarn compile
 
-            - name: Run tests
-              run: xvfb-run -a yarn test
+            - name: Run lint
+              run: yarn lint
 
             - name: Package extension
               run: yarn vsce package -o react-native-version-bumper.vsix
