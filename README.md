@@ -186,12 +186,23 @@ We’d love your help! Here’s how to contribute:
 
 ---
 
-## 📜 License
+## 🙌 Contributing
 
-This project is licensed under the [MIT License](https://github.com/sandipshiwakoti/react-native-version-bumper/blob/main/LICENSE).
+We welcome contributions! Please see our [Contributing Guidelines](.github/CONTRIBUTING.md) for details on how to submit pull requests, report issues, and contribute to the project.
 
----
+For major changes, please open an issue first to discuss what you would like to change.
 
 ## 💬 Support
 
-Questions or ideas? Open an issue on [GitHub](https://github.com/sandipshiwakoti/react-native-version-bumper/issues).
+If you find this project helpful, please consider:
+
+- ⭐️ [Starring the repository](https://github.com/sandipshiwakoti/react-native-version-bumper/stargazers)
+- 🐛 [Reporting bugs](https://github.com/sandipshiwakoti/react-native-version-bumper/issues/new?labels=bug&template=bug_report.md)
+- 💡 [Suggesting new features](https://github.com/sandipshiwakoti/react-native-version-bumper/issues/new?labels=enhancement&template=feature_request.md)
+- 🔄 [Sharing with the React Native community](https://twitter.com/intent/tweet?text=🚀%20Discovered%20a%20great%20tool!%20React%20Native%20Package%20Checker%20helps%20verify%20New%20Architecture%20compatibility%20for%20all%20your%20packages%20in%20seconds%20⚡️%20Try%20it%20out:%20https://react-native-version-bumper.vercel.app)
+
+---
+
+## 📜 License
+
+This project is licensed under the [MIT License](https://github.com/sandipshiwakoti/react-native-version-bumper/blob/main/LICENSE).
