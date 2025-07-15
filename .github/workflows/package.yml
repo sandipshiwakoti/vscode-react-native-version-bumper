@@ -11,11 +11,17 @@ jobs:
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
 
             - name: Set up Node.js
               uses: actions/setup-node@v4
               with:
                   node-version: 20
+                  cache: "yarn"
+
+            - name: Install xvfb
+              run: sudo apt-get update && sudo apt-get install -y xvfb
 
             - name: Install dependencies
               run: yarn install
@@ -24,7 +30,7 @@ jobs:
               run: yarn compile
 
             - name: Run tests
-              run: yarn test
+              run: xvfb-run -a yarn test
 
             - name: Package extension
               run: yarn vsce package -o react-native-version-bumper.vsix
