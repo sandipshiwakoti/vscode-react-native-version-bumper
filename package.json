@@ -25,24 +25,40 @@
         "automation"
     ],
     "activationEvents": [
-        "onStartupFinished"
+        "onStartupFinished",
+        "onLanguage:json"
     ],
     "main": "./out/extension.js",
     "contributes": {
         "commands": [
             {
                 "command": "react-native-version-bumper.bumpAppVersion",
-                "title": "Bump App Version 📱",
+                "title": "Bump App Version",
                 "category": "RN Version Bumper"
             },
             {
                 "command": "react-native-version-bumper.bumpAppVersionWithGit",
-                "title": "Bump App Version with Git 🔄",
+                "title": "Bump App Version with Git",
                 "category": "RN Version Bumper"
             },
             {
                 "command": "react-native-version-bumper.showVersions",
-                "title": "Show Current Versions 👀",
+                "title": "Show Current Versions",
+                "category": "RN Version Bumper"
+            },
+            {
+                "command": "react-native-version-bumper.bumpPatch",
+                "title": "Bump Patch Version",
+                "category": "RN Version Bumper"
+            },
+            {
+                "command": "react-native-version-bumper.bumpMinor",
+                "title": "Bump Minor Version",
+                "category": "RN Version Bumper"
+            },
+            {
+                "command": "react-native-version-bumper.bumpMajor",
+                "title": "Bump Major Version",
                 "category": "RN Version Bumper"
             }
         ],

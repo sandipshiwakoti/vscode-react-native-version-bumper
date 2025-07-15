@@ -3,6 +3,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { exec } from "child_process";
 import { promisify } from "util";
+import { registerVersionCodeLensProvider } from "./codeLensProvider";
 
 const execAsync = promisify(exec);
 
@@ -53,11 +54,26 @@ export function activate(context: vscode.ExtensionContext) {
         ),
         vscode.commands.registerCommand(
             "react-native-version-bumper.showVersions",
-            () => showCurrentVersions()
+            showCurrentVersions
+        ),
+        vscode.commands.registerCommand(
+            "react-native-version-bumper.bumpPatch",
+            () => bumpVersionByType("patch")
+        ),
+        vscode.commands.registerCommand(
+            "react-native-version-bumper.bumpMinor",
+            () => bumpVersionByType("minor")
+        ),
+        vscode.commands.registerCommand(
+            "react-native-version-bumper.bumpMajor",
+            () => bumpVersionByType("major")
         ),
     ];
 
     context.subscriptions.push(statusBarItem, ...commands);
+
+    // Register the CodeLens provider
+    registerVersionCodeLensProvider(context);
 
     vscode.workspace.onDidChangeWorkspaceFolders(() => updateStatusBar());
 }
@@ -2135,7 +2151,143 @@ function generateResultsHTML(
     return html;
 }
 
-function bumpSemanticVersion(version: string, type: BumpType): string {
+async function bumpAndroidVersionOnly(type: BumpType): Promise<void> {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders) {
+        vscode.window.showErrorMessage("No workspace folder found");
+        return;
+    }
+
+    const rootPath = workspaceFolders[0].uri.fsPath;
+
+    return vscode.window.withProgress(
+        {
+            location: vscode.ProgressLocation.Notification,
+            title: `Bumping Android ${type} version...`,
+            cancellable: false,
+        },
+        async (progress) => {
+            progress.report({ increment: 0 });
+            try {
+                const result = await bumpAndroidVersion(rootPath, type);
+                progress.report({ increment: 100 });
+
+                if (result.success) {
+                    vscode.window.showInformationMessage(
+                        `Android version bumped successfully: ${result.message}`
+                    );
+                } else {
+                    vscode.window.showErrorMessage(
+                        `Failed to bump Android version: ${result.error || "Unknown error"}`
+                    );
+                }
+
+                updateStatusBar();
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : "Unknown error";
+                vscode.window.showErrorMessage(`Failed to bump Android version: ${errorMessage}`);
+            }
+        }
+    );
+}
+
+async function bumpVersionByType(type: BumpType): Promise<void> {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+        vscode.window.showInformationMessage(
+            "Please open a file to bump its version"
+        );
+        return;
+    }
+
+    const filePath = editor.document.fileName;
+    const rootPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || path.dirname(filePath);
+
+    // Get configuration
+    const config = vscode.workspace.getConfiguration("reactNativeVersionBumper");
+    const customBuildGradlePath = config.get("android.buildGradlePath", path.join("android", "app", "build.gradle"));
+    const customInfoPlistPath = config.get("ios.infoPlistPath") as string;
+
+    // Normalize paths for comparison
+    const normalizedFilePath = path.normalize(filePath);
+    const normalizedBuildGradlePath = path.normalize(path.join(rootPath, customBuildGradlePath));
+    const normalizedInfoPlistPath = customInfoPlistPath ?
+        path.normalize(path.join(rootPath, customInfoPlistPath)) : null;
+
+    await vscode.window.withProgress(
+        {
+            location: vscode.ProgressLocation.Notification,
+            title: "Bumping version...",
+            cancellable: false,
+        },
+        async (progress) => {
+            try {
+                let result: BumpResult | undefined;
+
+                // Determine file type and call appropriate function
+                if (filePath.endsWith('package.json')) {
+                    result = await bumpPackageJsonVersion(rootPath, type);
+                } else if (filePath.endsWith('build.gradle')) {
+                    // Check if custom path is configured and if current file matches it
+                    if (normalizedFilePath !== normalizedBuildGradlePath && normalizedBuildGradlePath) {
+                        const answer = await vscode.window.showWarningMessage(
+                            `You are editing a build.gradle file that doesn't match your configured path (${customBuildGradlePath}). Do you want to update the configured file instead?`,
+                            'Yes', 'No', 'Update Configuration'
+                        );
+
+                        if (answer === 'No') {
+                            return;
+                        } else if (answer === 'Update Configuration') {
+                            await config.update('android.buildGradlePath', path.relative(rootPath, filePath), vscode.ConfigurationTarget.Workspace);
+                            vscode.window.showInformationMessage(`Configuration updated to use: ${path.relative(rootPath, filePath)}`);
+                        }
+                    }
+                    result = await bumpAndroidVersion(rootPath, type);
+                } else if (filePath.endsWith('Info.plist') || filePath.includes('.xcodeproj')) {
+                    // Check if custom path is configured and if current file matches it
+                    if (normalizedInfoPlistPath && normalizedFilePath !== normalizedInfoPlistPath && filePath.endsWith('Info.plist')) {
+                        const answer = await vscode.window.showWarningMessage(
+                            `You are editing an Info.plist file that doesn't match your configured path (${customInfoPlistPath}). Do you want to update the configured file instead?`,
+                            'Yes', 'No', 'Update Configuration'
+                        );
+
+                        if (answer === 'No') {
+                            return;
+                        } else if (answer === 'Update Configuration') {
+                            await config.update('ios.infoPlistPath', path.relative(rootPath, filePath), vscode.ConfigurationTarget.Workspace);
+                            vscode.window.showInformationMessage(`Configuration updated to use: ${path.relative(rootPath, filePath)}`);
+                        }
+                    }
+                    result = await bumpIOSVersion(rootPath, type);
+                } else {
+                    vscode.window.showInformationMessage(
+                        "Please open a version file (package.json, build.gradle, or iOS Info.plist) to bump its version"
+                    );
+                    return;
+                }
+
+                progress.report({ increment: 100 });
+
+                if (result && result.success) {
+                    vscode.window.showInformationMessage(
+                        `${result.platform} version bumped successfully: ${result.message}`
+                    );
+                } else {
+                    vscode.window.showErrorMessage(
+                        `Failed to bump version: ${result?.error || "Unknown error"}`
+                    );
+                }
+
+                updateStatusBar();
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : "Unknown error";
+                vscode.window.showErrorMessage(`Failed to bump version: ${errorMessage}`);
+            }
+        }
+    );
+}
+
+export function bumpSemanticVersion(version: string, type: BumpType): string {
     const versionParts = version.split(".").map((part) => parseInt(part) || 0);
     while (versionParts.length < 3) {
         versionParts.push(0);
