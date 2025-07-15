@@ -1,7 +1,8 @@
 {
     "name": "react-native-version-bumper",
     "displayName": "React Native Version Bumper",
-    "description": "Bump React Native app versions for Android, iOS, and package.json with semantic versioning and Git integration",
+    "description": "Simplify version management for React Native projects with with semantic versioning, CodeLens and Git integration",
+    "icon": "assets/logo.png",
     "version": "0.0.1",
     "publisher": "sandipshiwakoti",
     "repository": {

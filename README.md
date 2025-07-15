@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.svg" alt="React Native Version Bumper Logo" width="150" height="150">
+  <img src="assets/logo.png" alt="React Native Version Bumper Logo" width="150" height="150">
 </p>
 
 <h1 align="center">React Native Version Bumper</h1>
@@ -188,7 +188,7 @@ We’d love your help! Here’s how to contribute:
 
 ## 📜 License
 
-MIT License. See [LICENSE](LICENSE) for details.
+This project is licensed under the [MIT License](https://github.com/sandipshiwakoti/react-native-version-bumper/blob/main/LICENSE).
 
 ---
 
