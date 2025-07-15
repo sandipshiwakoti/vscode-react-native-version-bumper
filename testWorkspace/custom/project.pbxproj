@@ -1,0 +1,13 @@
+// !$*UTF8*$!
+{
+    objects = {
+        1DEB928E1A68010B00C97117 /* Debug */ = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                APP_VERSION_CODE = 1;
+                APP_VERSION_NAME = 1.0.0;
+            };
+            name = Debug;
+        };
+    };
+}
