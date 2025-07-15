@@ -24,8 +24,9 @@
 
 ## ✨ Features
 
-- 📦 **Version Bumping**: Increment `package.json`, Android (`build.gradle`), and iOS (`Info.plist` or `project.pbxproj`) versions (major, minor, patch).
-- 🔄 **Git Integration**: Commit, branch, tag, and push changes with a dedicated command and customizable templates.
+- 📦 **Version Bumping**: Increment versions in `package.json`, Android (`build.gradle`), and iOS (`Info.plist` or `project.pbxproj`) using commands or CodeLens (major, minor, patch).
+- 🔍 **CodeLens**: Click CodeLens links (e.g., "Bump Patch: 1.0.0 → 1.0.1") to increment version code and name for Android/iOS or version for `package.json`, with an optional toggle to show/hide CodeLens.
+- 🔄 **Git Integration**: Commit, branch, tag, and push changes with customizable templates.
 - 📊 **Status Bar Display**: Show the current `package.json` version in the VS Code status bar (toggleable).
 - 👀 **Version Overview**: View all platform versions in an interactive webview.
 - 🛠️ **Flexible Configuration**: Customize file paths, skip platforms, and tweak Git behaviors via settings.
@@ -55,13 +56,14 @@ Open a React Native project in VS Code.
 
 Access commands via the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P` on macOS):
 
-- **RN Version Bumper: Bump App Version 📱**Bumps versions for selected platforms without Git operations.
-
+- **RN Version Bumper: Bump App Version 📱**  
+  Bumps versions for selected platforms without Git operations.
   - Choose bump type (Major, Minor, Patch) for Android/iOS.
   - Optionally include `package.json` with its own bump type.
+  - Updates version code (Android/iOS) and version name (all platforms).
   - View results in a webview (success/failure details).
-- **RN Version Bumper: Bump App Version with Git 🔄**Bumps versions and performs Git operations.
-
+- **RN Version Bumper: Bump App Version with Git 🔄**  
+  Bumps versions and performs Git operations.
   - Same version bump process as above.
   - Additional steps:
     - Create a branch (optional, customizable name).
@@ -69,12 +71,18 @@ Access commands via the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P` on macO
     - Create a tag (optional, customizable format).
     - Push to remote (optional).
   - Webview results include links to:
-    - **Create a GitHub Release**: For the new tag.
-    - **Create a Pull Request**: For the new branch.
-- **RN Version Bumper: Show Current Versions 👀**
+    - **Create a Release**: For the new tag (e.g., on GitHub or GitLab).
+    - **Create a Merge Request**: For the new branch (e.g., on GitHub or GitLab).
+- **RN Version Bumper: Show Current Versions 👀**  
   Displays current versions for all platforms in a webview.
 
-### 3. Status Bar
+### 3. CodeLens Version Bumping
+
+When CodeLens is enabled (default), editing `package.json`, `build.gradle`, or `Info.plist` shows CodeLens links above version fields:
+- **Bump Patch/Minor/Major Version**: Shows the current and next version (e.g., "Bump Patch: 1.0.0 → 1.0.1"). Clicking increments the version code (Android/iOS), version name (all platforms), or version (`package.json`).
+- **Toggle CodeLens**: Use the editor title bar button (circle with upward arrow for enabled, slashed for disabled) to show/hide CodeLens for a cleaner editor view.
+
+### 4. Status Bar
 
 Click the status bar item to quickly see the current `package.json` version or trigger the "Show Current Versions" command.
 
@@ -101,6 +109,7 @@ Adjust settings in `settings.json` to fit your workflow:
 | `reactNativeVersionBumper.git.autoCreateTag`         | Auto-create tag                                   | `false`                        |
 | `reactNativeVersionBumper.git.tagNameTemplate`       | Tag name template                                 | `"v{version}"`                 |
 | `reactNativeVersionBumper.git.skipPush`              | Skip pushing to remote                            | `false`                        |
+| `reactNativeVersionBumper.enableCodeLens`            | Enable or disable CodeLens for version bumping    | `true`                         |
 
 ### Template Placeholders
 
@@ -118,7 +127,8 @@ Adjust settings in `settings.json` to fit your workflow:
   "reactNativeVersionBumper.git.autoCommit": true,
   "reactNativeVersionBumper.git.commitMessageTemplate": "chore: bump {platforms} on {date}",
   "reactNativeVersionBumper.git.autoCreateTag": true,
-  "reactNativeVersionBumper.git.tagNameTemplate": "release-v{version}"
+  "reactNativeVersionBumper.git.tagNameTemplate": "release-v{version}",
+  "reactNativeVersionBumper.enableCodeLens": true
 }
 ```
 
@@ -126,17 +136,20 @@ Adjust settings in `settings.json` to fit your workflow:
 
 ## ❓ FAQ
 
-**Q: Why not use a CLI tool instead?**
-A: This extension keeps you in VS Code, offering an integrated experience with interactive prompts, visual feedback, and Git support—no terminal required!
+**Q: Why not use a CLI tool instead?**  
+A: This extension keeps you in VS Code, offering an integrated experience with interactive prompts, visual feedback, Git support, and CodeLens for version bumping—no terminal required!
 
-**Q: How do I create a GitHub release or pull request?**A: Use the "Bump App Version with Git 🔄" command. After a successful bump, the webview shows buttons to:
+**Q: How do I create a release or merge request?**  
+A: Use the "Bump App Version with Git 🔄" command. After a successful bump, the webview shows buttons to:
+- Create a release for the new tag (e.g., on GitHub or GitLab).
+- Create a merge request for the new branch (e.g., on GitHub or GitLab).
+  These open in your browser for the configured Git remote.
 
-- Create a release for the new tag.
-- Create a pull request for the new branch.
-  These open directly in your browser on GitHub.
+**Q: How do I toggle CodeLens?**  
+A: Click the editor title bar button when editing `package.json`, `build.gradle`, or `Info.plist`. The button shows a circle with an upward arrow (enabled) or a slashed version (disabled), toggling CodeLens instantly.
 
-**Q: What if my project structure is different?**
-A: Customize the file paths in the settings (e.g., `android.buildGradlePath`, `ios.infoPlistPath`) to match your project.
+**Q: What if my project structure is different?**  
+A: Customize file paths in the settings (e.g., `android.buildGradlePath`, `ios.infoPlistPath`, `ios.projectPbxprojPath`). The extension auto-detects `Info.plist` and `project.pbxproj` for iOS using variables (e.g., `ios.infoPlistPath` or `ios.projectPbxprojPath`) if not specified, ensuring compatibility with non-standard React Native project structures.
 
 ---
 
