@@ -3,7 +3,10 @@ import * as fs from "fs";
 import * as path from "path";
 import { exec } from "child_process";
 import { promisify } from "util";
-import { registerVersionCodeLensProvider } from "./codeLensProvider";
+import {
+    registerVersionCodeLensProvider,
+    VersionCodeLensProvider,
+} from "./codeLensProvider";
 
 const execAsync = promisify(exec);
 
@@ -25,14 +28,9 @@ interface ProjectVersions {
     ios?: { buildNumber: string; version: string };
 }
 
-interface GitConfig {
-    autoCommit: boolean;
-    commitMessage: string;
-    createTags: boolean;
-    pushToRemote: boolean;
-}
-
 let statusBarItem: vscode.StatusBarItem;
+let codeLensProvider: VersionCodeLensProvider;
+let codeLensDisposable: vscode.Disposable;
 
 export function activate(context: vscode.ExtensionContext) {
     statusBarItem = vscode.window.createStatusBarItem(
@@ -42,6 +40,16 @@ export function activate(context: vscode.ExtensionContext) {
     statusBarItem.command = "react-native-version-bumper.showVersions";
     updateStatusBar();
     statusBarItem.show();
+
+    // Create and store the CodeLens provider instance
+    codeLensProvider = new VersionCodeLensProvider();
+    context.subscriptions.push(codeLensProvider);
+
+    // Register the CodeLens provider and store the disposable
+    codeLensDisposable = registerVersionCodeLensProvider(
+        context,
+        codeLensProvider
+    );
 
     const commands = [
         vscode.commands.registerCommand(
@@ -68,12 +76,71 @@ export function activate(context: vscode.ExtensionContext) {
             "react-native-version-bumper.bumpMajor",
             () => bumpVersionByType("major")
         ),
+        vscode.commands.registerCommand(
+            "react-native-version-bumper.showCodeLens",
+            async () => {
+                await vscode.workspace
+                    .getConfiguration("reactNativeVersionBumper")
+                    .update(
+                        "enableCodeLens",
+                        true,
+                        vscode.ConfigurationTarget.Workspace
+                    );
+                vscode.window.showInformationMessage(
+                    "Code Lens is now enabled"
+                );
+                codeLensDisposable.dispose();
+                codeLensDisposable = registerVersionCodeLensProvider(
+                    context,
+                    codeLensProvider
+                );
+                context.subscriptions.push(codeLensDisposable);
+                codeLensProvider.refresh();
+            }
+        ),
+        vscode.commands.registerCommand(
+            "react-native-version-bumper.hideCodeLens",
+            async () => {
+                await vscode.workspace
+                    .getConfiguration("reactNativeVersionBumper")
+                    .update(
+                        "enableCodeLens",
+                        false,
+                        vscode.ConfigurationTarget.Workspace
+                    );
+                vscode.window.showInformationMessage(
+                    "Code Lens is now disabled"
+                );
+                codeLensDisposable.dispose();
+                codeLensDisposable = registerVersionCodeLensProvider(
+                    context,
+                    codeLensProvider
+                );
+                context.subscriptions.push(codeLensDisposable);
+                codeLensProvider.refresh();
+            }
+        ),
     ];
 
     context.subscriptions.push(statusBarItem, ...commands);
 
-    // Register the CodeLens provider
-    registerVersionCodeLensProvider(context);
+    context.subscriptions.push(
+        vscode.workspace.onDidChangeConfiguration((e) => {
+            if (
+                e.affectsConfiguration(
+                    "reactNativeVersionBumper.enableCodeLens"
+                )
+            ) {
+                codeLensDisposable.dispose();
+                codeLensDisposable = registerVersionCodeLensProvider(
+                    context,
+                    codeLensProvider
+                );
+                context.subscriptions.push(codeLensDisposable);
+                codeLensProvider.refresh();
+            }
+        })
+    );
 
     vscode.workspace.onDidChangeWorkspaceFolders(() => updateStatusBar());
 }
@@ -841,7 +908,7 @@ async function findInfoPlistPath(iosPath: string): Promise<string | null> {
         projectDirs.forEach((dir) =>
             possiblePlistPaths.push(path.join(iosPath, dir, "Info.plist"))
         );
-    } catch (error) { }
+    } catch (error) {}
 
     return (
         possiblePlistPaths.find((checkPath) => fs.existsSync(checkPath)) || null
@@ -926,10 +993,10 @@ async function getLatestGitTagVersion(rootPath: string): Promise<string> {
                 const match = tag.match(/v?(\d+\.\d+\.\d+)/);
                 return match
                     ? {
-                        tag,
-                        version: match[1],
-                        parts: match[1].split(".").map(Number),
-                    }
+                          tag,
+                          version: match[1],
+                          parts: match[1].split(".").map(Number),
+                      }
                     : null;
             })
             .filter(Boolean)
@@ -1596,7 +1663,7 @@ async function getCurrentVersions(): Promise<ProjectVersions> {
                             versions.ios = {
                                 buildNumber:
                                     buildNumberMatch[
-                                    buildNumberMatch.length - 1
+                                        buildNumberMatch.length - 1
                                     ],
                                 version: versionMatch[
                                     versionMatch.length - 1
@@ -2083,12 +2150,13 @@ function generateResultsHTML(
                     <span class="result-platform">${result.platform}</span>
                     <span class="result-icon" style="margin-left: auto;">${statusIcon}</span>
                 </div>
-                ${result.message
-                ? `<div class="result-message">${result.message}</div>`
-                : result.error
-                    ? `<div class="result-error-message">❌ ${result.error}</div>`
-                    : ""
-            }
+                ${
+                    result.message
+                        ? `<div class="result-message">${result.message}</div>`
+                        : result.error
+                          ? `<div class="result-error-message">❌ ${result.error}</div>`
+                          : ""
+                }
             </div>
         `;
     });
@@ -2184,8 +2252,11 @@ async function bumpAndroidVersionOnly(type: BumpType): Promise<void> {
 
                 updateStatusBar();
             } catch (error) {
-                const errorMessage = error instanceof Error ? error.message : "Unknown error";
-                vscode.window.showErrorMessage(`Failed to bump Android version: ${errorMessage}`);
+                const errorMessage =
+                    error instanceof Error ? error.message : "Unknown error";
+                vscode.window.showErrorMessage(
+                    `Failed to bump Android version: ${errorMessage}`
+                );
             }
         }
     );
@@ -2201,18 +2272,28 @@ async function bumpVersionByType(type: BumpType): Promise<void> {
     }
 
     const filePath = editor.document.fileName;
-    const rootPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || path.dirname(filePath);
+    const rootPath =
+        vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ||
+        path.dirname(filePath);
 
     // Get configuration
-    const config = vscode.workspace.getConfiguration("reactNativeVersionBumper");
-    const customBuildGradlePath = config.get("android.buildGradlePath", path.join("android", "app", "build.gradle"));
+    const config = vscode.workspace.getConfiguration(
+        "reactNativeVersionBumper"
+    );
+    const customBuildGradlePath = config.get(
+        "android.buildGradlePath",
+        path.join("android", "app", "build.gradle")
+    );
     const customInfoPlistPath = config.get("ios.infoPlistPath") as string;
 
     // Normalize paths for comparison
     const normalizedFilePath = path.normalize(filePath);
-    const normalizedBuildGradlePath = path.normalize(path.join(rootPath, customBuildGradlePath));
-    const normalizedInfoPlistPath = customInfoPlistPath ?
-        path.normalize(path.join(rootPath, customInfoPlistPath)) : null;
+    const normalizedBuildGradlePath = path.normalize(
+        path.join(rootPath, customBuildGradlePath)
+    );
+    const normalizedInfoPlistPath = customInfoPlistPath
+        ? path.normalize(path.join(rootPath, customInfoPlistPath))
+        : null;
 
     await vscode.window.withProgress(
         {
@@ -2225,37 +2306,63 @@ async function bumpVersionByType(type: BumpType): Promise<void> {
                 let result: BumpResult | undefined;
 
                 // Determine file type and call appropriate function
-                if (filePath.endsWith('package.json')) {
+                if (filePath.endsWith("package.json")) {
                     result = await bumpPackageJsonVersion(rootPath, type);
-                } else if (filePath.endsWith('build.gradle')) {
+                } else if (filePath.endsWith("build.gradle")) {
                     // Check if custom path is configured and if current file matches it
-                    if (normalizedFilePath !== normalizedBuildGradlePath && normalizedBuildGradlePath) {
+                    if (
+                        normalizedFilePath !== normalizedBuildGradlePath &&
+                        normalizedBuildGradlePath
+                    ) {
                         const answer = await vscode.window.showWarningMessage(
                             `You are editing a build.gradle file that doesn't match your configured path (${customBuildGradlePath}). Do you want to update the configured file instead?`,
-                            'Yes', 'No', 'Update Configuration'
+                            "Yes",
+                            "No",
+                            "Update Configuration"
                         );
 
-                        if (answer === 'No') {
+                        if (answer === "No") {
                             return;
-                        } else if (answer === 'Update Configuration') {
-                            await config.update('android.buildGradlePath', path.relative(rootPath, filePath), vscode.ConfigurationTarget.Workspace);
-                            vscode.window.showInformationMessage(`Configuration updated to use: ${path.relative(rootPath, filePath)}`);
+                        } else if (answer === "Update Configuration") {
+                            await config.update(
+                                "android.buildGradlePath",
+                                path.relative(rootPath, filePath),
+                                vscode.ConfigurationTarget.Workspace
+                            );
+                            vscode.window.showInformationMessage(
+                                `Configuration updated to use: ${path.relative(rootPath, filePath)}`
+                            );
                         }
                     }
                     result = await bumpAndroidVersion(rootPath, type);
-                } else if (filePath.endsWith('Info.plist') || filePath.includes('.xcodeproj')) {
+                } else if (
+                    filePath.endsWith("Info.plist") ||
+                    filePath.includes(".xcodeproj")
+                ) {
                     // Check if custom path is configured and if current file matches it
-                    if (normalizedInfoPlistPath && normalizedFilePath !== normalizedInfoPlistPath && filePath.endsWith('Info.plist')) {
+                    if (
+                        normalizedInfoPlistPath &&
+                        normalizedFilePath !== normalizedInfoPlistPath &&
+                        filePath.endsWith("Info.plist")
+                    ) {
                         const answer = await vscode.window.showWarningMessage(
                             `You are editing an Info.plist file that doesn't match your configured path (${customInfoPlistPath}). Do you want to update the configured file instead?`,
-                            'Yes', 'No', 'Update Configuration'
+                            "Yes",
+                            "No",
+                            "Update Configuration"
                         );
 
-                        if (answer === 'No') {
+                        if (answer === "No") {
                             return;
-                        } else if (answer === 'Update Configuration') {
-                            await config.update('ios.infoPlistPath', path.relative(rootPath, filePath), vscode.ConfigurationTarget.Workspace);
-                            vscode.window.showInformationMessage(`Configuration updated to use: ${path.relative(rootPath, filePath)}`);
+                        } else if (answer === "Update Configuration") {
+                            await config.update(
+                                "ios.infoPlistPath",
+                                path.relative(rootPath, filePath),
+                                vscode.ConfigurationTarget.Workspace
+                            );
+                            vscode.window.showInformationMessage(
+                                `Configuration updated to use: ${path.relative(rootPath, filePath)}`
+                            );
                         }
                     }
                     result = await bumpIOSVersion(rootPath, type);
@@ -2280,8 +2387,11 @@ async function bumpVersionByType(type: BumpType): Promise<void> {
 
                 updateStatusBar();
             } catch (error) {
-                const errorMessage = error instanceof Error ? error.message : "Unknown error";
-                vscode.window.showErrorMessage(`Failed to bump version: ${errorMessage}`);
+                const errorMessage =
+                    error instanceof Error ? error.message : "Unknown error";
+                vscode.window.showErrorMessage(
+                    `Failed to bump version: ${errorMessage}`
+                );
             }
         }
     );
@@ -2313,5 +2423,12 @@ export function bumpSemanticVersion(version: string, type: BumpType): string {
 export function deactivate() {
     if (statusBarItem) {
         statusBarItem.dispose();
+    }
+
+    if (codeLensProvider) {
+        codeLensProvider.dispose();
+    }
+    if (codeLensDisposable) {
+        codeLensDisposable.dispose();
     }
 }

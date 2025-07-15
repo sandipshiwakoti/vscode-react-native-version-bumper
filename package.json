@@ -60,6 +60,22 @@
                 "command": "react-native-version-bumper.bumpMajor",
                 "title": "Bump Major Version",
                 "category": "RN Version Bumper"
+            },
+            {
+                "command": "react-native-version-bumper.showCodeLens",
+                "title": "Enable Bumper Lens",
+                "icon": {
+                    "light": "assets/light/codelens-enabled.svg",
+                    "dark": "assets/dark/codelens-enabled.svg"
+                }
+            },
+            {
+                "command": "react-native-version-bumper.hideCodeLens",
+                "title": "Disable Bumper Lens",
+                "icon": {
+                    "light": "assets/light/codelens-disabled.svg",
+                    "dark": "assets/dark/codelens-disabled.svg"
+                }
             }
         ],
         "menus": {
@@ -75,6 +91,28 @@
                 {
                     "command": "react-native-version-bumper.showVersions",
                     "when": "workspaceFolderCount > 0"
+                },
+                {
+                    "command": "react-native-version-bumper.showCodeLens",
+                    "group": "navigation",
+                    "when": "editorTextFocus && (resourceFilename == 'package.json' || resourceFilename == 'build.gradle' || resourceFilename =~ /Info\\.plist$/) && !config.reactNativeVersionBumper.enableCodeLens"
+                },
+                {
+                    "command": "react-native-version-bumper.hideCodeLens",
+                    "group": "navigation",
+                    "when": "editorTextFocus && (resourceFilename == 'package.json' || resourceFilename == 'build.gradle' || resourceFilename =~ /Info\\.plist$/) && config.reactNativeVersionBumper.enableCodeLens"
+                }
+            ],
+            "editor/title": [
+                {
+                    "command": "react-native-version-bumper.showCodeLens",
+                    "group": "navigation",
+                    "when": "editorTextFocus && (resourceFilename == 'package.json' || resourceFilename == 'build.gradle' || resourceFilename =~ /Info\\.plist$/) && !config.reactNativeVersionBumper.enableCodeLens"
+                },
+                {
+                    "command": "react-native-version-bumper.hideCodeLens",
+                    "group": "navigation",
+                    "when": "editorTextFocus && (resourceFilename == 'package.json' || resourceFilename == 'build.gradle' || resourceFilename =~ /Info\\.plist$/) && config.reactNativeVersionBumper.enableCodeLens"
                 }
             ]
         },
@@ -155,6 +193,11 @@
                     "type": "boolean",
                     "default": false,
                     "description": "Skip pushing changes to the remote repository"
+                },
+                "reactNativeVersionBumper.enableCodeLens": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enable or disable code lenses for version bumping"
                 }
             }
         }
