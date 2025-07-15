@@ -1,217 +1,184 @@
-# React Native Version Bumper
+<p align="center">
+  <img src="assets/logo.svg" alt="React Native Version Bumper Logo" width="150" height="150">
+</p>
 
-🚀 A comprehensive VS Code extension for managing React Native app versions with semantic versioning and Git integration.
+<h1 align="center">React Native Version Bumper</h1>
 
-## Features
+<p align="center">
+  <a href="https://marketplace.visualstudio.com/items?itemName=sandipshiwakoti.react-native-version-bumper">
+    <img src="https://img.shields.io/visual-studio-marketplace/v/sandipshiwakoti.react-native-version-bumper?style=flat-square" alt="Marketplace Version">
+  </a>
+  <a href="https://github.com/sandipshiwakoti/react-native-version-bumper/stargazers">
+    <img src="https://img.shields.io/github/stars/sandipshiwakoti/react-native-version-bumper?style=flat-square" alt="GitHub Stars">
+  </a>
+  <a href="https://github.com/sandipshiwakoti/react-native-version-bumper/releases">
+    <img src="https://img.shields.io/github/v/release/sandipshiwakoti/react-native-version-bumper?style=flat-square" alt="GitHub Release">
+  </a>
+</p>
 
-### 🎯 Multi-Platform Support
-- **React Native CLI** projects (Android & iOS)
-- **Package.json** version management
+<p align="center">
+  <strong>Simplify version management for React Native projects right within VS Code.</strong>
+</p>
 
-### 📱 Platform-Specific Version Handling
+---
 
-#### Android
-- Automatically increments `versionCode` by 1
-- Updates `versionName` using semantic versioning
-- Supports `build.gradle` files
+## ✨ Features
 
-#### iOS
-- Handles both `Info.plist` and `project.pbxproj` configurations
-- Auto-detects whether to use variables or hardcoded values
-- Updates `CFBundleVersion`/`CURRENT_PROJECT_VERSION` and `CFBundleShortVersionString`/`MARKETING_VERSION`
+- 📦 **Version Bumping**: Increment `package.json`, Android (`build.gradle`), and iOS (`Info.plist` or `project.pbxproj`) versions (major, minor, patch).
+- 🔄 **Git Integration**: Commit, branch, tag, and push changes with a dedicated command and customizable templates.
+- 📊 **Status Bar Display**: Show the current `package.json` version in the VS Code status bar (toggleable).
+- 👀 **Version Overview**: View all platform versions in an interactive webview.
+- 🛠️ **Flexible Configuration**: Customize file paths, skip platforms, and tweak Git behaviors via settings.
+- 🖱️ **User-Friendly**: Interactive prompts guide you through version bumps and Git operations.
 
-### 🔄 Git Integration
-- Automatic commit with customizable messages
-- Optional branch creation (e.g., `version-bump/ios-v2.2.3` for iOS-only bumps)
-- Optional Git tag creation based on latest Git tag (e.g., `v12.0.2`)
-- User-confirmed push to remote repository to prevent unintended production deployments
-- Staging of all version-related changes
+---
 
-### 📊 Version Management
-- Real-time version display in status bar (shows project name and version)
-- Comprehensive version overview panel
-- Project type auto-detection
-- Semantic versioning (major.minor.patch)
+## 🚀 Installation
 
-## Commands
+Get it from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=sandipshiwakoti.react-native-version-bumper) or install it manually:
 
-### 📱 Bump App Version
-- Interactive version bumping for native platforms and optionally package.json
-- Steps:
-  1. Choose bump type (Patch, Minor, Major) for Android and iOS
-  2. Choose whether to include package.json and its bump type
-  3. Updates all relevant version files
+```bash
+code --install-extension sandipshiwakoti.react-native-version-bumper
+```
 
-### 🔄 Bump Version and Commit
-- Extends "Bump App Version" with Git operations
-- Steps:
-  1. Choose bump type (Patch, Minor, Major) for Android and iOS
-  2. Choose whether to include package.json and its bump type
-  3. Confirm Git commit (if not auto-enabled)
-  4. Confirm branch creation (if not auto-enabled)
-  5. Optionally create Git tag (if not enabled)
-  6. Confirm push to remote repository
-- Creates descriptive commit messages, branches, and tags
+**Requirements**: A React Native project with a `package.json` file and optional `android`/`ios` folders.
 
-### 👀 Show Current Versions
-- Displays all current version information in a formatted webview panel
+---
 
-## Usage
+## 📋 Usage
 
-### Quick Start
-1. Open your React Native project in VS Code
-2. Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on Mac) to open the command palette
-3. Type "RN Version Bumper" to see available commands
-4. Select the appropriate command for your needs
+### 1. Open Your Project
 
-### Status Bar Integration
-The extension shows the project name and current package.json version in the status bar (e.g., `my-app: v12.0.2`). Click to view detailed version information for all platforms.
+Open a React Native project in VS Code.
 
-### Git Workflow
-Use the "Bump Version and Commit" command for Git operations:
-1. Select bump type and package.json inclusion
-2. Confirm branch creation (if not auto-enabled in settings)
-3. Confirm commit (if not auto-enabled in settings)
-4. Choose to create a Git tag (if not enabled in settings)
-5. Confirm pushing to remote repository to prevent unintended production deployments
-6. Changes are staged, committed, branched (if selected), tagged (if selected), and pushed (if confirmed)
+### 2. Run Commands
 
-## Configuration
+Access commands via the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P` on macOS):
 
-Access settings via `File > Preferences > Settings` and search for "React Native Version Bumper".
+- **RN Version Bumper: Bump App Version 📱**Bumps versions for selected platforms without Git operations.
 
-### Available Settings
+  - Choose bump type (Major, Minor, Patch) for Android/iOS.
+  - Optionally include `package.json` with its own bump type.
+  - View results in a webview (success/failure details).
+- **RN Version Bumper: Bump App Version with Git 🔄**Bumps versions and performs Git operations.
 
-| Setting                                              | Default                      | Description                                                                                                                                                                                                                                                                                                                                                                                                       |
-| ---------------------------------------------------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `reactNativeVersionBumper.skipPackageJson`           | `false`                      | Skip bumping the package.json version                                                                                                                                                                                                                                                                                                                                                                             |
-| `reactNativeVersionBumper.skipAndroid`               | `false`                      | Skip bumping the Android version                                                                                                                                                                                                                                                                                                                                                                                  |
-| `reactNativeVersionBumper.android.buildGradlePath`   | `"android/app/build.gradle"` | Path to Android `build.gradle` file                                                                                                                                                                                                                                                                                                                                                                               |
-| `reactNativeVersionBumper.skipIOS`                   | `false`                      | Skip bumping the iOS version                                                                                                                                                                                                                                                                                                                                                                                      |
-| `reactNativeVersionBumper.ios.infoPlistPath`         | `null`                       | Path to iOS `Info.plist` file (auto-detected if null)                                                                                                                                                                                                                                                                                                                                                             |
-| `reactNativeVersionBumper.git.autoCommit`            | `false`                      | Automatically commit changes to Git                                                                                                                                                                                                                                                                                                                                                                               |
-| `reactNativeVersionBumper.git.commitMessageTemplate` | `"chore: bump {platforms}"`  | Template for the Git commit message. Placeholders: {type}, {platforms}, {version}, {date}, {androidVersion}, {iosVersion}, {androidBuildNumber}, {iosBuildNumber}                                                                                                                                                                                                                                                 |
-| `reactNativeVersionBumper.git.skipBranch`            | `false`                      | Skip creating a new Git branch                                                                                                                                                                                                                                                                                                                                                                                    |
-| `reactNativeVersionBumper.git.autoCreateBranch`      | `false`                      | Automatically create a new Git branch                                                                                                                                                                                                                                                                                                                                                                             |
-| `reactNativeVersionBumper.git.branchNameTemplate`    | `""`                         | Template for the Git branch name. Placeholders: {type}, {version}, {date}, {androidVersion}, {iosVersion}, {androidBuildNumber}, {iosBuildNumber}. Defaults to 'version-bump/android-v{androidVersion}-ios-v{iosVersion}' for both platforms, 'version-bump/android-v{androidVersion}' for Android only, 'version-bump/ios-v{iosVersion}' for iOS only, or 'version-bump/v{version}' for package.json or Git tag. |
-| `reactNativeVersionBumper.git.skipTag`               | `false`                      | Skip creating a Git tag                                                                                                                                                                                                                                                                                                                                                                                           |
-| `reactNativeVersionBumper.git.autoCreateTag`         | `false`                      | Automatically create a Git tag                                                                                                                                                                                                                                                                                                                                                                                    |
-| `reactNativeVersionBumper.git.tagNameTemplate`       | `"v{version}"`               | Template for the Git tag name. Placeholders: {type}, {version}, {date}, {androidVersion}, {iosVersion}, {androidBuildNumber}, {iosBuildNumber}. Uses latest Git tag version by default.                                                                                                                                                                                                                           |
-| `reactNativeVersionBumper.git.skipPush`              | `false`                      | Skip pushing to remote repository                                                                                                                                                                                                                                                                                                                                                                                 |
+  - Same version bump process as above.
+  - Additional steps:
+    - Create a branch (optional, customizable name).
+    - Commit changes (customizable message).
+    - Create a tag (optional, customizable format).
+    - Push to remote (optional).
+  - Webview results include links to:
+    - **Create a GitHub Release**: For the new tag.
+    - **Create a Pull Request**: For the new branch.
+- **RN Version Bumper: Show Current Versions 👀**
+  Displays current versions for all platforms in a webview.
 
-### Example Configuration
+### 3. Status Bar
 
-For iOS-only bumps with correct branch and tag:
+Click the status bar item to quickly see the current `package.json` version or trigger the "Show Current Versions" command.
+
+---
+
+## ⚙️ Configuration
+
+Adjust settings in `settings.json` to fit your workflow:
+
+| Setting                                              | Description                                       | Default                        |
+| ---------------------------------------------------- | ------------------------------------------------- | ------------------------------ |
+| `reactNativeVersionBumper.skipPackageJson`           | Skip `package.json` version bump                  | `false`                        |
+| `reactNativeVersionBumper.skipAndroid`               | Skip Android version bump                         | `false`                        |
+| `reactNativeVersionBumper.android.buildGradlePath`   | Path to `build.gradle`                            | `"android/app/build.gradle"`   |
+| `reactNativeVersionBumper.skipIOS`                   | Skip iOS version bump                             | `false`                        |
+| `reactNativeVersionBumper.ios.infoPlistPath`         | Path to `Info.plist` (auto-detected if null)      | `null`                         |
+| `reactNativeVersionBumper.ios.projectPbxprojPath`    | Path to `project.pbxproj` (auto-detected if null) | `null`                         |
+| `reactNativeVersionBumper.git.autoCommit`            | Auto-commit changes                               | `false`                        |
+| `reactNativeVersionBumper.git.commitMessageTemplate` | Commit message template                           | `"chore: bump {platforms}"`    |
+| `reactNativeVersionBumper.git.skipBranch`            | Skip branch creation                              | `false`                        |
+| `reactNativeVersionBumper.git.autoCreateBranch`      | Auto-create branch                                | `false`                        |
+| `reactNativeVersionBumper.git.branchNameTemplate`    | Branch name template                              | `""` (uses `version-bump/...`) |
+| `reactNativeVersionBumper.git.skipTag`               | Skip tag creation                                 | `false`                        |
+| `reactNativeVersionBumper.git.autoCreateTag`         | Auto-create tag                                   | `false`                        |
+| `reactNativeVersionBumper.git.tagNameTemplate`       | Tag name template                                 | `"v{version}"`                 |
+| `reactNativeVersionBumper.git.skipPush`              | Skip pushing to remote                            | `false`                        |
+
+### Template Placeholders
+
+- `{type}`: Bump type (e.g., "patch")
+- `{platforms}`: Affected platforms (e.g., "android to v1.0.1 (2)")
+- `{version}`: Latest version (from Git tag or `package.json`)
+- `{date}`: Current date (YYYY-MM-DD)
+- `{androidVersion}`, `{iosVersion}`: Platform-specific versions
+- `{androidBuildNumber}`, `{iosBuildNumber}`: Build numbers
+
+**Example `settings.json`:**
 
 ```json
 {
-  "reactNativeVersionBumper.skipAndroid": true,
-  "reactNativeVersionBumper.skipIOS": false,
-  "reactNativeVersionBumper.skipPackageJson": false,
-  "reactNativeVersionBumper.autoCommit": true,
-  "reactNativeVersionBumper.commitMessageTemplate": "chore: bump {platforms}",
-  "reactNativeVersionBumper.autoCreateBranch": true,
-  "reactNativeVersionBumper.branchNameTemplate": "",
-  "reactNativeVersionBumper.autoCreateTag": true,
-  "reactNativeVersionBumper.tagNameTemplate": "v{version}",
-  "reactNativeVersionBumper.skipPush": false,
-  "reactNativeVersionBumper.showInStatusBar": true
+  "reactNativeVersionBumper.git.autoCommit": true,
+  "reactNativeVersionBumper.git.commitMessageTemplate": "chore: bump {platforms} on {date}",
+  "reactNativeVersionBumper.git.autoCreateTag": true,
+  "reactNativeVersionBumper.git.tagNameTemplate": "release-v{version}"
 }
 ```
 
-## Project Structure Support
+---
 
-### React Native CLI Projects
-```
-project/
-├── android/
-│   └── app/
-│       └── build.gradle
-├── ios/
-│   ├── ProjectName/
-│   │   └── Info.plist
-│   └── ProjectName.xcodeproj/
-│       └── project.pbxproj
-└── package.json
-```
+## ❓ FAQ
 
-## Version Bump Examples
+**Q: Why not use a CLI tool instead?**
+A: This extension keeps you in VS Code, offering an integrated experience with interactive prompts, visual feedback, and Git support—no terminal required!
 
-### Before
-```
-Android: versionCode 49, versionName "3.1.9"
-iOS: CFBundleVersion 51, CFBundleShortVersionString "2.2.2"
-Package.json: "version": "12.0.2"
-Latest Git tag: v12.0.2
-```
+**Q: How do I create a GitHub release or pull request?**A: Use the "Bump App Version with Git 🔄" command. After a successful bump, the webview shows buttons to:
 
-### After Patch Bump (iOS only, skipAndroid: true)
-```
-Android: versionCode 49, versionName "3.1.9" (unchanged)
-iOS: CFBundleVersion 52, CFBundleShortVersionString "2.2.3"
-Package.json: "version": "12.0.3" (if included)
-Git:
-  Branch: version-bump/ios-v2.2.3
-  Commit: chore: bump ios to v2.2.3 (52)
-  Tag: v12.0.3
-  Push: Pushed branch and tag to remote
-```
+- Create a release for the new tag.
+- Create a pull request for the new branch.
+  These open directly in your browser on GitHub.
 
-### After Patch Bump (Both Platforms)
-```
-Android: versionCode 50, versionName "3.2.0"
-iOS: CFBundleVersion 52, CFBundleShortVersionString "2.2.3"
-Package.json: "version": "12.0.3" (if included)
-Git:
-  Branch: version-bump/android-v3.2.0-ios-v2.2.3
-  Commit: chore: bump android to v3.2.0 (50) and ios to v2.2.3 (52)
-  Tag: v12.0.3
-  Push: Pushed branch and tag to remote
-```
+**Q: What if my project structure is different?**
+A: Customize the file paths in the settings (e.g., `android.buildGradlePath`, `ios.infoPlistPath`) to match your project.
 
-## Advanced Features
+---
 
-### Auto-Detection
-- Detects project type based on folder structure
-- **React Native CLI**: Has `android/` and `ios/` folders
+## 🤝 Contributing
 
-### Error Handling
-- Comprehensive error messages with solutions
-- Graceful handling of missing files
-- Partial success reporting
+We’d love your help! Here’s how to contribute:
 
-### Results Display
-- Formatted webview panel showing:
-  - ✅ Successful operations with before/after values
-  - ❌ Failed operations with error details
-  - 📊 Summary of operations completed
+1. Fork the repo: [github.com/sandipshiwakoti/react-native-version-bumper](https://github.com/sandipshiwakoti/react-native-version-bumper)
+2. Clone it:
+   ```bash
+   git clone https://github.com/<your-username>/react-native-version-bumper.git
+   ```
+3. Install dependencies:
+   ```bash
+   cd react-native-version-bumper
+   yarn install
+   ```
+4. Make changes, then test:
+   ```bash
+   yarn compile
+   yarn test
+   ```
+5. Submit a pull request!
 
-## Troubleshooting
+---
 
-### Common Issues
+## 🛠️ Development Setup
 
-**Android build.gradle not found**
-- Ensure `android/app/build.gradle` exists
-- Verify `reactNativeVersionBumper.android.buildGradlePath` is correct
+- **Tools**: Node.js, Yarn, VS Code, TypeScript.
+- **Build**: `yarn compile`
+- **Test**: `yarn test`
+- **Package**: `yarn package` (creates `.vsix`)
+- **Publish**: `yarn publish` (for maintainers)
 
-**iOS project not found**
-- Confirm `ios/` folder and `.xcodeproj` file exist
-- Check `reactNativeVersionBumper.ios.infoPlistPath` or ensure auto-detection works
+---
 
-**Package.json not bumped**
-- Ensure `reactNativeVersionBumper.skipPackageJson` is `false`
-- Confirm you select "Yes" when prompted to include package.json during the bump
-- Check the project’s `package.json` exists and is writable
+## 📜 License
 
-**Git operations failing**
-- Verify Git is installed and the project is a Git repository (`git init`)
-- Check repository permissions and remote configuration
-- Ensure `git push` is allowed for the remote repository
+MIT License. See [LICENSE](LICENSE) for details.
 
-## Contributing
+---
 
-Contributions are welcome! Submit issues, feature requests, or pull requests on [GitHub](https://github.com/sandipshiwakoti/react-native-version-bumper).
+## 💬 Support
 
-## License
-
-MIT License - see LICENSE file for details.
+Questions or ideas? Open an issue on [GitHub](https://github.com/sandipshiwakoti/react-native-version-bumper/issues).

@@ -97,7 +97,7 @@
                 },
                 "reactNativeVersionBumper.git.autoCommit": {
                     "type": "boolean",
-                    "default": false,
+                    "default": true,
                     "description": "Automatically commit changes to Git"
                 },
                 "reactNativeVersionBumper.git.commitMessageTemplate": {
