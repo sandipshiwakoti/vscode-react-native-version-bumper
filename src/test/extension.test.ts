@@ -78,11 +78,11 @@ suite("React Native Version Bumper Extension Tests", function () {
 
         // Activate the extension under test
         const extension = vscode.extensions.getExtension(
-            "sandipshiwakoti.react-native-version-bumper"
+            "sandipshiwakoti.vscode-react-native-version-bumper"
         );
         if (!extension) {
             throw new Error(
-                "Extension 'sandipshiwakoti.react-native-version-bumper' not found."
+                "Extension 'sandipshiwakoti.vscode-react-native-version-bumper' not found."
             );
         }
         await extension.activate();
@@ -166,7 +166,7 @@ suite("React Native Version Bumper Extension Tests", function () {
         try {
             // Execute the version bump command
             await vscode.commands.executeCommand(
-                "react-native-version-bumper.bumpAppVersion"
+                "vscode-react-native-version-bumper.bumpAppVersion"
             );
 
             // Wait for file system operations to complete (only needed for desktop VS Code)
@@ -240,7 +240,7 @@ suite("React Native Version Bumper Extension Tests", function () {
         try {
             // Execute the version bump command
             await vscode.commands.executeCommand(
-                "react-native-version-bumper.bumpAppVersion"
+                "vscode-react-native-version-bumper.bumpAppVersion"
             );
 
             // Wait for file system operations to complete
@@ -316,7 +316,7 @@ suite("React Native Version Bumper Extension Tests", function () {
         try {
             // Execute the version bump command
             await vscode.commands.executeCommand(
-                "react-native-version-bumper.bumpAppVersion"
+                "vscode-react-native-version-bumper.bumpAppVersion"
             );
 
             // Wait for file system operations to complete

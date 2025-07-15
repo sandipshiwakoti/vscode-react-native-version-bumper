@@ -5,14 +5,14 @@
 <h1 align="center">React Native Version Bumper</h1>
 
 <p align="center">
-  <a href="https://marketplace.visualstudio.com/items?itemName=sandipshiwakoti.react-native-version-bumper">
-    <img src="https://img.shields.io/visual-studio-marketplace/v/sandipshiwakoti.react-native-version-bumper?style=flat-square" alt="Marketplace Version">
+  <a href="https://marketplace.visualstudio.com/items?itemName=sandipshiwakoti.vscode-react-native-version-bumper">
+    <img src="https://img.shields.io/visual-studio-marketplace/v/sandipshiwakoti.vscode-react-native-version-bumper?style=flat-square" alt="Marketplace Version">
   </a>
-  <a href="https://github.com/sandipshiwakoti/react-native-version-bumper/stargazers">
-    <img src="https://img.shields.io/github/stars/sandipshiwakoti/react-native-version-bumper?style=flat-square" alt="GitHub Stars">
+  <a href="https://github.com/sandipshiwakoti/vscode-react-native-version-bumper/stargazers">
+    <img src="https://img.shields.io/github/stars/sandipshiwakoti/vscode-react-native-version-bumper?style=flat-square" alt="GitHub Stars">
   </a>
-  <a href="https://github.com/sandipshiwakoti/react-native-version-bumper/releases">
-    <img src="https://img.shields.io/github/v/release/sandipshiwakoti/react-native-version-bumper?style=flat-square" alt="GitHub Release">
+  <a href="https://github.com/sandipshiwakoti/vscode-react-native-version-bumper/releases">
+    <img src="https://img.shields.io/github/v/release/sandipshiwakoti/vscode-react-native-version-bumper?style=flat-square" alt="GitHub Release">
   </a>
 </p>
 
@@ -36,10 +36,10 @@
 
 ## 🚀 Installation
 
-Get it from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=sandipshiwakoti.react-native-version-bumper) or install it manually:
+Get it from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=sandipshiwakoti.vscode-react-native-version-bumper) or install it manually:
 
 ```bash
-code --install-extension sandipshiwakoti.react-native-version-bumper
+code --install-extension sandipshiwakoti.vscode-react-native-version-bumper
 ```
 
 **Requirements**: A React Native project with a `package.json` file and optional `android`/`ios` folders.
@@ -157,14 +157,14 @@ A: Customize file paths in the settings (e.g., `android.buildGradlePath`, `ios.i
 
 We’d love your help! Here’s how to contribute:
 
-1. Fork the repo: [github.com/sandipshiwakoti/react-native-version-bumper](https://github.com/sandipshiwakoti/react-native-version-bumper)
+1. Fork the repo: [github.com/sandipshiwakoti/vscode-react-native-version-bumper](https://github.com/sandipshiwakoti/vscode-react-native-version-bumper)
 2. Clone it:
    ```bash
-   git clone https://github.com/<your-username>/react-native-version-bumper.git
+   git clone https://github.com/<your-username>/vscode-react-native-version-bumper.git
    ```
 3. Install dependencies:
    ```bash
-   cd react-native-version-bumper
+   cd vscode-react-native-version-bumper
    yarn install
    ```
 4. Make changes, then test:
@@ -196,13 +196,13 @@ For major changes, please open an issue first to discuss what you would like to 
 
 If you find this project helpful, please consider:
 
-- ⭐️ [Starring the repository](https://github.com/sandipshiwakoti/react-native-version-bumper/stargazers)
-- 🐛 [Reporting bugs](https://github.com/sandipshiwakoti/react-native-version-bumper/issues/new?labels=bug&template=bug_report.md)
-- 💡 [Suggesting new features](https://github.com/sandipshiwakoti/react-native-version-bumper/issues/new?labels=enhancement&template=feature_request.md)
-- 🔄 [Sharing with the React Native community](https://twitter.com/intent/tweet?text=🚀%20Discovered%20a%20great%20tool!%20React%20Native%20Package%20Checker%20helps%20verify%20New%20Architecture%20compatibility%20for%20all%20your%20packages%20in%20seconds%20⚡️%20Try%20it%20out:%20https://react-native-version-bumper.vercel.app)
+- ⭐️ [Starring the repository](https://github.com/sandipshiwakoti/vscode-react-native-version-bumper/stargazers)
+- 🐛 [Reporting bugs](https://github.com/sandipshiwakoti/vscode-react-native-version-bumper/issues/new?labels=bug&template=bug_report.md)
+- 💡 [Suggesting new features](https://github.com/sandipshiwakoti/vscode-react-native-version-bumper/issues/new?labels=enhancement&template=feature_request.md)
+- 🔄 [Sharing with the React Native community](https://twitter.com/intent/tweet?text=🚀%20Discovered%20a%20great%20tool!%20React%20Native%20Package%20Checker%20helps%20verify%20New%20Architecture%20compatibility%20for%20all%20your%20packages%20in%20seconds%20⚡️%20Try%20it%20out:%20https://vscode-react-native-version-bumper.vercel.app)
 
 ---
 
 ## 📜 License
 
-This project is licensed under the [MIT License](https://github.com/sandipshiwakoti/react-native-version-bumper/blob/main/LICENSE).
+This project is licensed under the [MIT License](https://github.com/sandipshiwakoti/vscode-react-native-version-bumper/blob/main/LICENSE).

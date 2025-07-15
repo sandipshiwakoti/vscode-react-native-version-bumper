@@ -1,5 +1,5 @@
 {
-    "name": "react-native-version-bumper",
+    "name": "vscode-react-native-version-bumper",
     "displayName": "React Native Version Bumper",
     "description": "Simplify version management for React Native projects with with semantic versioning, CodeLens and Git integration",
     "icon": "assets/logo.png",
@@ -7,7 +7,7 @@
     "publisher": "sandipshiwakoti",
     "repository": {
         "type": "git",
-        "url": "https://github.com/sandipshiwakoti/react-native-version-bumper"
+        "url": "https://github.com/sandipshiwakoti/vscode-react-native-version-bumper"
     },
     "engines": {
         "vscode": "^1.101.2"
@@ -33,37 +33,37 @@
     "contributes": {
         "commands": [
             {
-                "command": "react-native-version-bumper.bumpAppVersion",
+                "command": "vscode-react-native-version-bumper.bumpAppVersion",
                 "title": "Bump App Version",
                 "category": "RN Version Bumper"
             },
             {
-                "command": "react-native-version-bumper.bumpAppVersionWithGit",
+                "command": "vscode-react-native-version-bumper.bumpAppVersionWithGit",
                 "title": "Bump App Version with Git",
                 "category": "RN Version Bumper"
             },
             {
-                "command": "react-native-version-bumper.showVersions",
+                "command": "vscode-react-native-version-bumper.showVersions",
                 "title": "Show Current Versions",
                 "category": "RN Version Bumper"
             },
             {
-                "command": "react-native-version-bumper.bumpPatch",
+                "command": "vscode-react-native-version-bumper.bumpPatch",
                 "title": "Bump Patch Version",
                 "category": "RN Version Bumper"
             },
             {
-                "command": "react-native-version-bumper.bumpMinor",
+                "command": "vscode-react-native-version-bumper.bumpMinor",
                 "title": "Bump Minor Version",
                 "category": "RN Version Bumper"
             },
             {
-                "command": "react-native-version-bumper.bumpMajor",
+                "command": "vscode-react-native-version-bumper.bumpMajor",
                 "title": "Bump Major Version",
                 "category": "RN Version Bumper"
             },
             {
-                "command": "react-native-version-bumper.showCodeLens",
+                "command": "vscode-react-native-version-bumper.showCodeLens",
                 "title": "Enable Bumper Lens",
                 "icon": {
                     "light": "assets/light/codelens-enabled.svg",
@@ -71,7 +71,7 @@
                 }
             },
             {
-                "command": "react-native-version-bumper.hideCodeLens",
+                "command": "vscode-react-native-version-bumper.hideCodeLens",
                 "title": "Disable Bumper Lens",
                 "icon": {
                     "light": "assets/light/codelens-disabled.svg",
@@ -82,36 +82,36 @@
         "menus": {
             "commandPalette": [
                 {
-                    "command": "react-native-version-bumper.bumpAppVersion",
+                    "command": "vscode-react-native-version-bumper.bumpAppVersion",
                     "when": "workspaceFolderCount > 0"
                 },
                 {
-                    "command": "react-native-version-bumper.bumpAppVersionWithGit",
+                    "command": "vscode-react-native-version-bumper.bumpAppVersionWithGit",
                     "when": "workspaceFolderCount > 0"
                 },
                 {
-                    "command": "react-native-version-bumper.showVersions",
+                    "command": "vscode-react-native-version-bumper.showVersions",
                     "when": "workspaceFolderCount > 0"
                 },
                 {
-                    "command": "react-native-version-bumper.showCodeLens",
+                    "command": "vscode-react-native-version-bumper.showCodeLens",
                     "group": "navigation",
                     "when": "editorTextFocus && (resourceFilename == 'package.json' || resourceFilename == 'build.gradle' || resourceFilename =~ /Info\\.plist$/) && !config.reactNativeVersionBumper.enableCodeLens"
                 },
                 {
-                    "command": "react-native-version-bumper.hideCodeLens",
+                    "command": "vscode-react-native-version-bumper.hideCodeLens",
                     "group": "navigation",
                     "when": "editorTextFocus && (resourceFilename == 'package.json' || resourceFilename == 'build.gradle' || resourceFilename =~ /Info\\.plist$/) && config.reactNativeVersionBumper.enableCodeLens"
                 }
             ],
             "editor/title": [
                 {
-                    "command": "react-native-version-bumper.showCodeLens",
+                    "command": "vscode-react-native-version-bumper.showCodeLens",
                     "group": "navigation",
                     "when": "editorTextFocus && (resourceFilename == 'package.json' || resourceFilename == 'build.gradle' || resourceFilename =~ /Info\\.plist$/) && !config.reactNativeVersionBumper.enableCodeLens"
                 },
                 {
-                    "command": "react-native-version-bumper.hideCodeLens",
+                    "command": "vscode-react-native-version-bumper.hideCodeLens",
                     "group": "navigation",
                     "when": "editorTextFocus && (resourceFilename == 'package.json' || resourceFilename == 'build.gradle' || resourceFilename =~ /Info\\.plist$/) && config.reactNativeVersionBumper.enableCodeLens"
                 }

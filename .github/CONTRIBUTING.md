@@ -5,7 +5,7 @@ Thank you for your interest in contributing to React Native Package Checker!
 ## Getting Started
 
 1. Fork the repository
-2. Clone your fork: `git clone https://github.com/sandipshiwakoti/react-native-version-bumper.git`
+2. Clone your fork: `git clone https://github.com/sandipshiwakoti/vscode-react-native-version-bumper.git`
 3. Install dependencies: `yarn install`
 4. Create a new branch: `git checkout -b feature/your-feature-name`
 

@@ -37,7 +37,7 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.StatusBarAlignment.Left,
         100
     );
-    statusBarItem.command = "react-native-version-bumper.showVersions";
+    statusBarItem.command = "vscode-react-native-version-bumper.showVersions";
     updateStatusBar();
     statusBarItem.show();
 
@@ -53,31 +53,31 @@ export function activate(context: vscode.ExtensionContext) {
 
     const commands = [
         vscode.commands.registerCommand(
-            "react-native-version-bumper.bumpAppVersion",
+            "vscode-react-native-version-bumper.bumpAppVersion",
             () => bumpAppVersion(false)
         ),
         vscode.commands.registerCommand(
-            "react-native-version-bumper.bumpAppVersionWithGit",
+            "vscode-react-native-version-bumper.bumpAppVersionWithGit",
             () => bumpAppVersion(true)
         ),
         vscode.commands.registerCommand(
-            "react-native-version-bumper.showVersions",
+            "vscode-react-native-version-bumper.showVersions",
             showCurrentVersions
         ),
         vscode.commands.registerCommand(
-            "react-native-version-bumper.bumpPatch",
+            "vscode-react-native-version-bumper.bumpPatch",
             () => bumpVersionByType("patch")
         ),
         vscode.commands.registerCommand(
-            "react-native-version-bumper.bumpMinor",
+            "vscode-react-native-version-bumper.bumpMinor",
             () => bumpVersionByType("minor")
         ),
         vscode.commands.registerCommand(
-            "react-native-version-bumper.bumpMajor",
+            "vscode-react-native-version-bumper.bumpMajor",
             () => bumpVersionByType("major")
         ),
         vscode.commands.registerCommand(
-            "react-native-version-bumper.showCodeLens",
+            "vscode-react-native-version-bumper.showCodeLens",
             async () => {
                 await vscode.workspace
                     .getConfiguration("reactNativeVersionBumper")
@@ -99,7 +99,7 @@ export function activate(context: vscode.ExtensionContext) {
             }
         ),
         vscode.commands.registerCommand(
-            "react-native-version-bumper.hideCodeLens",
+            "vscode-react-native-version-bumper.hideCodeLens",
             async () => {
                 await vscode.workspace
                     .getConfiguration("reactNativeVersionBumper")

@@ -30,10 +30,10 @@ jobs:
               run: yarn lint
 
             - name: Package extension
-              run: yarn vsce package -o react-native-version-bumper.vsix
+              run: yarn vsce package -o vscode-react-native-version-bumper.vsix
 
             - name: Upload VSIX artifact
               uses: actions/upload-artifact@v4
               with:
-                  name: react-native-version-bumper-vsix
-                  path: react-native-version-bumper.vsix
+                  name: vscode-react-native-version-bumper-vsix
+                  path: vscode-react-native-version-bumper.vsix

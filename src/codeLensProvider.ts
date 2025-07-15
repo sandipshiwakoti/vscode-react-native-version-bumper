@@ -208,7 +208,7 @@ export class VersionCodeLensProvider
         codeLenses.push(
             new vscode.CodeLens(range, {
                 title: `Bump Patch: ${version} → ${patchVersion}`,
-                command: "react-native-version-bumper.bumpPatch",
+                command: "vscode-react-native-version-bumper.bumpPatch",
                 tooltip: "Bump the patch version",
             })
         );
@@ -216,7 +216,7 @@ export class VersionCodeLensProvider
         codeLenses.push(
             new vscode.CodeLens(range, {
                 title: `Bump Minor: ${version} → ${minorVersion}`,
-                command: "react-native-version-bumper.bumpMinor",
+                command: "vscode-react-native-version-bumper.bumpMinor",
                 tooltip: "Bump the minor version",
             })
         );
@@ -224,7 +224,7 @@ export class VersionCodeLensProvider
         codeLenses.push(
             new vscode.CodeLens(range, {
                 title: `Bump Major: ${version} → ${majorVersion}`,
-                command: "react-native-version-bumper.bumpMajor",
+                command: "vscode-react-native-version-bumper.bumpMajor",
                 tooltip: "Bump the major version",
             })
         );
@@ -245,7 +245,7 @@ export class VersionCodeLensProvider
         codeLenses.push(
             new vscode.CodeLens(range, {
                 title: `Bump Patch: ${versionName} (${versionCode}) → ${patchVersion} (${newVersionCode})`,
-                command: "react-native-version-bumper.bumpPatch",
+                command: "vscode-react-native-version-bumper.bumpPatch",
                 tooltip: "Bump the Android patch version and version code",
             })
         );
@@ -253,7 +253,7 @@ export class VersionCodeLensProvider
         codeLenses.push(
             new vscode.CodeLens(range, {
                 title: `Bump Minor: ${versionName} (${versionCode}) → ${minorVersion} (${newVersionCode})`,
-                command: "react-native-version-bumper.bumpMinor",
+                command: "vscode-react-native-version-bumper.bumpMinor",
                 tooltip: "Bump the Android minor version and version code",
             })
         );
@@ -261,7 +261,7 @@ export class VersionCodeLensProvider
         codeLenses.push(
             new vscode.CodeLens(range, {
                 title: `Bump Major: ${versionName} (${versionCode}) → ${majorVersion} (${newVersionCode})`,
-                command: "react-native-version-bumper.bumpMajor",
+                command: "vscode-react-native-version-bumper.bumpMajor",
                 tooltip: "Bump the Android major version and version code",
             })
         );
@@ -404,7 +404,7 @@ export class VersionCodeLensProvider
         codeLenses.push(
             new vscode.CodeLens(range, {
                 title: `Bump Patch: ${version} (${buildNumber}) → ${patchVersion} (${newBuildNumber})`,
-                command: "react-native-version-bumper.bumpPatch",
+                command: "vscode-react-native-version-bumper.bumpPatch",
                 tooltip: "Bump the iOS patch version and build number",
             })
         );
@@ -412,7 +412,7 @@ export class VersionCodeLensProvider
         codeLenses.push(
             new vscode.CodeLens(range, {
                 title: `Bump Minor: ${version} (${buildNumber}) → ${minorVersion} (${newBuildNumber})`,
-                command: "react-native-version-bumper.bumpMinor",
+                command: "vscode-react-native-version-bumper.bumpMinor",
                 tooltip: "Bump the iOS minor version and build number",
             })
         );
@@ -420,7 +420,7 @@ export class VersionCodeLensProvider
         codeLenses.push(
             new vscode.CodeLens(range, {
                 title: `Bump Major: ${version} (${buildNumber}) → ${majorVersion} (${newBuildNumber})`,
-                command: "react-native-version-bumper.bumpMajor",
+                command: "vscode-react-native-version-bumper.bumpMajor",
                 tooltip: "Bump the iOS major version and build number",
             })
         );
