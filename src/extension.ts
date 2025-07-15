@@ -1772,10 +1772,11 @@ function showBumpResults(type: BumpType, results: BumpResult[]) {
     );
 
     // Extract Git operation results
-    const gitResult = results.find(r => r.platform === "Git");
+    const gitResult = results.find((r) => r.platform === "Git");
     let tagName = "";
     let branchName = "";
     let hasCommit = false;
+    let pushSuccess = false;
 
     if (gitResult && gitResult.success) {
         // Extract tag name if a tag was created
@@ -1792,9 +1793,19 @@ function showBumpResults(type: BumpType, results: BumpResult[]) {
 
         // Check if commit was created
         hasCommit = gitResult.message.includes("Commit: ✅");
+
+        // Check if push was successful
+        pushSuccess = gitResult.message.includes("Push: ✅");
     }
 
-    panel.webview.html = generateResultsHTML(type, results, tagName, branchName, hasCommit);
+    panel.webview.html = generateResultsHTML(
+        type,
+        results,
+        tagName,
+        branchName,
+        hasCommit,
+        pushSuccess
+    );
 
     // Handle messages from the webview
     panel.webview.onDidReceiveMessage(
@@ -1811,25 +1822,35 @@ function showBumpResults(type: BumpType, results: BumpResult[]) {
             let repoUrl = "";
             try {
                 // Try to get the remote URL from Git
-                const { stdout } = await execAsync("git config --get remote.origin.url", {
-                    cwd: rootPath
-                });
+                const { stdout } = await execAsync(
+                    "git config --get remote.origin.url",
+                    {
+                        cwd: rootPath,
+                    }
+                );
 
                 repoUrl = stdout.trim();
 
                 // Clean up the URL if it's a git URL
                 repoUrl = repoUrl.replace(/\.git$/, "").replace(/^git\+/, "");
                 if (repoUrl.startsWith("git@github.com:")) {
-                    repoUrl = repoUrl.replace("git@github.com:", "https://github.com/");
+                    repoUrl = repoUrl.replace(
+                        "git@github.com:",
+                        "https://github.com/"
+                    );
                 }
             } catch (error) {
                 console.error("Error getting Git remote URL:", error);
-                vscode.window.showErrorMessage("Could not determine repository URL from Git. Make sure you have a remote configured.");
+                vscode.window.showErrorMessage(
+                    "Could not determine repository URL from Git. Make sure you have a remote configured."
+                );
                 return;
             }
 
             if (!repoUrl) {
-                vscode.window.showErrorMessage("Repository URL not found. Make sure you have a Git remote configured.");
+                vscode.window.showErrorMessage(
+                    "Repository URL not found. Make sure you have a Git remote configured."
+                );
                 return;
             }
 
@@ -1856,7 +1877,14 @@ function showBumpResults(type: BumpType, results: BumpResult[]) {
     );
 }
 
-function generateResultsHTML(type: BumpType, results: BumpResult[], tagName: string = "", branchName: string = "", hasCommit: boolean = false): string {
+function generateResultsHTML(
+    type: BumpType,
+    results: BumpResult[],
+    tagName: string = "",
+    branchName: string = "",
+    hasCommit: boolean = false,
+    pushSuccess = false
+): string {
     const successCount = results.filter((r) => r.success).length;
     const totalCount = results.length;
     const hasErrors = results.some((r) => !r.success);
@@ -2061,7 +2089,7 @@ function generateResultsHTML(type: BumpType, results: BumpResult[], tagName: str
             `;
         }
 
-        if (branchName && hasCommit) {
+        if (branchName && hasCommit && pushSuccess) {
             html += `
                 <button class="action-button" id="createPRBtn">
                     <span class="emoji">🔀</span> Create PR for branch ${branchName}
