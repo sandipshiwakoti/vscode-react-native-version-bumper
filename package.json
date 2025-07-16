@@ -123,7 +123,7 @@
                 "reactNativeVersionBumper.skipPackageJson": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Skip bumping the package.json version"
+                    "description": "Skip bumping the package.json version (package.json is included by default)"
                 },
                 "reactNativeVersionBumper.skipAndroid": {
                     "type": "boolean",

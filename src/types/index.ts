@@ -1,6 +1,6 @@
 export type BumpType = 'major' | 'minor' | 'patch';
 
-export type ProjectType = 'react-native';
+export type ProjectType = 'react-native' | 'unknown';
 
 export type PlatformKey = 'Package.json' | 'Android' | 'iOS' | 'Git';
 

@@ -13,7 +13,7 @@ import {
 import { updateStatusBar } from '../extension';
 import { BumpResult, BumpType } from '../types';
 import { showBumpResults } from '../ui/resultsView';
-import { detectProjectType, findInfoPlistPath } from '../utils/fileUtils';
+import { detectProjectType, findInfoPlistPath, hasAndroidProject, hasIOSProject } from '../utils/fileUtils';
 import { bumpSemanticVersion } from '../utils/versionUtils';
 
 import { handleGitOperations } from './gitService';
@@ -70,12 +70,23 @@ export async function bumpVersion(
 
             switch (projectType) {
                 case 'react-native':
-                    if (!config.get(CONFIG_SKIP_ANDROID)) {
+                    // Only attempt Android bump if Android project exists and is not skipped
+                    if (!config.get(CONFIG_SKIP_ANDROID) && hasAndroidProject(rootPath)) {
                         tasks.push(bumpAndroidVersion(rootPath, type));
                     }
-                    if (!config.get(CONFIG_SKIP_IOS)) {
+                    // Only attempt iOS bump if iOS project exists and is not skipped
+                    if (!config.get(CONFIG_SKIP_IOS) && hasIOSProject(rootPath)) {
                         tasks.push(bumpIOSVersion(rootPath, type));
                     }
+                    break;
+                case 'unknown':
+                    results.push({
+                        platform: 'Project Detection',
+                        success: false,
+                        oldVersion: '',
+                        newVersion: '',
+                        message: 'No React Native project detected. Android or iOS folders not found.',
+                    });
                     break;
                 default:
                     results.push({

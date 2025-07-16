@@ -6,6 +6,7 @@ import { bumpAppVersion } from './commands/bumpAppVersion';
 import { bumpVersionByType } from './commands/bumpVersionByType';
 import { showCurrentVersions } from './commands/showCurrentVersions';
 import { registerVersionCodeLensProvider, VersionCodeLensProvider } from './providers/codeLensProvider';
+import { isReactNativeProject } from './utils/fileUtils';
 import { getCurrentVersions } from './utils/versionUtils';
 import { CONFIG_ENABLE_CODE_LENS, CONFIG_SHOW_IN_STATUS_BAR } from './constants';
 
@@ -88,18 +89,31 @@ export async function updateStatusBar() {
         return;
     }
 
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders) {
+        statusBarItem.hide();
+        return;
+    }
+
+    const rootPath = workspaceFolders[0].uri.fsPath;
+
+    // Only show status bar for React Native projects
+    if (!isReactNativeProject(rootPath)) {
+        statusBarItem.hide();
+        return;
+    }
+
     try {
         const versions = await getCurrentVersions();
         const packageVersion = versions.packageJson || 'N/A';
-        const workspaceFolders = vscode.workspace.workspaceFolders;
         let projectName = 'Version Bumper';
-        if (workspaceFolders) {
-            const packageJsonPath = path.join(workspaceFolders[0].uri.fsPath, 'package.json');
-            if (fs.existsSync(packageJsonPath)) {
-                const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-                projectName = packageJson.name || 'Version Bumper';
-            }
+
+        const packageJsonPath = path.join(rootPath, 'package.json');
+        if (fs.existsSync(packageJsonPath)) {
+            const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+            projectName = packageJson.name || 'Version Bumper';
         }
+
         statusBarItem.text = `📱 ${projectName}: v${packageVersion}`;
         statusBarItem.tooltip = 'Click to show all versions';
         statusBarItem.show();

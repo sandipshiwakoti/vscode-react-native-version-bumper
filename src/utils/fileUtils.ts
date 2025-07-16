@@ -8,7 +8,24 @@ export async function detectProjectType(rootPath: string): Promise<ProjectType> 
     const iosPath = path.join(rootPath, 'ios');
     const hasAndroid = fs.existsSync(androidPath);
     const hasIos = fs.existsSync(iosPath);
-    return hasAndroid && hasIos ? 'react-native' : 'react-native';
+    return hasAndroid || hasIos ? 'react-native' : 'unknown';
+}
+
+export function isReactNativeProject(rootPath: string): boolean {
+    const androidPath = path.join(rootPath, 'android');
+    const iosPath = path.join(rootPath, 'ios');
+    return fs.existsSync(androidPath) || fs.existsSync(iosPath);
+}
+
+export function hasAndroidProject(rootPath: string): boolean {
+    const androidPath = path.join(rootPath, 'android');
+    const buildGradlePath = path.join(androidPath, 'app', 'build.gradle');
+    return fs.existsSync(androidPath) && fs.existsSync(buildGradlePath);
+}
+
+export function hasIOSProject(rootPath: string): boolean {
+    const iosPath = path.join(rootPath, 'ios');
+    return fs.existsSync(iosPath);
 }
 
 export async function findInfoPlistPath(iosPath: string): Promise<string | null> {
