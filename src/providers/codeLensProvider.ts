@@ -1,7 +1,11 @@
 import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
-import { bumpSemanticVersion } from "./extension";
+import { bumpSemanticVersion } from "../utils/versionUtils";
+import {
+    CONFIG_ENABLE_CODE_LENS,
+    INITIAL_SEMANTIC_VERSION,
+} from "../constants";
 
 // CodeLens provider for package.json and build.gradle files that shows version information and provides quick actions for version bumping.
 export class VersionCodeLensProvider
@@ -41,7 +45,7 @@ export class VersionCodeLensProvider
         const config = vscode.workspace.getConfiguration(
             "reactNativeVersionBumper"
         );
-        if (!config.get("enableCodeLens", true)) {
+        if (!config.get(CONFIG_ENABLE_CODE_LENS, true)) {
             return [];
         }
 
@@ -74,7 +78,7 @@ export class VersionCodeLensProvider
 
         try {
             const packageJson = JSON.parse(text);
-            const version = packageJson.version || "0.0.0";
+            const version = packageJson.version || INITIAL_SEMANTIC_VERSION;
 
             // Find the position of the "version" field in the document
             const lines = text.split("\n");

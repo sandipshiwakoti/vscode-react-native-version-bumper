@@ -1,4 +1,11 @@
 import {
+    CONFIG_SKIP_ANDROID,
+    CONFIG_SKIP_IOS,
+    CONFIG_SKIP_PACKAGE_JSON,
+    CONFIG_ANDROID_BUILD_GRADLE_PATH,
+    CONFIG_IOS_INFO_PLIST_PATH,
+} from "../constants";
+import {
     checkFileExists,
     createQuickPickMock,
     setExtensionSettings,
@@ -117,11 +124,11 @@ suite("React Native Version Bumper Extension Tests", function () {
             "reactNativeVersionBumper"
         );
         const settingsToReset = [
-            "skipAndroid",
-            "skipIOS",
-            "skipPackageJson",
-            "android.buildGradlePath",
-            "ios.infoPlistPath",
+            CONFIG_SKIP_ANDROID,
+            CONFIG_SKIP_IOS,
+            CONFIG_SKIP_PACKAGE_JSON,
+            CONFIG_ANDROID_BUILD_GRADLE_PATH,
+            CONFIG_IOS_INFO_PLIST_PATH,
             "ios.projectPbxprojPath",
         ];
 
@@ -222,8 +229,8 @@ suite("React Native Version Bumper Extension Tests", function () {
     test("Bump custom android only", async function () {
         // Configure extension to use custom file paths and skip iOS/package.json
         await setExtensionSettings("reactNativeVersionBumper", {
-            "android.buildGradlePath": "custom/build.gradle",
-            "ios.infoPlistPath": "custom/Info.plist",
+            CONFIG_ANDROID_BUILD_GRADLE_PATH: "custom/build.gradle",
+            CONFIG_IOS_INFO_PLIST_PATH: "custom/Info.plist",
             "ios.projectPbxprojPath": "custom/project.pbxproj",
             skipAndroid: false,
             skipIOS: true,
@@ -298,8 +305,8 @@ suite("React Native Version Bumper Extension Tests", function () {
     test("Bump custom iOS only", async function () {
         // Configure extension to use custom file paths and skip Android/package.json
         await setExtensionSettings("reactNativeVersionBumper", {
-            "android.buildGradlePath": "custom/build.gradle",
-            "ios.infoPlistPath": "custom/Info.plist",
+            CONFIG_ANDROID_BUILD_GRADLE_PATH: "custom/build.gradle",
+            CONFIG_IOS_INFO_PLIST_PATH: "custom/Info.plist",
             "ios.projectPbxprojPath": "custom/project.pbxproj",
             skipAndroid: true,
             skipIOS: false,
