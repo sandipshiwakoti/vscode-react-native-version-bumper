@@ -1,5 +1,5 @@
-const vscode = require("vscode");
-const fs = require("fs/promises");
+const vscode = require('vscode');
+const fs = require('fs/promises');
 
 // Create a mock for VS Code QuickPick dialogs
 export function createQuickPickMock(responses) {
@@ -16,14 +16,14 @@ export function createQuickPickMock(responses) {
 
         const response = responses[callIndex++];
         const selected = items.find((item) => {
-            const label = (item.label || item.value || "").toLowerCase();
+            const label = (item.label || item.value || '').toLowerCase();
             return label.includes(response.toLowerCase());
         });
 
         if (!selected) {
             throw new Error(
                 `No QuickPick item found for response: "${response}". ` +
-                    `Available items: ${items.map((i) => i.label || i.value).join(", ")}`
+                    `Available items: ${items.map((i) => i.label || i.value).join(', ')}`
             );
         }
 

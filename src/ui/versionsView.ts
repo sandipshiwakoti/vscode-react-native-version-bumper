@@ -1,10 +1,6 @@
-import * as vscode from "vscode";
-import { ProjectVersions, ProjectType } from "../types";
+import { ProjectType, ProjectVersions } from '../types';
 
-export function generateVersionsHTML(
-    versions: ProjectVersions,
-    projectType: ProjectType
-): string {
+export function generateVersionsHTML(versions: ProjectVersions, projectType: ProjectType): string {
     let html = `
         <!DOCTYPE html>
         <html lang="en">
@@ -67,7 +63,7 @@ export function generateVersionsHTML(
         <body>
             <div class="header">
                 <h1>📱 Current Versions</h1>
-                <span class="project-type">${projectType.replace("-", " ")}</span>
+                <span class="project-type">${projectType.replace('-', ' ')}</span>
             </div>
     `;
 
@@ -90,7 +86,7 @@ export function generateVersionsHTML(
                 </div>
             </div>
         `;
-    } else if (projectType === "react-native") {
+    } else if (projectType === 'react-native') {
         html += `
             <div class="version-section">
                 <div class="version-title"><span class="emoji">🤖</span>Android</div>
@@ -111,7 +107,7 @@ export function generateVersionsHTML(
                 </div>
             </div>
         `;
-    } else if (projectType === "react-native") {
+    } else if (projectType === 'react-native') {
         html += `
             <div class="version-section">
                 <div class="version-title"><span class="emoji">🍎</span>iOS</div>

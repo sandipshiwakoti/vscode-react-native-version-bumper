@@ -1,16 +1,18 @@
-import * as vscode from "vscode";
-import { promisify } from "util";
-import { exec } from "child_process";
-import { BumpResult, BumpType, PlatformKey } from "../types";
-import { PLATFORM_ICONS } from "../constants";
+import * as vscode from 'vscode';
+
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+import { PLATFORM_ICONS } from '../constants';
+import { BumpResult, BumpType, PlatformKey } from '../types';
 
 const execAsync = promisify(exec);
 
 export function generateResultsHTML(
     type: BumpType,
     results: BumpResult[],
-    tagName: string = "",
-    branchName: string = "",
+    tagName: string = '',
+    branchName: string = '',
     hasCommit: boolean = false,
     pushSuccess = false
 ): string {
@@ -48,8 +50,8 @@ export function generateResultsHTML(
                     margin-left: 10px;
                 }
                 .summary {
-                    background-color: ${hasErrors ? "var(--vscode-inputValidation-warningBackground)" : "var(--vscode-inputValidation-infoBackground)"};
-                    border: 1px solid ${hasErrors ? "var(--vscode-inputValidation-warningBorder)" : "var(--vscode-inputValidation-infoBorder)"};
+                    background-color: ${hasErrors ? 'var(--vscode-inputValidation-warningBackground)' : 'var(--vscode-inputValidation-infoBackground)'};
+                    border: 1px solid ${hasErrors ? 'var(--vscode-inputValidation-warningBorder)' : 'var(--vscode-inputValidation-infoBorder)'};
                     border-radius: 6px;
                     padding: 15px;
                     margin-bottom: 25px;
@@ -174,16 +176,16 @@ export function generateResultsHTML(
             </div>
             <div class="summary">
                 <strong>Summary:</strong> ${successCount}/${totalCount} operations completed successfully
-                ${hasErrors ? "<br><strong>⚠️ Some operations failed - check details below</strong>" : ""}
+                ${hasErrors ? '<br><strong>⚠️ Some operations failed - check details below</strong>' : ''}
             </div>
     `;
 
     results.forEach((result) => {
-        const icon = PLATFORM_ICONS[result.platform as PlatformKey] || "📱";
-        const statusIcon = result.success ? "✅" : "❌";
+        const icon = PLATFORM_ICONS[result.platform as PlatformKey] || '📱';
+        const statusIcon = result.success ? '✅' : '❌';
 
         html += `
-            <div class="version-section ${result.success ? "result-success" : "result-error"}">
+            <div class="version-section ${result.success ? 'result-success' : 'result-error'}">
                 <div class="version-title">
                     <span class="result-icon">${icon}</span>
                     <span class="result-platform">${result.platform}</span>
@@ -194,7 +196,7 @@ export function generateResultsHTML(
                         ? `<div class="result-message">${result.message}</div>`
                         : result.error
                           ? `<div class="result-error-message">❌ ${result.error}</div>`
-                          : ""
+                          : ''
                 }
             </div>
         `;
@@ -260,16 +262,16 @@ export function generateResultsHTML(
 
 export function showBumpResults(type: BumpType, results: BumpResult[]) {
     const panel = vscode.window.createWebviewPanel(
-        "versionBumpResults",
+        'versionBumpResults',
         `Version Bump Results - ${type.charAt(0).toUpperCase() + type.slice(1)}`,
         vscode.ViewColumn.One,
         { enableScripts: true, retainContextWhenHidden: true }
     );
 
     // Extract Git operation results
-    const gitResult = results.find((r) => r.platform === "Git");
-    let tagName = "";
-    let branchName = "";
+    const gitResult = results.find((r) => r.platform === 'Git');
+    let tagName = '';
+    let branchName = '';
     let hasCommit = false;
     let pushSuccess = false;
 
@@ -287,77 +289,62 @@ export function showBumpResults(type: BumpType, results: BumpResult[]) {
         }
 
         // Check if commit was created
-        hasCommit = gitResult.message.includes("Commit: ✅");
+        hasCommit = gitResult.message.includes('Commit: ✅');
 
         // Check if push was successful
-        pushSuccess = gitResult.message.includes("Push: ✅");
+        pushSuccess = gitResult.message.includes('Push: ✅');
     }
 
-    panel.webview.html = generateResultsHTML(
-        type,
-        results,
-        tagName,
-        branchName,
-        hasCommit,
-        pushSuccess
-    );
+    panel.webview.html = generateResultsHTML(type, results, tagName, branchName, hasCommit, pushSuccess);
 
     // Handle messages from the webview
     panel.webview.onDidReceiveMessage(
         async (message) => {
             const workspaceFolders = vscode.workspace.workspaceFolders;
             if (!workspaceFolders) {
-                vscode.window.showErrorMessage("No workspace folder found");
+                vscode.window.showErrorMessage('No workspace folder found');
                 return;
             }
 
             const rootPath = workspaceFolders[0].uri.fsPath;
 
             // Get repository URL from Git instead of package.json
-            let repoUrl = "";
+            let repoUrl = '';
             try {
                 // Try to get the remote URL from Git
-                const { stdout } = await execAsync(
-                    "git config --get remote.origin.url",
-                    {
-                        cwd: rootPath,
-                    }
-                );
+                const { stdout } = await execAsync('git config --get remote.origin.url', {
+                    cwd: rootPath,
+                });
 
                 repoUrl = stdout.trim();
 
                 // Clean up the URL if it's a git URL
-                repoUrl = repoUrl.replace(/\.git$/, "").replace(/^git\+/, "");
-                if (repoUrl.startsWith("git@github.com:")) {
-                    repoUrl = repoUrl.replace(
-                        "git@github.com:",
-                        "https://github.com/"
-                    );
+                repoUrl = repoUrl.replace(/\.git$/, '').replace(/^git\+/, '');
+                if (repoUrl.startsWith('git@github.com:')) {
+                    repoUrl = repoUrl.replace('git@github.com:', 'https://github.com/');
                 }
             } catch (error) {
-                console.error("Error getting Git remote URL:", error);
+                console.error('Error getting Git remote URL:', error);
                 vscode.window.showErrorMessage(
-                    "Could not determine repository URL from Git. Make sure you have a remote configured."
+                    'Could not determine repository URL from Git. Make sure you have a remote configured.'
                 );
                 return;
             }
 
             if (!repoUrl) {
-                vscode.window.showErrorMessage(
-                    "Repository URL not found. Make sure you have a Git remote configured."
-                );
+                vscode.window.showErrorMessage('Repository URL not found. Make sure you have a Git remote configured.');
                 return;
             }
 
             switch (message.command) {
-                case "createRelease":
+                case 'createRelease':
                     if (tagName) {
                         const releaseUrl = `${repoUrl}/releases/new?tag=${tagName}`;
                         vscode.env.openExternal(vscode.Uri.parse(releaseUrl));
                     }
                     break;
 
-                case "createPR":
+                case 'createPR':
                     if (branchName && hasCommit) {
                         // For GitHub, the URL format is typically:
                         // https://github.com/owner/repo/compare/branchName?expand=1

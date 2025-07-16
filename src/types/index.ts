@@ -1,8 +1,8 @@
-export type BumpType = "major" | "minor" | "patch";
+export type BumpType = 'major' | 'minor' | 'patch';
 
-export type ProjectType = "react-native";
+export type ProjectType = 'react-native';
 
-export type PlatformKey = "Package.json" | "Android" | "iOS" | "Git";
+export type PlatformKey = 'Package.json' | 'Android' | 'iOS' | 'Git';
 
 export interface BumpResult {
     platform: string;
