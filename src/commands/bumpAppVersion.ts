@@ -24,7 +24,10 @@ export async function bumpAppVersion(withGit: boolean) {
     // Show error if neither Android nor iOS projects are found
     if (!hasAndroid && !hasIOS) {
         vscode.window.showErrorMessage(
-            'No Android or iOS projects found. This extension requires at least one React Native platform (android/ or ios/ folder) to be present.'
+            'No React Native projects found. Please ensure you have:\n' +
+                '• Android: android/app/build.gradle file\n' +
+                '• iOS: ios/ folder with Info.plist\n' +
+                'At least one platform is required.'
         );
         return;
     }
@@ -78,6 +81,7 @@ export async function bumpAppVersion(withGit: boolean) {
     );
 
     if (!bumpType) {
+        // User cancelled the operation
         return;
     }
 

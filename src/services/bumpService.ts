@@ -144,10 +144,23 @@ export async function bumpVersion(
             }
 
             progress.report({ increment: 100 });
-            if (results.length > 0) {
+
+            // Only show results if there were actual successful operations
+            const hasSuccessfulOperations = results.some((result) => result.success);
+            const hasCompletedTasks = tasks.length > 0 && completedTasks > 0;
+
+            if (hasSuccessfulOperations && hasCompletedTasks) {
                 showBumpResults(type, results);
+                updateStatusBar();
+            } else if (results.length > 0 && !hasSuccessfulOperations) {
+                // Show error summary instead of results view for failed operations
+                const errorMessages = results
+                    .filter((r) => !r.success)
+                    .map((r) => `${r.platform}: ${r.error || r.message}`)
+                    .join('\n');
+                vscode.window.showErrorMessage(`Version bump failed:\n${errorMessages}`);
             }
-            updateStatusBar();
+
             return results;
         }
     );
