@@ -18,19 +18,19 @@ jobs:
               uses: actions/setup-node@v4
               with:
                   node-version: 20
-                  cache: "yarn"
+                  cache: 'bun'
 
             - name: Install dependencies
-              run: yarn install
+              run: bun install
 
             - name: Compile extension
-              run: yarn compile
+              run: bun compile
 
             - name: Run lint
-              run: yarn lint
+              run: bun lint
 
             - name: Package extension
-              run: yarn vsce package -o vscode-react-native-version-bumper.vsix
+              run: bun vsce package -o vscode-react-native-version-bumper.vsix
 
             - name: Upload VSIX artifact
               uses: actions/upload-artifact@v4

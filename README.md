@@ -58,27 +58,28 @@ Access commands via the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P` on macO
 
 - **RN Version Bumper: Bump App Version 📱**  
   Bumps versions for selected platforms without Git operations.
-  - Choose bump type (Major, Minor, Patch) for Android/iOS.
-  - Optionally include `package.json` with its own bump type.
-  - Updates version code (Android/iOS) and version name (all platforms).
-  - View results in a webview (success/failure details).
+    - Choose bump type (Major, Minor, Patch) for Android/iOS.
+    - Optionally include `package.json` with its own bump type.
+    - Updates version code (Android/iOS) and version name (all platforms).
+    - View results in a webview (success/failure details).
 - **RN Version Bumper: Bump App Version with Git 🔄**  
   Bumps versions and performs Git operations.
-  - Same version bump process as above.
-  - Additional steps:
-    - Create a branch (optional, customizable name).
-    - Commit changes (customizable message).
-    - Create a tag (optional, customizable format).
-    - Push to remote (optional).
-  - Webview results include links to:
-    - **Create a Release**: For the new tag (e.g., on GitHub or GitLab).
-    - **Create a Merge Request**: For the new branch (e.g., on GitHub or GitLab).
+    - Same version bump process as above.
+    - Additional steps:
+        - Create a branch (optional, customizable name).
+        - Commit changes (customizable message).
+        - Create a tag (optional, customizable format).
+        - Push to remote (optional).
+    - Webview results include links to:
+        - **Create a Release**: For the new tag (e.g., on GitHub or GitLab).
+        - **Create a Merge Request**: For the new branch (e.g., on GitHub or GitLab).
 - **RN Version Bumper: Show Current Versions 👀**  
   Displays current versions for all platforms in a webview.
 
 ### 3. CodeLens Version Bumping
 
 When CodeLens is enabled (default), editing `package.json`, `build.gradle`, or `Info.plist` shows CodeLens links above version fields:
+
 - **Bump Patch/Minor/Major Version**: Shows the current and next version (e.g., "Bump Patch: 1.0.0 → 1.0.1"). Clicking increments the version code (Android/iOS), version name (all platforms), or version (`package.json`).
 - **Toggle CodeLens**: Use the editor title bar button (circle with upward arrow for enabled, slashed for disabled) to show/hide CodeLens for a cleaner editor view.
 
@@ -124,11 +125,11 @@ Adjust settings in `settings.json` to fit your workflow:
 
 ```json
 {
-  "reactNativeVersionBumper.git.autoCommit": true,
-  "reactNativeVersionBumper.git.commitMessageTemplate": "chore: bump {platforms} on {date}",
-  "reactNativeVersionBumper.git.autoCreateTag": true,
-  "reactNativeVersionBumper.git.tagNameTemplate": "release-v{version}",
-  "reactNativeVersionBumper.enableCodeLens": true
+    "reactNativeVersionBumper.git.autoCommit": true,
+    "reactNativeVersionBumper.git.commitMessageTemplate": "chore: bump {platforms} on {date}",
+    "reactNativeVersionBumper.git.autoCreateTag": true,
+    "reactNativeVersionBumper.git.tagNameTemplate": "release-v{version}",
+    "reactNativeVersionBumper.enableCodeLens": true
 }
 ```
 
@@ -141,6 +142,7 @@ A: This extension keeps you in VS Code, offering an integrated experience with i
 
 **Q: How do I create a release or merge request?**  
 A: Use the "Bump App Version with Git 🔄" command. After a successful bump, the webview shows buttons to:
+
 - Create a release for the new tag (e.g., on GitHub or GitLab).
 - Create a merge request for the new branch (e.g., on GitHub or GitLab).
   These open in your browser for the configured Git remote.
@@ -159,30 +161,30 @@ We’d love your help! Here’s how to contribute:
 
 1. Fork the repo: [github.com/sandipshiwakoti/vscode-react-native-version-bumper](https://github.com/sandipshiwakoti/vscode-react-native-version-bumper)
 2. Clone it:
-   ```bash
-   git clone https://github.com/<your-username>/vscode-react-native-version-bumper.git
-   ```
+    ```bash
+    git clone https://github.com/<your-username>/vscode-react-native-version-bumper.git
+    ```
 3. Install dependencies:
-   ```bash
-   cd vscode-react-native-version-bumper
-   yarn install
-   ```
+    ```bash
+    cd vscode-react-native-version-bumper
+    bun install
+    ```
 4. Make changes, then test:
-   ```bash
-   yarn compile
-   yarn test
-   ```
+    ```bash
+    bun compile
+    bun test
+    ```
 5. Submit a pull request!
 
 ---
 
 ## 🛠️ Development Setup
 
-- **Tools**: Node.js, Yarn, VS Code, TypeScript.
-- **Build**: `yarn compile`
-- **Test**: `yarn test`
-- **Package**: `yarn package` (creates `.vsix`)
-- **Publish**: `yarn publish` (for maintainers)
+- **Tools**: Bun, VS Code, TypeScript.
+- **Build**: `bun compile`
+- **Test**: `bun test`
+- **Package**: `bun package` (creates `.vsix`)
+- **Publish**: `bun publish` (for maintainers)
 
 ---
 
