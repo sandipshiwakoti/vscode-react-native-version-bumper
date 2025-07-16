@@ -96,24 +96,24 @@
                 {
                     "command": "vscode-react-native-version-bumper.showCodeLens",
                     "group": "navigation",
-                    "when": "editorTextFocus && (resourceFilename == 'package.json' || resourceFilename == 'build.gradle' || resourceFilename =~ /Info\\.plist$/) && !config.reactNativeVersionBumper.enableCodeLens"
+                    "when": "editorTextFocus && (resourceFilename == 'package.json' || resourceFilename == 'build.gradle' || resourceFilename =~ /Info\\.plist$/) && !reactNativeVersionBumper.codeLensEnabled"
                 },
                 {
                     "command": "vscode-react-native-version-bumper.hideCodeLens",
                     "group": "navigation",
-                    "when": "editorTextFocus && (resourceFilename == 'package.json' || resourceFilename == 'build.gradle' || resourceFilename =~ /Info\\.plist$/) && config.reactNativeVersionBumper.enableCodeLens"
+                    "when": "editorTextFocus && (resourceFilename == 'package.json' || resourceFilename == 'build.gradle' || resourceFilename =~ /Info\\.plist$/) && reactNativeVersionBumper.codeLensEnabled"
                 }
             ],
             "editor/title": [
                 {
                     "command": "vscode-react-native-version-bumper.showCodeLens",
                     "group": "navigation",
-                    "when": "editorTextFocus && (resourceFilename == 'package.json' || resourceFilename == 'build.gradle' || resourceFilename =~ /Info\\.plist$/) && !config.reactNativeVersionBumper.enableCodeLens"
+                    "when": "editorTextFocus && (resourceFilename == 'package.json' || resourceFilename == 'build.gradle' || resourceFilename =~ /Info\\.plist$/) && !reactNativeVersionBumper.codeLensEnabled"
                 },
                 {
                     "command": "vscode-react-native-version-bumper.hideCodeLens",
                     "group": "navigation",
-                    "when": "editorTextFocus && (resourceFilename == 'package.json' || resourceFilename == 'build.gradle' || resourceFilename =~ /Info\\.plist$/) && config.reactNativeVersionBumper.enableCodeLens"
+                    "when": "editorTextFocus && (resourceFilename == 'package.json' || resourceFilename == 'build.gradle' || resourceFilename =~ /Info\\.plist$/) && reactNativeVersionBumper.codeLensEnabled"
                 }
             ]
         },

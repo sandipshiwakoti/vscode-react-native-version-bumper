@@ -8,13 +8,38 @@ import { showCurrentVersions } from './commands/showCurrentVersions';
 import { registerVersionCodeLensProvider, VersionCodeLensProvider } from './providers/codeLensProvider';
 import { isReactNativeProject } from './utils/fileUtils';
 import { getCurrentVersions } from './utils/versionUtils';
-import { CONFIG_ENABLE_CODE_LENS, CONFIG_SHOW_IN_STATUS_BAR } from './constants';
+import { CODELENS_CONTEXT_KEY, CODELENS_ENABLED_KEY, CONFIG_SHOW_IN_STATUS_BAR } from './constants';
 
 let statusBarItem: vscode.StatusBarItem;
 let codeLensProvider: VersionCodeLensProvider;
 let codeLensDisposable: vscode.Disposable;
+let extensionContext: vscode.ExtensionContext;
+
+export function isCodeLensEnabled(): boolean {
+    if (!extensionContext) {
+        return true; // Default to enabled
+    }
+    return extensionContext.workspaceState.get(CODELENS_ENABLED_KEY, true);
+}
+
+export async function setCodeLensEnabled(enabled: boolean): Promise<void> {
+    if (!extensionContext) {
+        return;
+    }
+    await extensionContext.workspaceState.update(CODELENS_ENABLED_KEY, enabled);
+    await vscode.commands.executeCommand('setContext', CODELENS_CONTEXT_KEY, enabled);
+}
+
+function updateCodeLensContext(): void {
+    const enabled = isCodeLensEnabled();
+    vscode.commands.executeCommand('setContext', CODELENS_CONTEXT_KEY, enabled);
+}
 
 export function activate(context: vscode.ExtensionContext) {
+    extensionContext = context;
+
+    updateCodeLensContext();
+
     statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
     statusBarItem.command = 'vscode-react-native-version-bumper.showVersions';
     updateStatusBar();
@@ -45,9 +70,7 @@ export function activate(context: vscode.ExtensionContext) {
             bumpVersionByType('major')
         ),
         vscode.commands.registerCommand('vscode-react-native-version-bumper.showCodeLens', async () => {
-            await vscode.workspace
-                .getConfiguration('reactNativeVersionBumper')
-                .update(CONFIG_ENABLE_CODE_LENS, true, vscode.ConfigurationTarget.Workspace);
+            await setCodeLensEnabled(true);
             vscode.window.showInformationMessage('Code Lens is now enabled');
             codeLensDisposable.dispose();
             codeLensDisposable = registerVersionCodeLensProvider(context, codeLensProvider);
@@ -55,29 +78,19 @@ export function activate(context: vscode.ExtensionContext) {
             codeLensProvider.refresh();
         }),
         vscode.commands.registerCommand('vscode-react-native-version-bumper.hideCodeLens', async () => {
-            await vscode.workspace
-                .getConfiguration('reactNativeVersionBumper')
-                .update(CONFIG_ENABLE_CODE_LENS, false, vscode.ConfigurationTarget.Workspace);
+            await setCodeLensEnabled(false);
             vscode.window.showInformationMessage('Code Lens is now disabled');
             codeLensDisposable.dispose();
             codeLensDisposable = registerVersionCodeLensProvider(context, codeLensProvider);
             context.subscriptions.push(codeLensDisposable);
             codeLensProvider.refresh();
         }),
+        vscode.commands.registerCommand('vscode-react-native-version-bumper.isCodeLensEnabled', () => {
+            return isCodeLensEnabled();
+        }),
     ];
 
     context.subscriptions.push(statusBarItem, ...commands);
-
-    context.subscriptions.push(
-        vscode.workspace.onDidChangeConfiguration((e) => {
-            if (e.affectsConfiguration('reactNativeVersionBumper.enableCodeLens')) {
-                codeLensDisposable.dispose();
-                codeLensDisposable = registerVersionCodeLensProvider(context, codeLensProvider);
-                context.subscriptions.push(codeLensDisposable);
-                codeLensProvider.refresh();
-            }
-        })
-    );
 
     vscode.workspace.onDidChangeWorkspaceFolders(() => updateStatusBar());
 }

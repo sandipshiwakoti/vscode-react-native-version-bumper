@@ -2,7 +2,8 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { CONFIG_ENABLE_CODE_LENS, INITIAL_SEMANTIC_VERSION } from '../constants';
+import { INITIAL_SEMANTIC_VERSION } from '../constants';
+import { isCodeLensEnabled } from '../extension';
 import { bumpSemanticVersion } from '../utils/versionUtils';
 
 export class VersionCodeLensProvider implements vscode.CodeLensProvider, vscode.Disposable {
@@ -35,8 +36,7 @@ export class VersionCodeLensProvider implements vscode.CodeLensProvider, vscode.
         document: vscode.TextDocument,
         token: vscode.CancellationToken
     ): vscode.ProviderResult<vscode.CodeLens[]> {
-        const config = vscode.workspace.getConfiguration('reactNativeVersionBumper');
-        if (!config.get(CONFIG_ENABLE_CODE_LENS, true)) {
+        if (!isCodeLensEnabled()) {
             return [];
         }
 

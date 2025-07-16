@@ -23,6 +23,9 @@ export const CONFIG_GIT_BRANCH_NAME_TEMPLATE = 'git.branchNameTemplate';
 export const CONFIG_GIT_COMMIT_MESSAGE_TEMPLATE = 'git.commitMessageTemplate';
 export const CONFIG_GIT_TAG_NAME_TEMPLATE = 'git.tagNameTemplate';
 
+export const CODELENS_ENABLED_KEY = 'codeLensEnabled';
+export const CODELENS_CONTEXT_KEY = 'reactNativeVersionBumper.codeLensEnabled';
+
 export const PLATFORM_ICONS: { [key in PlatformKey]: string } = {
     'Package.json': '📦',
     Android: '🤖',
