@@ -79,7 +79,7 @@ suite('React Native Version Bumper Extension Tests', function () {
             await fs.rm(backupPath, { recursive: true, force: true });
         } catch (error) {
             // ENOENT is expected if backup doesn't exist
-            if (error.code !== 'ENOENT') {
+            if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
                 throw error;
             }
         }
@@ -117,7 +117,10 @@ suite('React Native Version Bumper Extension Tests', function () {
             await fs.rm(backupPath, { recursive: true, force: true });
         } catch (error) {
             // Ignore errors during cleanup
-            console.warn('Warning: Could not clean up backup directory:', error.message);
+            console.warn(
+                'Warning: Could not clean up backup directory:',
+                error instanceof Error ? error.message : String(error)
+            );
         }
     });
 

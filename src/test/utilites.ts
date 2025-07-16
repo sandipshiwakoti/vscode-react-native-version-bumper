@@ -1,12 +1,17 @@
 const vscode = require('vscode');
 const fs = require('fs/promises');
 
+interface QuickPickItem {
+    label?: string;
+    value?: string;
+}
+
 // Create a mock for VS Code QuickPick dialogs
-export function createQuickPickMock(responses) {
+export function createQuickPickMock(responses: string[]) {
     const originalShowQuickPick = vscode.window.showQuickPick;
     let callIndex = 0;
 
-    const mockFunction = async function (items) {
+    const mockFunction = async function (items: QuickPickItem[]) {
         if (callIndex >= responses.length) {
             throw new Error(
                 `Mock QuickPick called more times than expected. ` +
@@ -35,7 +40,7 @@ export function createQuickPickMock(responses) {
 }
 
 // Helper function to set multiple VS Code extension settings at once
-export async function setExtensionSettings(configName, settings) {
+export async function setExtensionSettings(configName: string, settings: Record<string, any>) {
     const config = vscode.workspace.getConfiguration(configName);
     for (const [key, value] of Object.entries(settings)) {
         await config.update(key, value, vscode.ConfigurationTarget.Workspace);
@@ -43,7 +48,7 @@ export async function setExtensionSettings(configName, settings) {
 }
 
 // Check if a file exists
-export const checkFileExists = async (filePath) => {
+export const checkFileExists = async (filePath: string) => {
     try {
         await fs.access(filePath);
         return true;
