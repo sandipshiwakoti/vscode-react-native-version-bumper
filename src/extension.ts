@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import { bumpAppVersion } from './commands/bumpAppVersion';
+import { bumpSyncVersion } from './commands/bumpSyncVersion';
 import { bumpVersionByType } from './commands/bumpVersionByType';
 import { showCurrentVersions } from './commands/showCurrentVersions';
 import { registerVersionCodeLensProvider, VersionCodeLensProvider } from './providers/codeLensProvider';
@@ -17,7 +18,7 @@ let extensionContext: vscode.ExtensionContext;
 
 export function isCodeLensEnabled(): boolean {
     if (!extensionContext) {
-        return true; // Default to enabled
+        return true;
     }
     return extensionContext.workspaceState.get(CODELENS_ENABLED_KEY, true);
 }
@@ -45,11 +46,9 @@ export function activate(context: vscode.ExtensionContext) {
     updateStatusBar();
     statusBarItem.show();
 
-    // Create and store the CodeLens provider instance
     codeLensProvider = new VersionCodeLensProvider();
     context.subscriptions.push(codeLensProvider);
 
-    // Register the CodeLens provider and store the disposable
     codeLensDisposable = registerVersionCodeLensProvider(context, codeLensProvider);
 
     const commands = [
@@ -58,6 +57,12 @@ export function activate(context: vscode.ExtensionContext) {
         ),
         vscode.commands.registerCommand('vscode-react-native-version-bumper.bumpAppVersionWithGit', () =>
             bumpAppVersion(true)
+        ),
+        vscode.commands.registerCommand('vscode-react-native-version-bumper.syncVersions', () =>
+            bumpSyncVersion(false)
+        ),
+        vscode.commands.registerCommand('vscode-react-native-version-bumper.syncVersionsWithGit', () =>
+            bumpSyncVersion(true)
         ),
         vscode.commands.registerCommand('vscode-react-native-version-bumper.showVersions', showCurrentVersions),
         vscode.commands.registerCommand('vscode-react-native-version-bumper.bumpPatch', () =>
@@ -110,7 +115,6 @@ export async function updateStatusBar() {
 
     const rootPath = workspaceFolders[0].uri.fsPath;
 
-    // Only show status bar for React Native projects
     if (!isReactNativeProject(rootPath)) {
         statusBarItem.hide();
         return;

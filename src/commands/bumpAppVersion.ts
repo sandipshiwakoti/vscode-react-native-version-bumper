@@ -17,11 +17,9 @@ export async function bumpAppVersion(withGit: boolean) {
 
     const rootPath = workspaceFolders[0].uri.fsPath;
 
-    // Check if Android and iOS projects exist
     const hasAndroid = hasAndroidProject(rootPath);
     const hasIOS = hasIOSProject(rootPath);
 
-    // Show error if neither Android nor iOS projects are found
     if (!hasAndroid && !hasIOS) {
         vscode.window.showErrorMessage(
             'No React Native projects found. Please ensure you have:\n' +
@@ -48,7 +46,6 @@ export async function bumpAppVersion(withGit: boolean) {
         return platforms.length > 0 ? platforms.join(', ') : 'No platforms available';
     };
 
-    // Show error if no platforms are available for bumping
     if (getPlatformLabel('patch') === 'No platforms available') {
         const missingPlatforms: string[] = [];
         if (!hasAndroid) {
@@ -81,19 +78,15 @@ export async function bumpAppVersion(withGit: boolean) {
     );
 
     if (!bumpType) {
-        // User cancelled the operation
         return;
     }
 
-    // Package.json is enabled by default, no prompt needed
     let includePackageJson = true;
     let packageBumpType: BumpType = bumpType.value as BumpType;
 
-    // Only skip package.json if explicitly configured to skip
     if (config.get(CONFIG_SKIP_PACKAGE_JSON)) {
         includePackageJson = false;
     } else if (versions.packageJson) {
-        // If package.json exists, ask for bump type
         const packageBumpTypeSelection = await vscode.window.showQuickPick(
             [
                 {

@@ -118,16 +118,28 @@ export async function handleGitOperations(rootPath: string, type: BumpType, resu
 
         if (shouldCreateBranch) {
             let defaultBranchName = GIT_DEFAULT_BRANCH_PREFIX;
-            if (!skipAndroid && !skipIOS && versionMap['Android'] && versionMap['iOS']) {
-                defaultBranchName += `android-v${versionMap['Android']}-ios-v${versionMap['iOS']}`;
-            } else if (!skipAndroid && versionMap['Android']) {
-                defaultBranchName += `android-v${versionMap['Android']}`;
-            } else if (!skipIOS && versionMap['iOS']) {
-                defaultBranchName += `ios-v${versionMap['iOS']}`;
-            } else if (!skipPackageJson && versionMap['Package.json']) {
-                defaultBranchName += `v${versionMap['Package.json']}`;
+
+            const isSyncOperation = results.some((result) => result.platform === 'SyncOperation');
+
+            if (isSyncOperation) {
+                const syncResult = results.find((result) => result.platform === 'SyncOperation');
+                if (syncResult) {
+                    defaultBranchName += `v${syncResult.newVersion}`;
+                } else {
+                    defaultBranchName += `v${mainVersion}`;
+                }
             } else {
-                defaultBranchName += `v${mainVersion}`;
+                if (!skipAndroid && !skipIOS && versionMap['Android'] && versionMap['iOS']) {
+                    defaultBranchName += `android-v${versionMap['Android']}-ios-v${versionMap['iOS']}`;
+                } else if (!skipAndroid && versionMap['Android']) {
+                    defaultBranchName += `android-v${versionMap['Android']}`;
+                } else if (!skipIOS && versionMap['iOS']) {
+                    defaultBranchName += `ios-v${versionMap['iOS']}`;
+                } else if (!skipPackageJson && versionMap['Package.json']) {
+                    defaultBranchName += `v${versionMap['Package.json']}`;
+                } else {
+                    defaultBranchName += `v${mainVersion}`;
+                }
             }
 
             const branchNameTemplate = config.get(CONFIG_GIT_BRANCH_NAME_TEMPLATE, '');

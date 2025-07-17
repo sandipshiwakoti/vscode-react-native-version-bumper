@@ -29,7 +29,6 @@ export function hasIOSProject(rootPath: string): boolean {
 }
 
 export function getAppName(rootPath: string): string | null {
-    // Try to get app name from app.json first (React Native/Expo standard)
     try {
         const appJsonPath = path.join(rootPath, 'app.json');
         if (fs.existsSync(appJsonPath)) {
@@ -42,26 +41,19 @@ export function getAppName(rootPath: string): string | null {
             }
         }
         // eslint-disable-next-line unused-imports/no-unused-vars
-    } catch (error) {
-        // Continue to next fallback
-    }
+    } catch (error) {}
 
-    // Try to get app name from package.json
     try {
         const packageJsonPath = path.join(rootPath, 'package.json');
         if (fs.existsSync(packageJsonPath)) {
             const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
             if (packageJson.name) {
-                // Convert package name to a more suitable app name format
                 return packageJson.name.replace(/[@\/\-_]/g, '').replace(/^\w/, (c: string) => c.toUpperCase());
             }
         }
         // eslint-disable-next-line unused-imports/no-unused-vars
-    } catch (error) {
-        // Continue to next fallback
-    }
+    } catch (error) {}
 
-    // Try to get app name from iOS project structure
     try {
         const iosPath = path.join(rootPath, 'ios');
         if (fs.existsSync(iosPath)) {
@@ -72,9 +64,7 @@ export function getAppName(rootPath: string): string | null {
             }
         }
         // eslint-disable-next-line unused-imports/no-unused-vars
-    } catch (error) {
-        // Continue to next fallback
-    }
+    } catch (error) {}
 
     return null;
 }
@@ -85,12 +75,10 @@ export async function findInfoPlistPath(iosPath: string): Promise<string | null>
 
     const possiblePlistPaths: string[] = [];
 
-    // If we have an app name, prioritize the app-specific path
     if (appName) {
         possiblePlistPaths.push(path.join(iosPath, appName, 'Info.plist'));
     }
 
-    // Add fallback paths
     possiblePlistPaths.push(path.join(iosPath, 'Info.plist'));
 
     try {
@@ -102,7 +90,6 @@ export async function findInfoPlistPath(iosPath: string): Promise<string | null>
                 !item.endsWith('.xcworkspace')
         );
 
-        // Add all possible directory paths, but prioritize the app name if it exists
         const sortedDirs = projectDirs.sort((a, b) => {
             if (appName) {
                 if (a === appName) {
@@ -122,9 +109,7 @@ export async function findInfoPlistPath(iosPath: string): Promise<string | null>
             }
         });
         // eslint-disable-next-line unused-imports/no-unused-vars
-    } catch (error) {
-        // Continue with existing paths
-    }
+    } catch (error) {}
 
     return possiblePlistPaths.find((checkPath) => fs.existsSync(checkPath)) || null;
 }

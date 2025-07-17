@@ -16,7 +16,6 @@ export async function bumpVersionByType(type: BumpType): Promise<void> {
     const filePath = editor.document.fileName;
     const rootPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || path.dirname(filePath);
 
-    // Get configuration
     const config = vscode.workspace.getConfiguration('reactNativeVersionBumper');
     const customBuildGradlePath = config.get(
         CONFIG_ANDROID_BUILD_GRADLE_PATH,
@@ -24,7 +23,6 @@ export async function bumpVersionByType(type: BumpType): Promise<void> {
     );
     const customInfoPlistPath = config.get(CONFIG_IOS_INFO_PLIST_PATH) as string;
 
-    // Normalize paths for comparison
     const normalizedFilePath = path.normalize(filePath);
     const normalizedBuildGradlePath = path.normalize(path.join(rootPath, customBuildGradlePath));
     const normalizedInfoPlistPath = customInfoPlistPath
@@ -41,11 +39,9 @@ export async function bumpVersionByType(type: BumpType): Promise<void> {
             try {
                 let result: BumpResult | undefined;
 
-                // Determine file type and call appropriate function
                 if (filePath.endsWith('package.json')) {
                     result = await bumpPackageJsonVersion(rootPath, type);
                 } else if (filePath.endsWith('build.gradle')) {
-                    // Check if custom path is configured and if current file matches it
                     if (normalizedFilePath !== normalizedBuildGradlePath && normalizedBuildGradlePath) {
                         const answer = await vscode.window.showWarningMessage(
                             `You are editing a build.gradle file that doesn't match your configured path (${customBuildGradlePath}). Do you want to update the configured file instead?`,
@@ -69,7 +65,6 @@ export async function bumpVersionByType(type: BumpType): Promise<void> {
                     }
                     result = await bumpAndroidVersion(rootPath, type);
                 } else if (filePath.endsWith('Info.plist') || filePath.includes('.xcodeproj')) {
-                    // Check if custom path is configured and if current file matches it
                     if (
                         normalizedInfoPlistPath &&
                         normalizedFilePath !== normalizedInfoPlistPath &&

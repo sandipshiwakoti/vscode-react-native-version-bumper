@@ -202,7 +202,6 @@ export function generateResultsHTML(
         `;
     });
 
-    // Add action buttons if tag or branch+commit were created
     if (tagName || (branchName && hasCommit)) {
         html += `<div class="action-buttons">`;
 
@@ -225,7 +224,6 @@ export function generateResultsHTML(
         html += `</div>`;
     }
 
-    // Add script to handle button clicks
     html += `
         <script>
             const vscode = acquireVsCodeApi();
@@ -268,7 +266,6 @@ export function showBumpResults(type: BumpType, results: BumpResult[]) {
         { enableScripts: true, retainContextWhenHidden: true }
     );
 
-    // Extract Git operation results
     const gitResult = results.find((r) => r.platform === 'Git');
     let tagName = '';
     let branchName = '';
@@ -276,13 +273,11 @@ export function showBumpResults(type: BumpType, results: BumpResult[]) {
     let pushSuccess = false;
 
     if (gitResult && gitResult.success) {
-        // Extract tag name if a tag was created
         const tagMatch = gitResult.message.match(/Tagged ([\w.-]+)/i);
         if (tagMatch) {
             tagName = tagMatch[1];
         }
 
-        // Extract branch name if a branch was created
         const branchMatch = gitResult.message.match(/branch "([^"]+)"/i);
         if (branchMatch) {
             branchName = branchMatch[1];

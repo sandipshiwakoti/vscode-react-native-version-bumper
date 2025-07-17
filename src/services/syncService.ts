@@ -8,92 +8,74 @@ import {
     CONFIG_SKIP_ANDROID,
     CONFIG_SKIP_IOS,
     CONFIG_SKIP_PACKAGE_JSON,
-    INITIAL_SEMANTIC_VERSION,
 } from '../constants';
 import { updateStatusBar } from '../extension';
-import { BumpResult, BumpType } from '../types';
+import { BumpResult } from '../types';
 import { showBumpResults } from '../ui/resultsView';
-import { detectProjectType, findInfoPlistPath, hasAndroidProject, hasIOSProject } from '../utils/fileUtils';
-import { bumpSemanticVersion } from '../utils/versionUtils';
+import { findInfoPlistPath } from '../utils/fileUtils';
 
 import { handleGitOperations } from './gitService';
 
-export async function bumpVersion(
-    type: BumpType,
-    includePackageJson: boolean,
-    packageBumpType: BumpType,
+async function handleGitOperationsForSync(
+    rootPath: string,
+    targetVersion: string,
+    results: BumpResult[]
+): Promise<void> {
+    const syncResults: BumpResult[] = results.map((result) => ({
+        ...result,
+        platform: result.platform === 'Package.json' ? 'Sync' : result.platform,
+        newVersion: targetVersion,
+    }));
+
+    syncResults.push({
+        platform: 'SyncOperation',
+        success: true,
+        oldVersion: '',
+        newVersion: targetVersion,
+        message: `Sync to version ${targetVersion}`,
+    });
+
+    await handleGitOperations(rootPath, 'patch', syncResults);
+}
+
+export async function syncVersions(
+    targetVersion: string,
+    currentVersions: any,
+    hasAndroid: boolean,
+    hasIOS: boolean,
     withGit: boolean
 ): Promise<BumpResult[]> {
     const config = vscode.workspace.getConfiguration('reactNativeVersionBumper');
     const workspaceFolders = vscode.workspace.workspaceFolders;
+
     if (!workspaceFolders) {
         vscode.window.showErrorMessage('No workspace folder found');
         return [];
     }
 
     const rootPath = workspaceFolders[0].uri.fsPath;
-    const projectType = await detectProjectType(rootPath);
     const results: BumpResult[] = [];
-
-    if (config.get(CONFIG_SKIP_PACKAGE_JSON) && config.get(CONFIG_SKIP_ANDROID) && config.get(CONFIG_SKIP_IOS)) {
-        vscode.window.showWarningMessage(
-            'All version bump operations (package.json, Android, iOS) are skipped. No changes will be made.'
-        );
-        return [];
-    }
 
     return vscode.window.withProgress(
         {
             location: vscode.ProgressLocation.Notification,
-            title: `Bumping ${type} version...`,
+            title: `Syncing all platforms to version ${targetVersion}...`,
             cancellable: false,
         },
         async (progress) => {
             progress.report({ increment: 0 });
             const tasks: Promise<BumpResult>[] = [];
 
-            if (includePackageJson && !config.get(CONFIG_SKIP_PACKAGE_JSON)) {
-                try {
-                    tasks.push(bumpPackageJsonVersion(rootPath, packageBumpType));
-                } catch (error) {
-                    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                    results.push({
-                        platform: 'Package.json',
-                        success: false,
-                        oldVersion: '',
-                        newVersion: '',
-                        message: 'Package.json bumping failed',
-                        error: errorMessage,
-                    });
-                }
+            if (currentVersions.packageJson && !config.get(CONFIG_SKIP_PACKAGE_JSON)) {
+                tasks.push(syncPackageJsonVersion(rootPath, targetVersion, currentVersions.packageJson));
             }
 
-            switch (projectType) {
-                case 'react-native':
-                    if (!config.get(CONFIG_SKIP_ANDROID) && hasAndroidProject(rootPath)) {
-                        tasks.push(bumpAndroidVersion(rootPath, type));
-                    }
-                    if (!config.get(CONFIG_SKIP_IOS) && hasIOSProject(rootPath)) {
-                        tasks.push(bumpIOSVersion(rootPath, type));
-                    }
-                    break;
-                case 'unknown':
-                    results.push({
-                        platform: 'Project Detection',
-                        success: false,
-                        oldVersion: '',
-                        newVersion: '',
-                        message: 'No React Native project detected. Android or iOS folders not found.',
-                    });
-                    break;
-                default:
-                    results.push({
-                        platform: 'Unknown',
-                        success: false,
-                        oldVersion: '',
-                        newVersion: '',
-                        message: `Unsupported project type: ${projectType}`,
-                    });
+            if (hasAndroid && !config.get(CONFIG_SKIP_ANDROID)) {
+                tasks.push(syncAndroidVersion(rootPath, targetVersion, currentVersions.android));
+            }
+
+            if (hasIOS && !config.get(CONFIG_SKIP_IOS)) {
+                tasks.push(syncIOSVersion(rootPath, targetVersion, currentVersions.ios));
             }
 
             progress.report({ increment: 20 });
@@ -106,11 +88,11 @@ export async function bumpVersion(
                     completedTasks++;
                 } else {
                     results.push({
-                        platform: `Task ${index + 1}`,
+                        platform: `Sync Task ${index + 1}`,
                         success: false,
                         oldVersion: '',
-                        newVersion: '',
-                        message: '',
+                        newVersion: targetVersion,
+                        message: 'Sync failed',
                         error: result.reason.toString(),
                     });
                 }
@@ -123,7 +105,7 @@ export async function bumpVersion(
 
             if (withGit && tasks.length > 0) {
                 try {
-                    await handleGitOperations(rootPath, type, results);
+                    await handleGitOperationsForSync(rootPath, targetVersion, results);
                     progress.report({ increment: 90 });
                 } catch (error) {
                     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -131,14 +113,12 @@ export async function bumpVersion(
                         platform: 'Git',
                         success: false,
                         oldVersion: '',
-                        newVersion: '',
-                        message: '',
+                        newVersion: targetVersion,
+                        message: 'Git sync failed',
                         error: errorMessage,
                     });
                     vscode.window.showErrorMessage(`Git operation failed: ${errorMessage}`);
                 }
-            } else if (tasks.length === 0) {
-                return results;
             }
 
             progress.report({ increment: 100 });
@@ -147,14 +127,14 @@ export async function bumpVersion(
             const hasCompletedTasks = tasks.length > 0 && completedTasks > 0;
 
             if (hasSuccessfulOperations && hasCompletedTasks) {
-                showBumpResults(type, results);
+                showBumpResults('patch', results);
                 updateStatusBar();
             } else if (results.length > 0 && !hasSuccessfulOperations) {
                 const errorMessages = results
                     .filter((r) => !r.success)
                     .map((r) => `${r.platform}: ${r.error || r.message}`)
                     .join('\n');
-                vscode.window.showErrorMessage(`Version bump failed:\n${errorMessages}`);
+                vscode.window.showErrorMessage(`Version sync failed:\n${errorMessages}`);
             }
 
             return results;
@@ -162,45 +142,60 @@ export async function bumpVersion(
     );
 }
 
-export async function bumpPackageJsonVersion(rootPath: string, type: BumpType): Promise<BumpResult> {
+async function syncPackageJsonVersion(
+    rootPath: string,
+    targetVersion: string,
+    currentVersion: string
+): Promise<BumpResult> {
     const packageJsonPath = path.join(rootPath, 'package.json');
+
     if (!fs.existsSync(packageJsonPath)) {
         throw new Error('package.json not found');
     }
 
     const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-    const oldVersion = packageJson.version || INITIAL_SEMANTIC_VERSION;
-    const newVersion = bumpSemanticVersion(oldVersion, type);
+    const oldVersion = packageJson.version || currentVersion;
 
-    packageJson.version = newVersion;
+    if (oldVersion === targetVersion) {
+        return {
+            platform: 'Package.json',
+            success: true,
+            oldVersion,
+            newVersion: targetVersion,
+            message: `Version: ${targetVersion} (no change needed)`,
+        };
+    }
+
+    packageJson.version = targetVersion;
     fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n', 'utf8');
 
     return {
         platform: 'Package.json',
         success: true,
         oldVersion,
-        newVersion,
-        message: `Version: ${oldVersion} → ${newVersion}`,
+        newVersion: targetVersion,
+        message: `Version: ${oldVersion} → ${targetVersion}`,
     };
 }
 
-export async function bumpAndroidVersion(rootPath: string, type: BumpType): Promise<BumpResult> {
+async function syncAndroidVersion(rootPath: string, targetVersion: string, currentAndroid: any): Promise<BumpResult> {
     const config = vscode.workspace.getConfiguration('reactNativeVersionBumper');
     const buildGradleConfigPath = config.get(
         CONFIG_ANDROID_BUILD_GRADLE_PATH,
         path.join('android', 'app', 'build.gradle')
     );
     const buildGradlePath = path.join(rootPath, buildGradleConfigPath);
+
     if (!fs.existsSync(buildGradlePath)) {
         throw new Error(`Android build.gradle not found at ${buildGradlePath}`);
     }
 
     const content = fs.readFileSync(buildGradlePath, 'utf8');
     const lines = content.split('\n');
-    let versionCode = 0,
-        versionName = '',
-        versionCodeLineIndex = -1,
-        versionNameLineIndex = -1;
+    let versionCode = currentAndroid?.versionCode || 1;
+    let versionName = currentAndroid?.versionName || '1.0.0';
+    let versionCodeLineIndex = -1;
+    let versionNameLineIndex = -1;
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
@@ -225,7 +220,8 @@ export async function bumpAndroidVersion(rootPath: string, type: BumpType): Prom
     }
 
     const newVersionCode = versionCode + 1;
-    const newVersionName = bumpSemanticVersion(versionName, type);
+    const oldVersionDisplay = `${versionName} (${versionCode})`;
+    const newVersionDisplay = `${targetVersion} (${newVersionCode})`;
 
     lines[versionCodeLineIndex] = lines[versionCodeLineIndex].replace(
         /versionCode\s+\d+/,
@@ -233,22 +229,24 @@ export async function bumpAndroidVersion(rootPath: string, type: BumpType): Prom
     );
     lines[versionNameLineIndex] = lines[versionNameLineIndex].replace(
         /versionName\s+["'][^"']+["']/,
-        `versionName "${newVersionName}"`
+        `versionName "${targetVersion}"`
     );
+
     fs.writeFileSync(buildGradlePath, lines.join('\n'), 'utf8');
 
     return {
         platform: 'Android',
         success: true,
-        oldVersion: `${versionName} (${versionCode})`,
-        newVersion: `${newVersionName} (${newVersionCode})`,
-        message: `Version Name: ${versionName} → ${newVersionName}\nVersion Code: ${versionCode} → ${newVersionCode}`,
+        oldVersion: oldVersionDisplay,
+        newVersion: newVersionDisplay,
+        message: `Version Name: ${versionName} → ${targetVersion}\nVersion Code: ${versionCode} → ${newVersionCode}`,
     };
 }
 
-export async function bumpIOSVersion(rootPath: string, type: BumpType): Promise<BumpResult> {
+async function syncIOSVersion(rootPath: string, targetVersion: string, currentIOS: any): Promise<BumpResult> {
     const config = vscode.workspace.getConfiguration('reactNativeVersionBumper');
     const iosPath = path.join(rootPath, 'ios');
+
     if (!fs.existsSync(iosPath)) {
         throw new Error('iOS project not found');
     }
@@ -259,40 +257,24 @@ export async function bumpIOSVersion(rootPath: string, type: BumpType): Promise<
     } else {
         plistPath = await findInfoPlistPath(iosPath);
     }
+
     if (!plistPath || !fs.existsSync(plistPath)) {
         throw new Error(`Info.plist not found at ${plistPath || 'default location'}`);
     }
 
     const plistContent = fs.readFileSync(plistPath, 'utf8');
     const plistLines = plistContent.split('\n');
-
     const plistUsesVariables = /\$\([^)]+\)/.test(plistContent);
 
-    let oldBuildNumber = '',
-        oldVersion = '',
-        newBuildNumber = '',
-        newVersion = '';
+    let oldBuildNumber = currentIOS?.buildNumber || '1';
+    let oldVersion = currentIOS?.version || '1.0.0';
+    let newBuildNumber = (parseInt(oldBuildNumber) + 1).toString();
+    let newVersion = targetVersion;
 
     if (plistUsesVariables) {
-        let pbxprojPath: string | null | undefined = config.get('ios.projectPbxprojPath');
-        if (pbxprojPath) {
-            pbxprojPath = path.join(rootPath, pbxprojPath);
-        } else {
-            const iosContents = fs.readdirSync(iosPath);
-            const xcodeprojDir = iosContents.find((item) => item.endsWith('.xcodeproj'));
-            if (!xcodeprojDir) {
-                throw new Error('Xcode project file not found');
-            }
-
-            pbxprojPath = path.join(iosPath, xcodeprojDir, 'project.pbxproj');
-        }
-
-        if (!fs.existsSync(pbxprojPath)) {
-            throw new Error('project.pbxproj not found');
-        }
-
         let versionVarName = '';
         let buildVarName = '';
+
         for (let i = 0; i < plistLines.length; i++) {
             const line = plistLines[i].trim();
             if (line.includes('<key>CFBundleShortVersionString</key>')) {
@@ -312,8 +294,8 @@ export async function bumpIOSVersion(rootPath: string, type: BumpType): Promise<
         }
 
         if (!versionVarName || !buildVarName) {
-            let bundleVersionLineIndex = -1,
-                bundleShortVersionLineIndex = -1;
+            let bundleVersionLineIndex = -1;
+            let bundleShortVersionLineIndex = -1;
 
             for (let i = 0; i < plistLines.length; i++) {
                 const line = plistLines[i].trim();
@@ -342,7 +324,6 @@ export async function bumpIOSVersion(rootPath: string, type: BumpType): Promise<
             }
 
             newBuildNumber = (parseInt(oldBuildNumber) + 1).toString();
-            newVersion = bumpSemanticVersion(oldVersion, type);
 
             plistLines[bundleVersionLineIndex] = plistLines[bundleVersionLineIndex].replace(
                 /<string>[^<]+<\/string>/,
@@ -350,7 +331,7 @@ export async function bumpIOSVersion(rootPath: string, type: BumpType): Promise<
             );
             plistLines[bundleShortVersionLineIndex] = plistLines[bundleShortVersionLineIndex].replace(
                 /<string>[^<]+<\/string>/,
-                `<string>${newVersion}</string>`
+                `<string>${targetVersion}</string>`
             );
             fs.writeFileSync(plistPath, plistLines.join('\n'), 'utf8');
 
@@ -361,6 +342,22 @@ export async function bumpIOSVersion(rootPath: string, type: BumpType): Promise<
                 newVersion: `${newVersion} (${newBuildNumber})`,
                 message: `Build Number: ${oldBuildNumber} → ${newBuildNumber}\nVersion: ${oldVersion} → ${newVersion}`,
             };
+        }
+
+        let pbxprojPath: string | null | undefined = config.get('ios.projectPbxprojPath');
+        if (pbxprojPath) {
+            pbxprojPath = path.join(rootPath, pbxprojPath);
+        } else {
+            const iosContents = fs.readdirSync(iosPath);
+            const xcodeprojDir = iosContents.find((item) => item.endsWith('.xcodeproj'));
+            if (!xcodeprojDir) {
+                throw new Error('Xcode project file not found');
+            }
+            pbxprojPath = path.join(iosPath, xcodeprojDir, 'project.pbxproj');
+        }
+
+        if (!fs.existsSync(pbxprojPath)) {
+            throw new Error('project.pbxproj not found');
         }
 
         let pbxContent = fs.readFileSync(pbxprojPath, 'utf8');
@@ -383,7 +380,7 @@ export async function bumpIOSVersion(rootPath: string, type: BumpType): Promise<
 
                 if (match) {
                     oldVersion = match[1].replace(/['"]*/g, '');
-                    newVersion = bumpSemanticVersion(oldVersion, type);
+                    newVersion = targetVersion;
 
                     if (line.includes('"')) {
                         pbxLines[i] = pbxLines[i].replace(
@@ -439,6 +436,7 @@ export async function bumpIOSVersion(rootPath: string, type: BumpType): Promise<
             }
         }
 
+        // Fallback regex approach if line-by-line didn't work
         if (!foundVersion || !foundBuildNumber) {
             const versionRegex = new RegExp(`${versionVarName}\\s*=\\s*([\\d\\.]+)`, 'g');
             const buildRegex = new RegExp(`${buildVarName}\\s*=\\s*(\\d+)`, 'g');
@@ -446,7 +444,7 @@ export async function bumpIOSVersion(rootPath: string, type: BumpType): Promise<
             let versionMatch;
             while (!foundVersion && (versionMatch = versionRegex.exec(pbxContent))) {
                 oldVersion = versionMatch[1];
-                newVersion = bumpSemanticVersion(oldVersion, type);
+                newVersion = targetVersion;
 
                 pbxContent = pbxContent.replace(
                     new RegExp(`${versionVarName}\\s*=\\s*${oldVersion}`, 'g'),
@@ -480,7 +478,7 @@ export async function bumpIOSVersion(rootPath: string, type: BumpType): Promise<
 
         if (!foundVersion) {
             oldVersion = '1.0.0';
-            newVersion = bumpSemanticVersion(oldVersion, type);
+            newVersion = targetVersion;
         }
 
         if (!foundBuildNumber) {
@@ -488,14 +486,14 @@ export async function bumpIOSVersion(rootPath: string, type: BumpType): Promise<
             newBuildNumber = '2';
         }
     } else {
-        let bundleVersionLineIndex = -1,
-            bundleShortVersionLineIndex = -1;
+        let bundleVersionLineIndex = -1;
+        let bundleShortVersionLineIndex = -1;
 
         for (let i = 0; i < plistLines.length; i++) {
             const line = plistLines[i].trim();
             if (line.includes('<key>CFBundleVersion</key>')) {
                 if (i + 1 < plistLines.length) {
-                    const match = plistLines[i + 1].trim().match(/<string>(\d+)<\/string>/);
+                    const match = plistLines[i + 1].trim().match(/<string>([^<]+)<\/string>/);
                     if (match) {
                         oldBuildNumber = match[1];
                         bundleVersionLineIndex = i + 1;
@@ -518,16 +516,16 @@ export async function bumpIOSVersion(rootPath: string, type: BumpType): Promise<
         }
 
         newBuildNumber = (parseInt(oldBuildNumber) + 1).toString();
-        newVersion = bumpSemanticVersion(oldVersion, type);
 
         plistLines[bundleVersionLineIndex] = plistLines[bundleVersionLineIndex].replace(
-            /<string>\d+<\/string>/,
+            /<string>[^<]+<\/string>/,
             `<string>${newBuildNumber}</string>`
         );
         plistLines[bundleShortVersionLineIndex] = plistLines[bundleShortVersionLineIndex].replace(
             /<string>[^<]+<\/string>/,
-            `<string>${newVersion}</string>`
+            `<string>${targetVersion}</string>`
         );
+
         fs.writeFileSync(plistPath, plistLines.join('\n'), 'utf8');
     }
 

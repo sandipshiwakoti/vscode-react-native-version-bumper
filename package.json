@@ -63,6 +63,16 @@
                 "category": "RN Version Bumper"
             },
             {
+                "command": "vscode-react-native-version-bumper.syncVersions",
+                "title": "Sync All Platform Versions",
+                "category": "RN Version Bumper"
+            },
+            {
+                "command": "vscode-react-native-version-bumper.syncVersionsWithGit",
+                "title": "Sync All Platform Versions with Git",
+                "category": "RN Version Bumper"
+            },
+            {
                 "command": "vscode-react-native-version-bumper.showCodeLens",
                 "title": "Enable Bumper Lens",
                 "icon": {
@@ -91,6 +101,14 @@
                 },
                 {
                     "command": "vscode-react-native-version-bumper.showVersions",
+                    "when": "workspaceFolderCount > 0"
+                },
+                {
+                    "command": "vscode-react-native-version-bumper.syncVersions",
+                    "when": "workspaceFolderCount > 0"
+                },
+                {
+                    "command": "vscode-react-native-version-bumper.syncVersionsWithGit",
                     "when": "workspaceFolderCount > 0"
                 },
                 {
