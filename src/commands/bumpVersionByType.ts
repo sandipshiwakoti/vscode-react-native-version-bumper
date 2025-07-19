@@ -11,7 +11,9 @@ import { updateStatusBar } from '../utils/statusBarUtils';
 export async function bumpVersionByType(type: BumpType): Promise<void> {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
-        vscode.window.showInformationMessage('Please open a file to bump its version');
+        vscode.window.showInformationMessage(
+            'Please open a version file (package.json, build.gradle, or Info.plist) to bump its version'
+        );
         return;
     }
 
@@ -46,7 +48,7 @@ export async function bumpVersionByType(type: BumpType): Promise<void> {
                 } else if (filePath.endsWith(FILE_EXTENSIONS.BUILD_GRADLE)) {
                     if (normalizedFilePath !== normalizedBuildGradlePath && normalizedBuildGradlePath) {
                         const answer = await vscode.window.showWarningMessage(
-                            `You are editing a ${FILE_EXTENSIONS.BUILD_GRADLE} file that doesn't match your configured path (${customBuildGradlePath}). Do you want to update the configured file instead?`,
+                            `This build.gradle file doesn't match your configured path (${customBuildGradlePath}). Update the configured file instead?`,
                             'Yes',
                             'No',
                             'Update Configuration'

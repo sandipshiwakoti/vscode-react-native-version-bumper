@@ -26,7 +26,7 @@ export async function bumpAppVersion(withGit: boolean) {
 
     if (!hasAndroid && !hasIOS) {
         vscode.window.showErrorMessage(
-            'No React Native projects found. Please ensure you have:\n• Android: android/app/build.gradle file\n• iOS: ios/ folder with Info.plist\nAt least one platform is required.'
+            'No React Native platforms detected. Please ensure you have:\n• Android: android/app/build.gradle file\n• iOS: ios/ folder with Info.plist file\n\nAt least one platform is required for version bumping.'
         );
         return;
     }
@@ -75,7 +75,10 @@ export async function bumpAppVersion(withGit: boolean) {
                 value: BumpType.MAJOR,
             },
         ],
-        { placeHolder: 'Select version bump type for available platforms' }
+        {
+            placeHolder:
+                'Choose how to increment versions (Patch: bug fixes, Minor: new features, Major: breaking changes)',
+        }
     );
 
     if (!bumpType) {
@@ -103,7 +106,7 @@ export async function bumpAppVersion(withGit: boolean) {
                     value: BumpType.MAJOR,
                 },
             ],
-            { placeHolder: 'Select package.json version bump type' }
+            { placeHolder: 'Choose package.json version increment type' }
         );
 
         if (packageBumpTypeSelection) {
@@ -119,7 +122,7 @@ export async function bumpAppVersion(withGit: boolean) {
 
     if (config.get(CONFIG.SKIP_PACKAGE_JSON) && config.get(CONFIG.SKIP_ANDROID) && config.get(CONFIG.SKIP_IOS)) {
         vscode.window.showWarningMessage(
-            'All version bump operations (package.json, Android, iOS) are skipped. No changes will be made.'
+            'All platforms are disabled in settings. Enable at least one platform:\n• reactNativeVersionBumper.skipPackageJson\n• reactNativeVersionBumper.skipAndroid\n• reactNativeVersionBumper.skipIOS'
         );
         return;
     }

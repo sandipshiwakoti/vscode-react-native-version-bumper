@@ -99,7 +99,7 @@ export async function bumpSyncVersion(withGit: boolean) {
         }
 
         const selectedOption = await vscode.window.showQuickPick(syncOptions, {
-            placeHolder: 'Choose which version to sync all platforms to',
+            placeHolder: 'Select version to sync all platforms to (or enter custom version)',
             matchOnDescription: true,
         });
 
@@ -120,7 +120,7 @@ export async function bumpSyncVersion(withGit: boolean) {
                     : DEFAULT_VALUES.SEMANTIC_VERSION;
 
             const customVersion = await vscode.window.showInputBox({
-                prompt: 'Enter the version to sync all platforms to',
+                prompt: 'Enter version to sync all platforms (e.g., 1.2.3)',
                 value: suggestedVersion,
                 validateInput: (value) => {
                     if (!value) {

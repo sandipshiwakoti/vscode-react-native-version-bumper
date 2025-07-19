@@ -36,7 +36,7 @@ function updateCodeLensContext(): void {
 
 export async function showCodeLens(): Promise<void> {
     await setCodeLensEnabled(true);
-    vscode.window.showInformationMessage('Code Lens is now enabled');
+    vscode.window.showInformationMessage('Version CodeLens enabled - Click version lines to bump versions');
 
     if (codeLensDisposable) {
         codeLensDisposable.dispose();
@@ -49,7 +49,7 @@ export async function showCodeLens(): Promise<void> {
 
 export async function hideCodeLens(): Promise<void> {
     await setCodeLensEnabled(false);
-    vscode.window.showInformationMessage('Code Lens is now disabled');
+    vscode.window.showInformationMessage('Version CodeLens disabled - Use Command Palette for version bumping');
 
     if (codeLensDisposable) {
         codeLensDisposable.dispose();

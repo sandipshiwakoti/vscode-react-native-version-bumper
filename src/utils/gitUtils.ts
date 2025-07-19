@@ -84,7 +84,7 @@ export async function executeGitWorkflow(rootPath: string, type: BumpType, resul
                     { label: 'Yes', value: true },
                     { label: 'No', value: false },
                 ],
-                { placeHolder: 'Commit version changes to Git?' }
+                { placeHolder: 'Commit version changes to Git? (Recommended for tracking releases)' }
             );
             shouldCommit = response?.value ?? false;
         }
@@ -100,7 +100,7 @@ export async function executeGitWorkflow(rootPath: string, type: BumpType, resul
                     { label: 'Yes', value: true },
                     { label: 'No', value: false },
                 ],
-                { placeHolder: 'Create a new branch for these changes?' }
+                { placeHolder: 'Create a new branch for version changes? (Useful for pull request workflow)' }
             );
             shouldCreateBranch = createBranchResponse?.value ?? false;
         }
@@ -154,8 +154,8 @@ export async function executeGitWorkflow(rootPath: string, type: BumpType, resul
                 branchName = customBranchName;
             } else {
                 branchName = await vscode.window.showInputBox({
-                    placeHolder: 'Enter branch name',
-                    prompt: 'Provide a name for the new branch',
+                    placeHolder: 'e.g., feature/version-bump-1.2.3',
+                    prompt: 'Enter branch name for version changes',
                     value: customBranchName,
                 });
             }
@@ -207,8 +207,8 @@ export async function executeGitWorkflow(rootPath: string, type: BumpType, resul
             customCommitMessage = defaultCommitMessage;
         } else {
             customCommitMessage = await vscode.window.showInputBox({
-                placeHolder: 'Enter commit message',
-                prompt: 'Customize the commit message or press Enter to use the default',
+                placeHolder: 'e.g., chore: bump version to 1.2.3',
+                prompt: 'Customize commit message (or press Enter for default)',
                 value: defaultCommitMessage,
             });
         }
@@ -243,7 +243,7 @@ export async function executeGitWorkflow(rootPath: string, type: BumpType, resul
                     { label: 'Yes', value: true },
                     { label: 'No', value: false },
                 ],
-                { placeHolder: 'Create Git tag for this version?' }
+                { placeHolder: 'Create Git tag for this version? (Essential for releases and deployments)' }
             );
             shouldTag = response?.value ?? false;
         }
@@ -284,8 +284,8 @@ export async function executeGitWorkflow(rootPath: string, type: BumpType, resul
             let newTagVersion: string;
             if (tagBumpType.value === 'custom') {
                 const customVersion = await vscode.window.showInputBox({
-                    placeHolder: 'Enter custom version (e.g., 1.2.3)',
-                    prompt: 'Enter the custom version for the tag',
+                    placeHolder: '1.2.3',
+                    prompt: 'Enter custom version for Git tag',
                     value: currentTagVersion,
                     validateInput: (value) => {
                         if (!value) {
@@ -354,7 +354,7 @@ export async function executeGitWorkflow(rootPath: string, type: BumpType, resul
                     { label: 'Yes', value: true },
                     { label: 'No', value: false },
                 ],
-                { placeHolder: 'Push changes to remote repository?' }
+                { placeHolder: 'Push changes to remote repository? (Share with team and trigger CI/CD)' }
             );
             shouldPush = pushResponse?.value ?? false;
         }
