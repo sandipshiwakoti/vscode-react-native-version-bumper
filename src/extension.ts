@@ -12,37 +12,25 @@ import {
     showCodeLens,
 } from './commands/toggleCodeLens';
 import { disposeStatusBar, initializeStatusBar } from './utils/statusBarUtils';
+import { COMMANDS } from './constants';
+import { BumpType } from './types';
 
 export function activate(context: vscode.ExtensionContext) {
     initializeCodeLens(context);
     initializeStatusBar();
 
     const commands = [
-        vscode.commands.registerCommand('vscode-react-native-version-bumper.bumpAppVersion', () =>
-            bumpAppVersion(false)
-        ),
-        vscode.commands.registerCommand('vscode-react-native-version-bumper.bumpAppVersionWithGit', () =>
-            bumpAppVersion(true)
-        ),
-        vscode.commands.registerCommand('vscode-react-native-version-bumper.syncVersions', () =>
-            bumpSyncVersion(false)
-        ),
-        vscode.commands.registerCommand('vscode-react-native-version-bumper.syncVersionsWithGit', () =>
-            bumpSyncVersion(true)
-        ),
-        vscode.commands.registerCommand('vscode-react-native-version-bumper.showVersions', showCurrentVersions),
-        vscode.commands.registerCommand('vscode-react-native-version-bumper.bumpPatch', () =>
-            bumpVersionByType('patch')
-        ),
-        vscode.commands.registerCommand('vscode-react-native-version-bumper.bumpMinor', () =>
-            bumpVersionByType('minor')
-        ),
-        vscode.commands.registerCommand('vscode-react-native-version-bumper.bumpMajor', () =>
-            bumpVersionByType('major')
-        ),
-        vscode.commands.registerCommand('vscode-react-native-version-bumper.showCodeLens', showCodeLens),
-        vscode.commands.registerCommand('vscode-react-native-version-bumper.hideCodeLens', hideCodeLens),
-        vscode.commands.registerCommand('vscode-react-native-version-bumper.isCodeLensEnabled', getCodeLensStatus),
+        vscode.commands.registerCommand(COMMANDS.BUMP_APP_VERSION, () => bumpAppVersion(false)),
+        vscode.commands.registerCommand(COMMANDS.BUMP_APP_VERSION_WITH_GIT, () => bumpAppVersion(true)),
+        vscode.commands.registerCommand(COMMANDS.SYNC_VERSIONS, () => bumpSyncVersion(false)),
+        vscode.commands.registerCommand(COMMANDS.SYNC_VERSIONS_WITH_GIT, () => bumpSyncVersion(true)),
+        vscode.commands.registerCommand(COMMANDS.SHOW_VERSIONS, showCurrentVersions),
+        vscode.commands.registerCommand(COMMANDS.BUMP_PATCH, () => bumpVersionByType(BumpType.PATCH)),
+        vscode.commands.registerCommand(COMMANDS.BUMP_MINOR, () => bumpVersionByType(BumpType.MINOR)),
+        vscode.commands.registerCommand(COMMANDS.BUMP_MAJOR, () => bumpVersionByType(BumpType.MAJOR)),
+        vscode.commands.registerCommand(COMMANDS.SHOW_CODE_LENS, showCodeLens),
+        vscode.commands.registerCommand(COMMANDS.HIDE_CODE_LENS, hideCodeLens),
+        vscode.commands.registerCommand(COMMANDS.IS_CODE_LENS_ENABLED, getCodeLensStatus),
     ];
 
     context.subscriptions.push(...commands);

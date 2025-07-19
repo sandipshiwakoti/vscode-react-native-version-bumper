@@ -5,18 +5,18 @@ import path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
-import { INITIAL_SEMANTIC_VERSION } from '../constants';
+import { DEFAULT_VALUES, FILE_PATTERNS, REGEX_PATTERNS, VERSION_PART_INDICES } from '../constants';
 import { BumpType, ProjectVersions } from '../types';
 
 function getAndroidVersionInfo(rootPath: string): { versionCode: number; versionName: string } | null {
-    const buildGradlePath = path.join(rootPath, 'android', 'app', 'build.gradle');
+    const buildGradlePath = path.join(rootPath, FILE_PATTERNS.ANDROID_BUILD_GRADLE_DEFAULT);
     if (!fs.existsSync(buildGradlePath)) {
         return null;
     }
 
     const content = fs.readFileSync(buildGradlePath, 'utf8');
-    const versionCodeMatch = content.match(/versionCode\s+(\d+)/);
-    const versionNameMatch = content.match(/versionName\s+["']([^"']+)["']/);
+    const versionCodeMatch = content.match(REGEX_PATTERNS.VERSION_CODE);
+    const versionNameMatch = content.match(REGEX_PATTERNS.VERSION_NAME);
 
     if (versionCodeMatch && versionNameMatch) {
         return {
@@ -72,17 +72,17 @@ export function bumpSemanticVersion(version: string, type: BumpType): string {
     }
 
     switch (type) {
-        case 'major':
-            versionParts[0] += 1;
-            versionParts[1] = 0;
-            versionParts[2] = 0;
+        case BumpType.MAJOR:
+            versionParts[VERSION_PART_INDICES.MAJOR] += 1;
+            versionParts[VERSION_PART_INDICES.MINOR] = 0;
+            versionParts[VERSION_PART_INDICES.PATCH] = 0;
             break;
-        case 'minor':
-            versionParts[1] += 1;
-            versionParts[2] = 0;
+        case BumpType.MINOR:
+            versionParts[VERSION_PART_INDICES.MINOR] += 1;
+            versionParts[VERSION_PART_INDICES.PATCH] = 0;
             break;
-        case 'patch':
-            versionParts[2] += 1;
+        case BumpType.PATCH:
+            versionParts[VERSION_PART_INDICES.PATCH] += 1;
             break;
     }
     return versionParts.join('.');
@@ -112,7 +112,7 @@ export async function getLatestGitTagVersion(rootPath: string): Promise<string> 
             .filter((tag) => tag.trim());
 
         if (tags.length === 0) {
-            return INITIAL_SEMANTIC_VERSION;
+            return DEFAULT_VALUES.SEMANTIC_VERSION;
         }
 
         const versionTags = tags
@@ -143,15 +143,15 @@ export async function getLatestGitTagVersion(rootPath: string): Promise<string> 
             return versionTags[0]!.version;
         }
 
-        return INITIAL_SEMANTIC_VERSION;
+        return DEFAULT_VALUES.SEMANTIC_VERSION;
         // eslint-disable-next-line unused-imports/no-unused-vars
     } catch (error) {
         try {
             const versions = await getCurrentVersions();
-            const fallbackVersion = versions.packageJson || INITIAL_SEMANTIC_VERSION;
+            const fallbackVersion = versions.packageJson || DEFAULT_VALUES.SEMANTIC_VERSION;
             return fallbackVersion;
         } catch {
-            return INITIAL_SEMANTIC_VERSION;
+            return DEFAULT_VALUES.SEMANTIC_VERSION;
         }
     }
 }

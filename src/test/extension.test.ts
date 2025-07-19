@@ -1,10 +1,4 @@
-import {
-    CONFIG_ANDROID_BUILD_GRADLE_PATH,
-    CONFIG_IOS_INFO_PLIST_PATH,
-    CONFIG_SKIP_ANDROID,
-    CONFIG_SKIP_IOS,
-    CONFIG_SKIP_PACKAGE_JSON,
-} from '../constants';
+import { COMMANDS, CONFIG, EXTENSION_ID, EXTENSION_PUBLISHER_ID } from '../constants';
 
 import { checkFileExists, createQuickPickMock, setExtensionSettings } from './utilites';
 
@@ -64,9 +58,9 @@ suite('React Native Version Bumper Extension Tests', function () {
         });
 
         // Activate the extension under test
-        const extension = vscode.extensions.getExtension('sandipshiwakoti.vscode-react-native-version-bumper');
+        const extension = vscode.extensions.getExtension(EXTENSION_PUBLISHER_ID);
         if (!extension) {
-            throw new Error("Extension 'sandipshiwakoti.vscode-react-native-version-bumper' not found.");
+            throw new Error(`Extension ${EXTENSION_PUBLISHER_ID} not found.`);
         }
         await extension.activate();
     });
@@ -96,14 +90,14 @@ suite('React Native Version Bumper Extension Tests', function () {
         await fs.rm(backupPath, { recursive: true, force: true });
 
         // Reset all extension configuration settings to defaults
-        const config = vscode.workspace.getConfiguration('reactNativeVersionBumper');
+        const config = vscode.workspace.getConfiguration(EXTENSION_ID);
         const settingsToReset = [
-            CONFIG_SKIP_ANDROID,
-            CONFIG_SKIP_IOS,
-            CONFIG_SKIP_PACKAGE_JSON,
-            CONFIG_ANDROID_BUILD_GRADLE_PATH,
-            CONFIG_IOS_INFO_PLIST_PATH,
-            'ios.projectPbxprojPath',
+            CONFIG.SKIP_ANDROID,
+            CONFIG.SKIP_IOS,
+            CONFIG.SKIP_PACKAGE_JSON,
+            CONFIG.ANDROID_BUILD_GRADLE_PATH,
+            CONFIG.IOS_INFO_PLIST_PATH,
+            CONFIG.IOS_PROJECT_PB_XPROJ_PATH,
         ];
 
         for (const setting of settingsToReset) {
@@ -127,7 +121,7 @@ suite('React Native Version Bumper Extension Tests', function () {
     // Test 1: Bump version across all platforms (package.json, Android, iOS)
     test('Bump all platforms together', async function () {
         // Configure extension to update all platforms
-        await setExtensionSettings('reactNativeVersionBumper', {
+        await setExtensionSettings(EXTENSION_ID, {
             skipAndroid: false,
             skipIOS: false,
             skipPackageJson: false,
@@ -138,7 +132,7 @@ suite('React Native Version Bumper Extension Tests', function () {
 
         try {
             // Execute the version bump command
-            await vscode.commands.executeCommand('vscode-react-native-version-bumper.bumpAppVersion');
+            await vscode.commands.executeCommand(COMMANDS.BUMP_APP_VERSION);
 
             // Wait for file system operations to complete (only needed for desktop VS Code)
             if (vscode.env.uiKind === vscode.UIKind.Desktop) {
@@ -187,13 +181,13 @@ suite('React Native Version Bumper Extension Tests', function () {
     // Test 2: Bump version for Android only using custom paths
     test('Bump custom android only', async function () {
         // Configure extension to use custom file paths and skip iOS/package.json
-        await setExtensionSettings('reactNativeVersionBumper', {
-            CONFIG_ANDROID_BUILD_GRADLE_PATH: 'custom/build.gradle',
-            CONFIG_IOS_INFO_PLIST_PATH: 'custom/Info.plist',
-            'ios.projectPbxprojPath': 'custom/project.pbxproj',
-            skipAndroid: false,
-            skipIOS: true,
-            skipPackageJson: true,
+        await setExtensionSettings(EXTENSION_ID, {
+            [CONFIG.ANDROID_BUILD_GRADLE_PATH]: 'custom/build.gradle',
+            [CONFIG.IOS_INFO_PLIST_PATH]: 'custom/Info.plist',
+            [CONFIG.IOS_PROJECT_PB_XPROJ_PATH]: 'custom/project.pbxproj',
+            [CONFIG.SKIP_ANDROID]: false,
+            [CONFIG.SKIP_IOS]: true,
+            [CONFIG.SKIP_PACKAGE_JSON]: true,
         });
 
         // Mock user responses
@@ -201,7 +195,7 @@ suite('React Native Version Bumper Extension Tests', function () {
 
         try {
             // Execute the version bump command
-            await vscode.commands.executeCommand('vscode-react-native-version-bumper.bumpAppVersion');
+            await vscode.commands.executeCommand(COMMANDS.BUMP_APP_VERSION);
 
             // Wait for file system operations to complete
             if (vscode.env.uiKind === vscode.UIKind.Desktop) {
@@ -249,7 +243,7 @@ suite('React Native Version Bumper Extension Tests', function () {
     // Test 3: Bump version for iOS only using custom paths
     test('Bump custom iOS only', async function () {
         // Configure extension to use custom file paths and skip Android/package.json
-        await setExtensionSettings('reactNativeVersionBumper', {
+        await setExtensionSettings(EXTENSION_ID, {
             CONFIG_ANDROID_BUILD_GRADLE_PATH: 'custom/build.gradle',
             CONFIG_IOS_INFO_PLIST_PATH: 'custom/Info.plist',
             'ios.projectPbxprojPath': 'custom/project.pbxproj',
@@ -263,7 +257,7 @@ suite('React Native Version Bumper Extension Tests', function () {
 
         try {
             // Execute the version bump command
-            await vscode.commands.executeCommand('vscode-react-native-version-bumper.bumpAppVersion');
+            await vscode.commands.executeCommand(COMMANDS.BUMP_APP_VERSION);
 
             // Wait for file system operations to complete
             if (vscode.env.uiKind === vscode.UIKind.Desktop) {

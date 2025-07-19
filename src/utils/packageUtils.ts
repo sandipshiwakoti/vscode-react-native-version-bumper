@@ -2,13 +2,13 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import path from 'path';
 
-import { INITIAL_SEMANTIC_VERSION } from '../constants';
+import { COMMANDS, DEFAULT_VALUES, FILE_EXTENSIONS } from '../constants';
 import { BumpResult, BumpType, PackageJsonData } from '../types';
 
 import { bumpSemanticVersion } from './versionUtils';
 
 function readPackageJson(rootPath: string): { packageJson: PackageJsonData; packageJsonPath: string } {
-    const packageJsonPath = path.join(rootPath, 'package.json');
+    const packageJsonPath = path.join(rootPath, FILE_EXTENSIONS.PACKAGE_JSON);
     if (!fs.existsSync(packageJsonPath)) {
         throw new Error('package.json not found');
     }
@@ -18,12 +18,16 @@ function readPackageJson(rootPath: string): { packageJson: PackageJsonData; pack
 }
 
 function writePackageJson(packageJsonPath: string, packageJson: PackageJsonData): void {
-    fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n', 'utf8');
+    fs.writeFileSync(
+        packageJsonPath,
+        JSON.stringify(packageJson, null, DEFAULT_VALUES.JSON_INDENT) + DEFAULT_VALUES.NEWLINE,
+        'utf8'
+    );
 }
 
 export async function bumpPackageJsonVersion(rootPath: string, type: BumpType): Promise<BumpResult> {
     const { packageJson, packageJsonPath } = readPackageJson(rootPath);
-    const oldVersion = packageJson.version || INITIAL_SEMANTIC_VERSION;
+    const oldVersion = packageJson.version || DEFAULT_VALUES.SEMANTIC_VERSION;
     const newVersion = bumpSemanticVersion(oldVersion, type);
 
     packageJson.version = newVersion;
@@ -91,10 +95,10 @@ export function getPackageJsonCodeLenses(document: vscode.TextDocument): vscode.
 
     try {
         const packageJson = JSON.parse(text);
-        const version = packageJson.version || INITIAL_SEMANTIC_VERSION;
+        const version = packageJson.version || DEFAULT_VALUES.SEMANTIC_VERSION;
 
         const lines = text.split('\n');
-        let versionLineIndex = -1;
+        let versionLineIndex = DEFAULT_VALUES.VERSION_LINE_INDEX;
 
         for (let i = 0; i < lines.length; i++) {
             if (lines[i].includes('"version"')) {
@@ -103,7 +107,7 @@ export function getPackageJsonCodeLenses(document: vscode.TextDocument): vscode.
             }
         }
 
-        if (versionLineIndex !== -1) {
+        if (versionLineIndex !== DEFAULT_VALUES.VERSION_LINE_INDEX) {
             const versionStartIndex = lines[versionLineIndex].indexOf('"version"');
             const position = new vscode.Position(versionLineIndex, versionStartIndex);
             const range = new vscode.Range(
@@ -111,14 +115,14 @@ export function getPackageJsonCodeLenses(document: vscode.TextDocument): vscode.
                 new vscode.Position(versionLineIndex, lines[versionLineIndex].length)
             );
 
-            const patchVersion = bumpSemanticVersion(version, 'patch');
-            const minorVersion = bumpSemanticVersion(version, 'minor');
-            const majorVersion = bumpSemanticVersion(version, 'major');
+            const patchVersion = bumpSemanticVersion(version, BumpType.PATCH);
+            const minorVersion = bumpSemanticVersion(version, BumpType.MINOR);
+            const majorVersion = bumpSemanticVersion(version, BumpType.MAJOR);
 
             codeLenses.push(
                 new vscode.CodeLens(range, {
                     title: `Bump Patch: ${version} → ${patchVersion}`,
-                    command: 'vscode-react-native-version-bumper.bumpPatch',
+                    command: COMMANDS.BUMP_PATCH,
                     tooltip: 'Bump the patch version',
                 })
             );
@@ -126,7 +130,7 @@ export function getPackageJsonCodeLenses(document: vscode.TextDocument): vscode.
             codeLenses.push(
                 new vscode.CodeLens(range, {
                     title: `Bump Minor: ${version} → ${minorVersion}`,
-                    command: 'vscode-react-native-version-bumper.bumpMinor',
+                    command: COMMANDS.BUMP_MINOR,
                     tooltip: 'Bump the minor version',
                 })
             );
@@ -134,7 +138,7 @@ export function getPackageJsonCodeLenses(document: vscode.TextDocument): vscode.
             codeLenses.push(
                 new vscode.CodeLens(range, {
                     title: `Bump Major: ${version} → ${majorVersion}`,
-                    command: 'vscode-react-native-version-bumper.bumpMajor',
+                    command: COMMANDS.BUMP_MAJOR,
                     tooltip: 'Bump the major version',
                 })
             );

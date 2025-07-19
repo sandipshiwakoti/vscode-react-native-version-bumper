@@ -1,4 +1,8 @@
-export type BumpType = 'major' | 'minor' | 'patch';
+export enum BumpType {
+    MAJOR = 'major',
+    MINOR = 'minor',
+    PATCH = 'patch',
+}
 
 export type ProjectType = 'react-native' | 'unknown';
 

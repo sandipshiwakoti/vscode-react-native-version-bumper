@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
-import { CONFIG_SKIP_ANDROID, CONFIG_SKIP_IOS, CONFIG_SKIP_PACKAGE_JSON, INITIAL_SEMANTIC_VERSION } from '../constants';
-import { BumpResult, SyncOption } from '../types';
+import { CONFIG, DEFAULT_VALUES, EXTENSION_ID, PROGRESS_INCREMENTS, REGEX_PATTERNS } from '../constants';
+import { BumpResult, BumpType, SyncOption } from '../types';
 import { showBumpResults } from '../ui/resultsView';
 import { syncAndroidVersion } from '../utils/androidUtils';
 import { hasAndroidProject, hasIOSProject } from '../utils/fileUtils';
@@ -12,7 +12,7 @@ import { updateStatusBar } from '../utils/statusBarUtils';
 import { getCurrentVersions, getHighestVersion } from '../utils/versionUtils';
 
 export async function bumpSyncVersion(withGit: boolean) {
-    const config = vscode.workspace.getConfiguration('reactNativeVersionBumper');
+    const config = vscode.workspace.getConfiguration(EXTENSION_ID);
     const workspaceFolders = vscode.workspace.workspaceFolders;
 
     if (!workspaceFolders) {
@@ -35,13 +35,13 @@ export async function bumpSyncVersion(withGit: boolean) {
         const versions = await getCurrentVersions();
 
         const availableVersions: string[] = [];
-        if (versions.packageJson && !config.get(CONFIG_SKIP_PACKAGE_JSON)) {
+        if (versions.packageJson && !config.get(CONFIG.SKIP_PACKAGE_JSON)) {
             availableVersions.push(versions.packageJson);
         }
-        if (versions.android && hasAndroid && !config.get(CONFIG_SKIP_ANDROID)) {
+        if (versions.android && hasAndroid && !config.get(CONFIG.SKIP_ANDROID)) {
             availableVersions.push(versions.android.versionName);
         }
-        if (versions.ios && hasIOS && !config.get(CONFIG_SKIP_IOS)) {
+        if (versions.ios && hasIOS && !config.get(CONFIG.SKIP_IOS)) {
             availableVersions.push(versions.ios.version);
         }
 
@@ -49,16 +49,16 @@ export async function bumpSyncVersion(withGit: boolean) {
         if (uniqueVersions.length === 1 && availableVersions.length > 1) {
             vscode.window.showInformationMessage(
                 `✅ All platforms are already synced to version ${uniqueVersions[0]}!\n\n` +
-                    `📦 Package.json: ${versions.packageJson || 'N/A'}\n` +
-                    `🤖 Android: ${versions.android?.versionName || 'N/A'}\n` +
-                    `🍎 iOS: ${versions.ios?.version || 'N/A'}`
+                    `📦 Package.json: ${versions.packageJson || DEFAULT_VALUES.NOT_AVAILABLE}\n` +
+                    `🤖 Android: ${versions.android?.versionName || DEFAULT_VALUES.NOT_AVAILABLE}\n` +
+                    `🍎 iOS: ${versions.ios?.version || DEFAULT_VALUES.NOT_AVAILABLE}`
             );
             return;
         }
 
         const syncOptions: SyncOption[] = [];
 
-        if (versions.packageJson && !config.get(CONFIG_SKIP_PACKAGE_JSON)) {
+        if (versions.packageJson && !config.get(CONFIG.SKIP_PACKAGE_JSON)) {
             syncOptions.push({
                 label: `📦 Use package.json version: ${versions.packageJson}`,
                 description: 'Sync all platforms to match package.json version',
@@ -67,7 +67,7 @@ export async function bumpSyncVersion(withGit: boolean) {
             });
         }
 
-        if (versions.android && hasAndroid && !config.get(CONFIG_SKIP_ANDROID)) {
+        if (versions.android && hasAndroid && !config.get(CONFIG.SKIP_ANDROID)) {
             syncOptions.push({
                 label: `🤖 Use Android version: ${versions.android.versionName}`,
                 description: 'Sync all platforms to match Android versionName',
@@ -76,7 +76,7 @@ export async function bumpSyncVersion(withGit: boolean) {
             });
         }
 
-        if (versions.ios && hasIOS && !config.get(CONFIG_SKIP_IOS)) {
+        if (versions.ios && hasIOS && !config.get(CONFIG.SKIP_IOS)) {
             syncOptions.push({
                 label: `🍎 Use iOS version: ${versions.ios.version}`,
                 description: 'Sync all platforms to match iOS version',
@@ -115,7 +115,9 @@ export async function bumpSyncVersion(withGit: boolean) {
             );
 
             const suggestedVersion =
-                currentVersions.length > 0 ? getHighestVersion(currentVersions as string[]) : INITIAL_SEMANTIC_VERSION;
+                currentVersions.length > 0
+                    ? getHighestVersion(currentVersions as string[])
+                    : DEFAULT_VALUES.SEMANTIC_VERSION;
 
             const customVersion = await vscode.window.showInputBox({
                 prompt: 'Enter the version to sync all platforms to',
@@ -124,7 +126,7 @@ export async function bumpSyncVersion(withGit: boolean) {
                     if (!value) {
                         return 'Version cannot be empty';
                     }
-                    if (!/^\d+\.\d+\.\d+$/.test(value)) {
+                    if (!REGEX_PATTERNS.SEMANTIC_VERSION.test(value)) {
                         return 'Version must be in format x.y.z (e.g., 1.2.3)';
                     }
                     return null;
@@ -140,7 +142,7 @@ export async function bumpSyncVersion(withGit: boolean) {
 
         const syncDetails: string[] = [];
 
-        if (versions.packageJson && !config.get(CONFIG_SKIP_PACKAGE_JSON)) {
+        if (versions.packageJson && !config.get(CONFIG.SKIP_PACKAGE_JSON)) {
             if (versions.packageJson !== targetVersion) {
                 syncDetails.push(`📦 package.json: ${versions.packageJson} → ${targetVersion}`);
             } else {
@@ -148,7 +150,7 @@ export async function bumpSyncVersion(withGit: boolean) {
             }
         }
 
-        if (versions.android && hasAndroid && !config.get(CONFIG_SKIP_ANDROID)) {
+        if (versions.android && hasAndroid && !config.get(CONFIG.SKIP_ANDROID)) {
             if (versions.android.versionName !== targetVersion) {
                 syncDetails.push(
                     `🤖 Android: ${versions.android.versionName} → ${targetVersion} (build: ${versions.android.versionCode} → ${versions.android.versionCode + 1})`
@@ -160,7 +162,7 @@ export async function bumpSyncVersion(withGit: boolean) {
             }
         }
 
-        if (versions.ios && hasIOS && !config.get(CONFIG_SKIP_IOS)) {
+        if (versions.ios && hasIOS && !config.get(CONFIG.SKIP_IOS)) {
             if (versions.ios.version !== targetVersion) {
                 syncDetails.push(
                     `🍎 iOS: ${versions.ios.version} → ${targetVersion} (build: ${versions.ios.buildNumber} → ${parseInt(versions.ios.buildNumber) + 1})`
@@ -194,22 +196,22 @@ export async function bumpSyncVersion(withGit: boolean) {
                 cancellable: false,
             },
             async (progress) => {
-                progress.report({ increment: 0 });
+                progress.report({ increment: PROGRESS_INCREMENTS.START });
                 const tasks: Promise<BumpResult>[] = [];
 
-                if (versions.packageJson && !config.get(CONFIG_SKIP_PACKAGE_JSON)) {
+                if (versions.packageJson && !config.get(CONFIG.SKIP_PACKAGE_JSON)) {
                     tasks.push(syncPackageJsonVersion(rootPath, targetVersion, versions.packageJson));
                 }
 
-                if (hasAndroid && !config.get(CONFIG_SKIP_ANDROID)) {
+                if (hasAndroid && !config.get(CONFIG.SKIP_ANDROID)) {
                     tasks.push(syncAndroidVersion(rootPath, targetVersion, versions.android));
                 }
 
-                if (hasIOS && !config.get(CONFIG_SKIP_IOS)) {
+                if (hasIOS && !config.get(CONFIG.SKIP_IOS)) {
                     tasks.push(syncIOSVersion(rootPath, targetVersion, versions.ios));
                 }
 
-                progress.report({ increment: 20 });
+                progress.report({ increment: PROGRESS_INCREMENTS.TASKS_PREPARED });
                 const taskResults = await Promise.allSettled(tasks);
                 let completedTasks = 0;
 
@@ -231,7 +233,10 @@ export async function bumpSyncVersion(withGit: boolean) {
 
                 const totalTasks = tasks.length || 1;
                 progress.report({
-                    increment: Math.min(60 * (completedTasks / totalTasks), 60),
+                    increment: Math.min(
+                        PROGRESS_INCREMENTS.TASKS_COMPLETED_MAX * (completedTasks / totalTasks),
+                        PROGRESS_INCREMENTS.TASKS_COMPLETED_MAX
+                    ),
                 });
 
                 if (withGit && tasks.length > 0) {
@@ -250,8 +255,8 @@ export async function bumpSyncVersion(withGit: boolean) {
                             message: `Sync to version ${targetVersion}`,
                         });
 
-                        await executeGitWorkflow(rootPath, 'patch', syncResults);
-                        progress.report({ increment: 90 });
+                        await executeGitWorkflow(rootPath, BumpType.PATCH, syncResults);
+                        progress.report({ increment: PROGRESS_INCREMENTS.GIT_COMPLETED });
                     } catch (error) {
                         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                         results.push({
@@ -266,13 +271,13 @@ export async function bumpSyncVersion(withGit: boolean) {
                     }
                 }
 
-                progress.report({ increment: 100 });
+                progress.report({ increment: PROGRESS_INCREMENTS.FINISHED });
 
                 const hasSuccessfulOperations = results.some((result) => result.success);
                 const hasCompletedTasks = tasks.length > 0 && completedTasks > 0;
 
                 if (hasSuccessfulOperations && hasCompletedTasks) {
-                    showBumpResults('patch', results);
+                    showBumpResults(BumpType.PATCH, results);
                     updateStatusBar();
                 } else if (results.length > 0 && !hasSuccessfulOperations) {
                     const errorMessages = results

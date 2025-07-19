@@ -1,7 +1,8 @@
+import { REGEX_PATTERNS } from '../constants';
 import { BumpResult, BumpType } from '../types';
 
 export function replacePlaceholders(template: string, values: Record<string, string>): string {
-    return template.replace(/{([a-zA-Z]+)}/g, (_, key) => values[key] || '');
+    return template.replace(REGEX_PATTERNS.PLACEHOLDER_REPLACE, (_, key) => values[key] || '');
 }
 
 export function getPlaceholderValues(

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import { CONFIG_SHOW_IN_STATUS_BAR } from '../constants';
+import { COMMANDS, CONFIG, DEFAULT_VALUES, EXTENSION_ID } from '../constants';
 
 import { isReactNativeProject } from './fileUtils';
 import { getPackageJsonName } from './packageUtils';
@@ -9,8 +9,11 @@ import { getCurrentVersions } from './versionUtils';
 let statusBarItem: vscode.StatusBarItem;
 
 export function initializeStatusBar(): void {
-    statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
-    statusBarItem.command = 'vscode-react-native-version-bumper.showVersions';
+    statusBarItem = vscode.window.createStatusBarItem(
+        vscode.StatusBarAlignment.Left,
+        DEFAULT_VALUES.STATUS_BAR_PRIORITY
+    );
+    statusBarItem.command = COMMANDS.SHOW_VERSIONS;
     updateStatusBar();
     statusBarItem.show();
 
@@ -18,8 +21,8 @@ export function initializeStatusBar(): void {
 }
 
 export async function updateStatusBar(): Promise<void> {
-    const config = vscode.workspace.getConfiguration('reactNativeVersionBumper');
-    if (!config.get(CONFIG_SHOW_IN_STATUS_BAR, true)) {
+    const config = vscode.workspace.getConfiguration(EXTENSION_ID);
+    if (!config.get(CONFIG.SHOW_IN_STATUS_BAR, true)) {
         statusBarItem.hide();
         return;
     }

@@ -6,7 +6,6 @@ interface QuickPickItem {
     value?: string;
 }
 
-// Create a mock for VS Code QuickPick dialogs
 export function createQuickPickMock(responses: string[]) {
     const originalShowQuickPick = vscode.window.showQuickPick;
     let callIndex = 0;
@@ -39,7 +38,6 @@ export function createQuickPickMock(responses: string[]) {
     return originalShowQuickPick;
 }
 
-// Helper function to set multiple VS Code extension settings at once
 export async function setExtensionSettings(configName: string, settings: Record<string, any>) {
     const config = vscode.workspace.getConfiguration(configName);
     for (const [key, value] of Object.entries(settings)) {
@@ -47,7 +45,6 @@ export async function setExtensionSettings(configName: string, settings: Record<
     }
 }
 
-// Check if a file exists
 export const checkFileExists = async (filePath: string) => {
     try {
         await fs.access(filePath);

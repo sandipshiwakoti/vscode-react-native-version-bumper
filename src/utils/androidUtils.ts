@@ -2,16 +2,24 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import path from 'path';
 
-import { CONFIG_ANDROID_BUILD_GRADLE_PATH } from '../constants';
+import {
+    ANDROID_GRADLE_KEYS,
+    COMMANDS,
+    CONFIG,
+    DEFAULT_VALUES,
+    EXTENSION_ID,
+    FILE_PATTERNS,
+    REGEX_PATTERNS,
+} from '../constants';
 import { AndroidVersionInfo, BumpResult, BumpType } from '../types';
 
 import { bumpSemanticVersion } from './versionUtils';
 
 function readAndroidVersionInfo(rootPath: string): AndroidVersionInfo {
-    const config = vscode.workspace.getConfiguration('reactNativeVersionBumper');
+    const config = vscode.workspace.getConfiguration(EXTENSION_ID);
     const buildGradleConfigPath = config.get(
-        CONFIG_ANDROID_BUILD_GRADLE_PATH,
-        path.join('android', 'app', 'build.gradle')
+        CONFIG.ANDROID_BUILD_GRADLE_PATH,
+        FILE_PATTERNS.ANDROID_BUILD_GRADLE_DEFAULT
     );
     const buildGradlePath = path.join(rootPath, buildGradleConfigPath);
 
@@ -21,22 +29,22 @@ function readAndroidVersionInfo(rootPath: string): AndroidVersionInfo {
 
     const content = fs.readFileSync(buildGradlePath, 'utf8');
     const lines = content.split('\n');
-    let versionCode = 0;
-    let versionName = '';
-    let versionCodeLineIndex = -1;
-    let versionNameLineIndex = -1;
+    let versionCode = DEFAULT_VALUES.VERSION_CODE;
+    let versionName = DEFAULT_VALUES.VERSION_NAME;
+    let versionCodeLineIndex = DEFAULT_VALUES.VERSION_LINE_INDEX;
+    let versionNameLineIndex = DEFAULT_VALUES.VERSION_LINE_INDEX;
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
-        if (line.startsWith('versionCode')) {
-            const match = line.match(/versionCode\s+(\d+)/);
+        if (line.startsWith(ANDROID_GRADLE_KEYS.VERSION_CODE)) {
+            const match = line.match(REGEX_PATTERNS.VERSION_CODE);
             if (match) {
                 versionCode = parseInt(match[1]);
                 versionCodeLineIndex = i;
             }
         }
-        if (line.startsWith('versionName')) {
-            const match = line.match(/versionName\s+["']([^"']+)["']/);
+        if (line.startsWith(ANDROID_GRADLE_KEYS.VERSION_NAME)) {
+            const match = line.match(REGEX_PATTERNS.VERSION_NAME);
             if (match) {
                 versionName = match[1];
                 versionNameLineIndex = i;
@@ -44,7 +52,10 @@ function readAndroidVersionInfo(rootPath: string): AndroidVersionInfo {
         }
     }
 
-    if (versionCodeLineIndex === -1 || versionNameLineIndex === -1) {
+    if (
+        versionCodeLineIndex === DEFAULT_VALUES.VERSION_LINE_INDEX ||
+        versionNameLineIndex === DEFAULT_VALUES.VERSION_LINE_INDEX
+    ) {
         throw new Error('Could not find version information in build.gradle');
     }
 
@@ -64,12 +75,12 @@ function writeAndroidVersionInfo(
     newVersionName: string
 ): void {
     versionInfo.lines[versionInfo.versionCodeLineIndex] = versionInfo.lines[versionInfo.versionCodeLineIndex].replace(
-        /versionCode\s+\d+/,
-        `versionCode ${newVersionCode}`
+        REGEX_PATTERNS.VERSION_CODE_REPLACE,
+        `${ANDROID_GRADLE_KEYS.VERSION_CODE} ${newVersionCode}`
     );
     versionInfo.lines[versionInfo.versionNameLineIndex] = versionInfo.lines[versionInfo.versionNameLineIndex].replace(
-        /versionName\s+["'][^"']+["']/,
-        `versionName "${newVersionName}"`
+        REGEX_PATTERNS.VERSION_NAME_REPLACE,
+        `${ANDROID_GRADLE_KEYS.VERSION_NAME} "${newVersionName}"`
     );
     fs.writeFileSync(versionInfo.buildGradlePath, versionInfo.lines.join('\n'), 'utf8');
 }
@@ -121,34 +132,34 @@ export function getAndroidCodeLenses(document: vscode.TextDocument): vscode.Code
     const lines = text.split('\n');
 
     let inDefaultConfig = false;
-    let versionNameLine = -1;
+    let versionNameLine = DEFAULT_VALUES.VERSION_LINE_INDEX;
     let versionCode = 1;
     let versionName = '1.0.0';
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
 
-        if (line.includes('defaultConfig {')) {
+        if (line.includes(ANDROID_GRADLE_KEYS.DEFAULT_CONFIG)) {
             inDefaultConfig = true;
             continue;
         }
 
-        if (inDefaultConfig && line === '}') {
+        if (inDefaultConfig && line === ANDROID_GRADLE_KEYS.CLOSING_BRACE) {
             inDefaultConfig = false;
             continue;
         }
 
         if (inDefaultConfig) {
-            if (line.includes('versionCode')) {
-                const match = line.match(/versionCode\s+(\d+)/);
+            if (line.includes(ANDROID_GRADLE_KEYS.VERSION_CODE)) {
+                const match = line.match(REGEX_PATTERNS.VERSION_CODE);
                 if (match) {
                     versionCode = parseInt(match[1]);
                 }
             }
 
-            if (line.includes('versionName')) {
+            if (line.includes(ANDROID_GRADLE_KEYS.VERSION_NAME)) {
                 versionNameLine = i;
-                const match = line.match(/versionName\s+["']([^"']+)["']/);
+                const match = line.match(REGEX_PATTERNS.VERSION_NAME);
                 if (match) {
                     versionName = match[1];
                 }
@@ -156,20 +167,20 @@ export function getAndroidCodeLenses(document: vscode.TextDocument): vscode.Code
         }
     }
 
-    if (versionNameLine !== -1) {
-        const versionStartIndex = lines[versionNameLine].indexOf('versionName');
+    if (versionNameLine !== DEFAULT_VALUES.VERSION_LINE_INDEX) {
+        const versionStartIndex = lines[versionNameLine].indexOf(ANDROID_GRADLE_KEYS.VERSION_NAME);
         const position = new vscode.Position(versionNameLine, versionStartIndex);
         const range = new vscode.Range(position, new vscode.Position(versionNameLine, lines[versionNameLine].length));
 
-        const patchVersion = bumpSemanticVersion(versionName, 'patch');
-        const minorVersion = bumpSemanticVersion(versionName, 'minor');
-        const majorVersion = bumpSemanticVersion(versionName, 'major');
+        const patchVersion = bumpSemanticVersion(versionName, BumpType.PATCH);
+        const minorVersion = bumpSemanticVersion(versionName, BumpType.MINOR);
+        const majorVersion = bumpSemanticVersion(versionName, BumpType.MAJOR);
         const newVersionCode = versionCode + 1;
 
         codeLenses.push(
             new vscode.CodeLens(range, {
                 title: `Bump Patch: ${versionName} (${versionCode}) → ${patchVersion} (${newVersionCode})`,
-                command: 'vscode-react-native-version-bumper.bumpPatch',
+                command: COMMANDS.BUMP_PATCH,
                 tooltip: 'Bump the Android patch version and version code',
             })
         );
@@ -177,7 +188,7 @@ export function getAndroidCodeLenses(document: vscode.TextDocument): vscode.Code
         codeLenses.push(
             new vscode.CodeLens(range, {
                 title: `Bump Minor: ${versionName} (${versionCode}) → ${minorVersion} (${newVersionCode})`,
-                command: 'vscode-react-native-version-bumper.bumpMinor',
+                command: COMMANDS.BUMP_MINOR,
                 tooltip: 'Bump the Android minor version and version code',
             })
         );
@@ -185,7 +196,7 @@ export function getAndroidCodeLenses(document: vscode.TextDocument): vscode.Code
         codeLenses.push(
             new vscode.CodeLens(range, {
                 title: `Bump Major: ${versionName} (${versionCode}) → ${majorVersion} (${newVersionCode})`,
-                command: 'vscode-react-native-version-bumper.bumpMajor',
+                command: COMMANDS.BUMP_MAJOR,
                 tooltip: 'Bump the Android major version and version code',
             })
         );

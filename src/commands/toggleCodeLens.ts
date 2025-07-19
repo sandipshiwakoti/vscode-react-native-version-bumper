@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import { CODELENS_CONTEXT_KEY, CODELENS_ENABLED_KEY } from '../constants';
+import { CODELENS } from '../constants';
 import { disposeCodeLensProvider, refreshCodeLenses, registerCodeLensProvider } from '../utils/codeLensUtils';
 
 let codeLensDisposable: vscode.Disposable;
@@ -18,20 +18,20 @@ export function isCodeLensEnabled(): boolean {
     if (!extensionContext) {
         return true;
     }
-    return extensionContext.workspaceState.get(CODELENS_ENABLED_KEY, true);
+    return extensionContext.workspaceState.get(CODELENS.ENABLED_KEY, true);
 }
 
 export async function setCodeLensEnabled(enabled: boolean): Promise<void> {
     if (!extensionContext) {
         return;
     }
-    await extensionContext.workspaceState.update(CODELENS_ENABLED_KEY, enabled);
-    await vscode.commands.executeCommand('setContext', CODELENS_CONTEXT_KEY, enabled);
+    await extensionContext.workspaceState.update(CODELENS.ENABLED_KEY, enabled);
+    await vscode.commands.executeCommand('setContext', CODELENS.CONTEXT_KEY, enabled);
 }
 
 function updateCodeLensContext(): void {
     const enabled = isCodeLensEnabled();
-    vscode.commands.executeCommand('setContext', CODELENS_CONTEXT_KEY, enabled);
+    vscode.commands.executeCommand('setContext', CODELENS.CONTEXT_KEY, enabled);
 }
 
 export async function showCodeLens(): Promise<void> {

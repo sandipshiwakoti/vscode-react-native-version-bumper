@@ -3,23 +3,7 @@ import * as vscode from 'vscode';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
-import {
-    CONFIG_GIT_AUTO_COMMIT,
-    CONFIG_GIT_AUTO_CREATE_BRANCH,
-    CONFIG_GIT_AUTO_CREATE_TAG,
-    CONFIG_GIT_BRANCH_NAME_TEMPLATE,
-    CONFIG_GIT_COMMIT_MESSAGE_TEMPLATE,
-    CONFIG_GIT_SKIP_BRANCH,
-    CONFIG_GIT_SKIP_PUSH,
-    CONFIG_GIT_SKIP_TAG,
-    CONFIG_GIT_TAG_NAME_TEMPLATE,
-    CONFIG_SKIP_ANDROID,
-    CONFIG_SKIP_IOS,
-    CONFIG_SKIP_PACKAGE_JSON,
-    GIT_DEFAULT_BRANCH_PREFIX,
-    GIT_DEFAULT_TAG_NAME_TEMPLATE,
-    INITIAL_SEMANTIC_VERSION,
-} from '../constants';
+import { CONFIG, DEFAULT_VALUES, EXTENSION_ID, REGEX_PATTERNS, TEMPLATES } from '../constants';
 import { BumpResult, BumpType } from '../types';
 
 import { getPlaceholderValues, replacePlaceholders } from './helperUtils';
@@ -28,7 +12,7 @@ import { bumpSemanticVersion, getLatestGitTagVersion } from './versionUtils';
 const execAsync = promisify(exec);
 
 export async function executeGitWorkflow(rootPath: string, type: BumpType, results: BumpResult[]): Promise<void> {
-    const config = vscode.workspace.getConfiguration('reactNativeVersionBumper');
+    const config = vscode.workspace.getConfiguration(EXTENSION_ID);
 
     let branchCreated = false;
     let branchName: string | undefined;
@@ -41,9 +25,9 @@ export async function executeGitWorkflow(rootPath: string, type: BumpType, resul
     let shouldPush = false;
 
     try {
-        const skipAndroid = config.get(CONFIG_SKIP_ANDROID, false);
-        const skipIOS = config.get(CONFIG_SKIP_IOS, false);
-        const skipPackageJson = config.get(CONFIG_SKIP_PACKAGE_JSON, false);
+        const skipAndroid = config.get(CONFIG.SKIP_ANDROID, false);
+        const skipIOS = config.get(CONFIG.SKIP_IOS, false);
+        const skipPackageJson = config.get(CONFIG.SKIP_PACKAGE_JSON, false);
 
         const versionMap: { [platform: string]: string } = {};
         const buildNumberMap: { [platform: string]: string } = {};
@@ -61,23 +45,27 @@ export async function executeGitWorkflow(rootPath: string, type: BumpType, resul
 
         versionSources.forEach((source) => {
             const platformKey = source.platform;
-            let semanticVersion = INITIAL_SEMANTIC_VERSION;
-            let buildNumber = 'N/A';
+            let semanticVersion = DEFAULT_VALUES.SEMANTIC_VERSION;
+            let buildNumber = DEFAULT_VALUES.NOT_AVAILABLE;
 
-            const versionMatch = source.newVersion.match(/^v?([\d.]+)(?:\s*\((\d+)\))?/);
+            const versionMatch = source.newVersion.match(REGEX_PATTERNS.VERSION_MATCH);
             if (versionMatch) {
                 semanticVersion = versionMatch[1];
-                buildNumber = versionMatch[2] || 'N/A';
+                buildNumber = versionMatch[2] || DEFAULT_VALUES.NOT_AVAILABLE;
             } else {
                 const result = results.find((r) => r.platform === source.platform);
                 if (result && result.oldVersion) {
-                    const oldVersionMatch = result.oldVersion.match(/^v?([\d.]+)(?:\s*\((\d+)\))?/);
+                    const oldVersionMatch = result.oldVersion.match(REGEX_PATTERNS.VERSION_MATCH);
                     if (oldVersionMatch) {
                         semanticVersion = oldVersionMatch[1];
-                        buildNumber = source.newVersion.match(/(\d+)/)?.[1] || 'N/A';
+                        buildNumber =
+                            source.newVersion.match(REGEX_PATTERNS.BUILD_NUMBER_EXTRACT)?.[1] ||
+                            DEFAULT_VALUES.NOT_AVAILABLE;
                     }
                 } else {
-                    buildNumber = source.newVersion.match(/(\d+)/)?.[1] || 'N/A';
+                    buildNumber =
+                        source.newVersion.match(REGEX_PATTERNS.BUILD_NUMBER_EXTRACT)?.[1] ||
+                        DEFAULT_VALUES.NOT_AVAILABLE;
                 }
             }
 
@@ -89,7 +77,7 @@ export async function executeGitWorkflow(rootPath: string, type: BumpType, resul
 
         const placeholderValues = getPlaceholderValues(type, results, mainVersion, versionMap, buildNumberMap);
 
-        let shouldCommit = config.get(CONFIG_GIT_AUTO_COMMIT, false);
+        let shouldCommit = config.get(CONFIG.GIT_AUTO_COMMIT, false);
         if (!shouldCommit) {
             const response = await vscode.window.showQuickPick(
                 [
@@ -105,8 +93,8 @@ export async function executeGitWorkflow(rootPath: string, type: BumpType, resul
             return;
         }
 
-        let shouldCreateBranch = config.get(CONFIG_GIT_AUTO_CREATE_BRANCH, false);
-        if (!config.get(CONFIG_GIT_SKIP_BRANCH) && !shouldCreateBranch) {
+        let shouldCreateBranch = config.get(CONFIG.GIT_AUTO_CREATE_BRANCH, false);
+        if (!config.get(CONFIG.GIT_SKIP_BRANCH) && !shouldCreateBranch) {
             const createBranchResponse = await vscode.window.showQuickPick(
                 [
                     { label: 'Yes', value: true },
@@ -118,7 +106,7 @@ export async function executeGitWorkflow(rootPath: string, type: BumpType, resul
         }
 
         if (shouldCreateBranch) {
-            let defaultBranchName = GIT_DEFAULT_BRANCH_PREFIX;
+            let defaultBranchName = TEMPLATES.GIT_BRANCH_PREFIX;
 
             const isSyncOperation = results.some((result) => result.platform === 'SyncOperation');
 
@@ -143,7 +131,7 @@ export async function executeGitWorkflow(rootPath: string, type: BumpType, resul
                 }
             }
 
-            const branchNameTemplate = config.get(CONFIG_GIT_BRANCH_NAME_TEMPLATE, '');
+            const branchNameTemplate = config.get(CONFIG.GIT_BRANCH_NAME_TEMPLATE, '');
             let customBranchName = defaultBranchName;
             if (branchNameTemplate) {
                 customBranchName = replacePlaceholders(branchNameTemplate, placeholderValues);
@@ -162,7 +150,7 @@ export async function executeGitWorkflow(rootPath: string, type: BumpType, resul
                 }
             }
 
-            if (config.get(CONFIG_GIT_AUTO_CREATE_BRANCH)) {
+            if (config.get(CONFIG.GIT_AUTO_CREATE_BRANCH)) {
                 branchName = customBranchName;
             } else {
                 branchName = await vscode.window.showInputBox({
@@ -211,11 +199,11 @@ export async function executeGitWorkflow(rootPath: string, type: BumpType, resul
         commitMessage =
             platforms.length > 0 ? `chore: bump ${platforms.join(' and ')}` : `chore: bump version to v${mainVersion}`;
 
-        const commitMessageTemplate = config.get(CONFIG_GIT_COMMIT_MESSAGE_TEMPLATE, commitMessage);
+        const commitMessageTemplate = config.get(CONFIG.GIT_COMMIT_MESSAGE_TEMPLATE, commitMessage);
         const defaultCommitMessage = replacePlaceholders(commitMessageTemplate, placeholderValues);
         let customCommitMessage: string | undefined;
 
-        if (config.get(CONFIG_GIT_AUTO_COMMIT)) {
+        if (config.get(CONFIG.GIT_AUTO_COMMIT)) {
             customCommitMessage = defaultCommitMessage;
         } else {
             customCommitMessage = await vscode.window.showInputBox({
@@ -248,8 +236,8 @@ export async function executeGitWorkflow(rootPath: string, type: BumpType, resul
             return;
         }
 
-        shouldTag = config.get(CONFIG_GIT_AUTO_CREATE_TAG, false);
-        if (!config.get(CONFIG_GIT_SKIP_TAG) && !shouldTag) {
+        shouldTag = config.get(CONFIG.GIT_AUTO_CREATE_TAG, false);
+        if (!config.get(CONFIG.GIT_SKIP_TAG) && !shouldTag) {
             const response = await vscode.window.showQuickPick(
                 [
                     { label: 'Yes', value: true },
@@ -263,9 +251,9 @@ export async function executeGitWorkflow(rootPath: string, type: BumpType, resul
         if (shouldTag) {
             const currentTagVersion = await getLatestGitTagVersion(rootPath);
 
-            const bumpPatchTag = (version: string) => bumpSemanticVersion(version, 'patch');
-            const bumpMinorTag = (version: string) => bumpSemanticVersion(version, 'minor');
-            const bumpMajorTag = (version: string) => bumpSemanticVersion(version, 'major');
+            const bumpPatchTag = (version: string) => bumpSemanticVersion(version, BumpType.PATCH);
+            const bumpMinorTag = (version: string) => bumpSemanticVersion(version, BumpType.MINOR);
+            const bumpMajorTag = (version: string) => bumpSemanticVersion(version, BumpType.MAJOR);
 
             const tagBumpType = await vscode.window.showQuickPick(
                 [
@@ -318,7 +306,7 @@ export async function executeGitWorkflow(rootPath: string, type: BumpType, resul
                 newTagVersion = bumpSemanticVersion(currentTagVersion, tagBumpType.value as BumpType);
             }
 
-            const tagNameTemplate = config.get(CONFIG_GIT_TAG_NAME_TEMPLATE, GIT_DEFAULT_TAG_NAME_TEMPLATE);
+            const tagNameTemplate = config.get(CONFIG.GIT_TAG_NAME_TEMPLATE, TEMPLATES.GIT_TAG_NAME);
             tagName = replacePlaceholders(tagNameTemplate, {
                 ...placeholderValues,
                 version: newTagVersion,
@@ -359,7 +347,7 @@ export async function executeGitWorkflow(rootPath: string, type: BumpType, resul
             }
         }
 
-        shouldPush = !config.get(CONFIG_GIT_SKIP_PUSH);
+        shouldPush = !config.get(CONFIG.GIT_SKIP_PUSH);
         if (shouldPush) {
             const pushResponse = await vscode.window.showQuickPick(
                 [

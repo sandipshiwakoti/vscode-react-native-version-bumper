@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import { CONFIG_SKIP_ANDROID, CONFIG_SKIP_IOS, CONFIG_SKIP_PACKAGE_JSON, INITIAL_SEMANTIC_VERSION } from '../constants';
+import { BUMP_TYPE_LABELS, CONFIG, DEFAULT_VALUES, EXTENSION_ID, PROGRESS_INCREMENTS } from '../constants';
 import { BumpResult, BumpType } from '../types';
 import { showBumpResults } from '../ui/resultsView';
 import { bumpAndroidVersion } from '../utils/androidUtils';
@@ -12,7 +12,7 @@ import { updateStatusBar } from '../utils/statusBarUtils';
 import { bumpSemanticVersion, getCurrentVersions } from '../utils/versionUtils';
 
 export async function bumpAppVersion(withGit: boolean) {
-    const config = vscode.workspace.getConfiguration('reactNativeVersionBumper');
+    const config = vscode.workspace.getConfiguration(EXTENSION_ID);
     const workspaceFolders = vscode.workspace.workspaceFolders;
 
     if (!workspaceFolders) {
@@ -26,31 +26,28 @@ export async function bumpAppVersion(withGit: boolean) {
 
     if (!hasAndroid && !hasIOS) {
         vscode.window.showErrorMessage(
-            'No React Native projects found. Please ensure you have:\n' +
-                '• Android: android/app/build.gradle file\n' +
-                '• iOS: ios/ folder with Info.plist\n' +
-                'At least one platform is required.'
+            'No React Native projects found. Please ensure you have:\n• Android: android/app/build.gradle file\n• iOS: ios/ folder with Info.plist\nAt least one platform is required.'
         );
         return;
     }
 
     const versions = await getCurrentVersions();
-    const androidVersion = versions?.android ? versions.android.versionName : INITIAL_SEMANTIC_VERSION;
-    const iosVersion = versions.ios ? versions.ios.version : INITIAL_SEMANTIC_VERSION;
-    const packageJsonVersion = versions.packageJson || INITIAL_SEMANTIC_VERSION;
+    const androidVersion = versions?.android ? versions.android.versionName : DEFAULT_VALUES.SEMANTIC_VERSION;
+    const iosVersion = versions.ios ? versions.ios.version : DEFAULT_VALUES.SEMANTIC_VERSION;
+    const packageJsonVersion = versions.packageJson || DEFAULT_VALUES.SEMANTIC_VERSION;
 
     const getPlatformLabel = (bumpType: BumpType) => {
         const platforms: string[] = [];
-        if (!config.get(CONFIG_SKIP_ANDROID) && hasAndroid && versions?.android) {
+        if (!config.get(CONFIG.SKIP_ANDROID) && hasAndroid && versions?.android) {
             platforms.push(`Android: v${bumpSemanticVersion(androidVersion, bumpType)}`);
         }
-        if (!config.get(CONFIG_SKIP_IOS) && hasIOS && versions.ios) {
+        if (!config.get(CONFIG.SKIP_IOS) && hasIOS && versions.ios) {
             platforms.push(`iOS: v${bumpSemanticVersion(iosVersion, bumpType)}`);
         }
         return platforms.length > 0 ? platforms.join(', ') : 'No platforms available';
     };
 
-    if (getPlatformLabel('patch') === 'No platforms available') {
+    if (getPlatformLabel(BumpType.PATCH) === 'No platforms available') {
         const missingPlatforms: string[] = [];
         if (!hasAndroid) {
             missingPlatforms.push('Android (android/app/build.gradle not found)');
@@ -66,16 +63,16 @@ export async function bumpAppVersion(withGit: boolean) {
     const bumpType = await vscode.window.showQuickPick(
         [
             {
-                label: `🔧 Patch (${getPlatformLabel('patch')})`,
-                value: 'patch',
+                label: `${BUMP_TYPE_LABELS.PATCH.ICON} ${BUMP_TYPE_LABELS.PATCH.LABEL} (${getPlatformLabel(BumpType.PATCH)})`,
+                value: BumpType.PATCH,
             },
             {
-                label: `⬆️ Minor (${getPlatformLabel('minor')})`,
-                value: 'minor',
+                label: `${BUMP_TYPE_LABELS.MINOR.ICON} ${BUMP_TYPE_LABELS.MINOR.LABEL} (${getPlatformLabel(BumpType.MINOR)})`,
+                value: BumpType.MINOR,
             },
             {
-                label: `🚀 Major (${getPlatformLabel('major')})`,
-                value: 'major',
+                label: `${BUMP_TYPE_LABELS.MAJOR.ICON} ${BUMP_TYPE_LABELS.MAJOR.LABEL} (${getPlatformLabel(BumpType.MAJOR)})`,
+                value: BumpType.MAJOR,
             },
         ],
         { placeHolder: 'Select version bump type for available platforms' }
@@ -88,22 +85,22 @@ export async function bumpAppVersion(withGit: boolean) {
     let includePackageJson = true;
     let packageBumpType: BumpType = bumpType.value as BumpType;
 
-    if (config.get(CONFIG_SKIP_PACKAGE_JSON)) {
+    if (config.get(CONFIG.SKIP_PACKAGE_JSON)) {
         includePackageJson = false;
     } else if (versions.packageJson) {
         const packageBumpTypeSelection = await vscode.window.showQuickPick(
             [
                 {
-                    label: `🔧 Patch (v${bumpSemanticVersion(packageJsonVersion, 'patch')})`,
-                    value: 'patch',
+                    label: `${BUMP_TYPE_LABELS.PATCH.ICON} ${BUMP_TYPE_LABELS.PATCH.LABEL} (v${bumpSemanticVersion(packageJsonVersion, BumpType.PATCH)})`,
+                    value: BumpType.PATCH,
                 },
                 {
-                    label: `⬆️ Minor (v${bumpSemanticVersion(packageJsonVersion, 'minor')})`,
-                    value: 'minor',
+                    label: `${BUMP_TYPE_LABELS.MINOR.ICON} ${BUMP_TYPE_LABELS.MINOR.LABEL} (v${bumpSemanticVersion(packageJsonVersion, BumpType.MINOR)})`,
+                    value: BumpType.MINOR,
                 },
                 {
-                    label: `🚀 Major (v${bumpSemanticVersion(packageJsonVersion, 'major')})`,
-                    value: 'major',
+                    label: `${BUMP_TYPE_LABELS.MAJOR.ICON} ${BUMP_TYPE_LABELS.MAJOR.LABEL} (v${bumpSemanticVersion(packageJsonVersion, BumpType.MAJOR)})`,
+                    value: BumpType.MAJOR,
                 },
             ],
             { placeHolder: 'Select package.json version bump type' }
@@ -120,7 +117,7 @@ export async function bumpAppVersion(withGit: boolean) {
     const projectType = await detectProjectType(rootPath);
     const results: BumpResult[] = [];
 
-    if (config.get(CONFIG_SKIP_PACKAGE_JSON) && config.get(CONFIG_SKIP_ANDROID) && config.get(CONFIG_SKIP_IOS)) {
+    if (config.get(CONFIG.SKIP_PACKAGE_JSON) && config.get(CONFIG.SKIP_ANDROID) && config.get(CONFIG.SKIP_IOS)) {
         vscode.window.showWarningMessage(
             'All version bump operations (package.json, Android, iOS) are skipped. No changes will be made.'
         );
@@ -134,10 +131,10 @@ export async function bumpAppVersion(withGit: boolean) {
             cancellable: false,
         },
         async (progress) => {
-            progress.report({ increment: 0 });
+            progress.report({ increment: PROGRESS_INCREMENTS.START });
             const tasks: Promise<BumpResult>[] = [];
 
-            if (includePackageJson && !config.get(CONFIG_SKIP_PACKAGE_JSON)) {
+            if (includePackageJson && !config.get(CONFIG.SKIP_PACKAGE_JSON)) {
                 try {
                     tasks.push(bumpPackageJsonVersion(rootPath, packageBumpType));
                 } catch (error) {
@@ -155,10 +152,10 @@ export async function bumpAppVersion(withGit: boolean) {
 
             switch (projectType) {
                 case 'react-native':
-                    if (!config.get(CONFIG_SKIP_ANDROID) && hasAndroid) {
+                    if (!config.get(CONFIG.SKIP_ANDROID) && hasAndroid) {
                         tasks.push(bumpAndroidVersion(rootPath, type));
                     }
-                    if (!config.get(CONFIG_SKIP_IOS) && hasIOS) {
+                    if (!config.get(CONFIG.SKIP_IOS) && hasIOS) {
                         tasks.push(bumpIOSVersion(rootPath, type));
                     }
                     break;
@@ -181,7 +178,7 @@ export async function bumpAppVersion(withGit: boolean) {
                     });
             }
 
-            progress.report({ increment: 20 });
+            progress.report({ increment: PROGRESS_INCREMENTS.TASKS_PREPARED });
             const taskResults = await Promise.allSettled(tasks);
             let completedTasks = 0;
 
@@ -203,13 +200,16 @@ export async function bumpAppVersion(withGit: boolean) {
 
             const totalTasks = tasks.length || 1;
             progress.report({
-                increment: Math.min(60 * (completedTasks / totalTasks), 60),
+                increment: Math.min(
+                    PROGRESS_INCREMENTS.TASKS_COMPLETED_MAX * (completedTasks / totalTasks),
+                    PROGRESS_INCREMENTS.TASKS_COMPLETED_MAX
+                ),
             });
 
             if (withGit && tasks.length > 0) {
                 try {
                     await executeGitWorkflow(rootPath, type, results);
-                    progress.report({ increment: 90 });
+                    progress.report({ increment: PROGRESS_INCREMENTS.GIT_COMPLETED });
                 } catch (error) {
                     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                     results.push({
@@ -226,7 +226,7 @@ export async function bumpAppVersion(withGit: boolean) {
                 return;
             }
 
-            progress.report({ increment: 100 });
+            progress.report({ increment: PROGRESS_INCREMENTS.FINISHED });
 
             const hasSuccessfulOperations = results.some((result) => result.success);
             const hasCompletedTasks = tasks.length > 0 && completedTasks > 0;

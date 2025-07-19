@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import path from 'path';
 
-import { CONFIG_ANDROID_BUILD_GRADLE_PATH, CONFIG_IOS_INFO_PLIST_PATH } from '../constants';
+import { CONFIG, EXTENSION_ID, FILE_EXTENSIONS, FILE_PATTERNS, PROGRESS_INCREMENTS } from '../constants';
 import { BumpResult, BumpType } from '../types';
 import { bumpAndroidVersion } from '../utils/androidUtils';
 import { bumpIOSVersion } from '../utils/iosUtils';
@@ -18,12 +18,12 @@ export async function bumpVersionByType(type: BumpType): Promise<void> {
     const filePath = editor.document.fileName;
     const rootPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || path.dirname(filePath);
 
-    const config = vscode.workspace.getConfiguration('reactNativeVersionBumper');
+    const config = vscode.workspace.getConfiguration(EXTENSION_ID);
     const customBuildGradlePath = config.get(
-        CONFIG_ANDROID_BUILD_GRADLE_PATH,
-        path.join('android', 'app', 'build.gradle')
+        CONFIG.ANDROID_BUILD_GRADLE_PATH,
+        FILE_PATTERNS.ANDROID_BUILD_GRADLE_DEFAULT
     );
-    const customInfoPlistPath = config.get(CONFIG_IOS_INFO_PLIST_PATH) as string;
+    const customInfoPlistPath = config.get(CONFIG.IOS_INFO_PLIST_PATH) as string;
 
     const normalizedFilePath = path.normalize(filePath);
     const normalizedBuildGradlePath = path.normalize(path.join(rootPath, customBuildGradlePath));
@@ -41,12 +41,12 @@ export async function bumpVersionByType(type: BumpType): Promise<void> {
             try {
                 let result: BumpResult | undefined;
 
-                if (filePath.endsWith('package.json')) {
+                if (filePath.endsWith(FILE_EXTENSIONS.PACKAGE_JSON)) {
                     result = await bumpPackageJsonVersion(rootPath, type);
-                } else if (filePath.endsWith('build.gradle')) {
+                } else if (filePath.endsWith(FILE_EXTENSIONS.BUILD_GRADLE)) {
                     if (normalizedFilePath !== normalizedBuildGradlePath && normalizedBuildGradlePath) {
                         const answer = await vscode.window.showWarningMessage(
-                            `You are editing a build.gradle file that doesn't match your configured path (${customBuildGradlePath}). Do you want to update the configured file instead?`,
+                            `You are editing a ${FILE_EXTENSIONS.BUILD_GRADLE} file that doesn't match your configured path (${customBuildGradlePath}). Do you want to update the configured file instead?`,
                             'Yes',
                             'No',
                             'Update Configuration'
@@ -56,7 +56,7 @@ export async function bumpVersionByType(type: BumpType): Promise<void> {
                             return;
                         } else if (answer === 'Update Configuration') {
                             await config.update(
-                                CONFIG_ANDROID_BUILD_GRADLE_PATH,
+                                CONFIG.ANDROID_BUILD_GRADLE_PATH,
                                 path.relative(rootPath, filePath),
                                 vscode.ConfigurationTarget.Workspace
                             );
@@ -66,14 +66,17 @@ export async function bumpVersionByType(type: BumpType): Promise<void> {
                         }
                     }
                     result = await bumpAndroidVersion(rootPath, type);
-                } else if (filePath.endsWith('Info.plist') || filePath.includes('.xcodeproj')) {
+                } else if (
+                    filePath.endsWith(FILE_EXTENSIONS.INFO_PLIST) ||
+                    filePath.includes(FILE_EXTENSIONS.XCODEPROJ)
+                ) {
                     if (
                         normalizedInfoPlistPath &&
                         normalizedFilePath !== normalizedInfoPlistPath &&
-                        filePath.endsWith('Info.plist')
+                        filePath.endsWith(FILE_EXTENSIONS.INFO_PLIST)
                     ) {
                         const answer = await vscode.window.showWarningMessage(
-                            `You are editing an Info.plist file that doesn't match your configured path (${customInfoPlistPath}). Do you want to update the configured file instead?`,
+                            `You are editing an ${FILE_EXTENSIONS.INFO_PLIST} file that doesn't match your configured path (${customInfoPlistPath}). Do you want to update the configured file instead?`,
                             'Yes',
                             'No',
                             'Update Configuration'
@@ -83,7 +86,7 @@ export async function bumpVersionByType(type: BumpType): Promise<void> {
                             return;
                         } else if (answer === 'Update Configuration') {
                             await config.update(
-                                CONFIG_IOS_INFO_PLIST_PATH,
+                                CONFIG.IOS_INFO_PLIST_PATH,
                                 path.relative(rootPath, filePath),
                                 vscode.ConfigurationTarget.Workspace
                             );
@@ -95,12 +98,12 @@ export async function bumpVersionByType(type: BumpType): Promise<void> {
                     result = await bumpIOSVersion(rootPath, type);
                 } else {
                     vscode.window.showInformationMessage(
-                        'Please open a version file (package.json, build.gradle, or iOS Info.plist) to bump its version'
+                        `Please open a version file (${FILE_EXTENSIONS.PACKAGE_JSON}, ${FILE_EXTENSIONS.BUILD_GRADLE}, or iOS ${FILE_EXTENSIONS.INFO_PLIST}) to bump its version`
                     );
                     return;
                 }
 
-                progress.report({ increment: 100 });
+                progress.report({ increment: PROGRESS_INCREMENTS.FINISHED });
 
                 if (result && result.success) {
                     vscode.window.showInformationMessage(

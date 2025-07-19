@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 
 import { isCodeLensEnabled } from '../commands/toggleCodeLens';
+import { FILE_EXTENSIONS, FILE_PATTERNS } from '../constants';
 
 import { getAndroidCodeLenses } from './androidUtils';
 import { getIOSCodeLenses } from './iosUtils';
@@ -14,9 +15,9 @@ export function initializeCodeLensProvider(): vscode.CodeLensProvider {
 
     textDocumentListener = vscode.workspace.onDidChangeTextDocument((e) => {
         if (
-            e.document.fileName.endsWith('package.json') ||
-            e.document.fileName.endsWith('build.gradle') ||
-            e.document.fileName.endsWith('Info.plist')
+            e.document.fileName.endsWith(FILE_EXTENSIONS.PACKAGE_JSON) ||
+            e.document.fileName.endsWith(FILE_EXTENSIONS.BUILD_GRADLE) ||
+            e.document.fileName.endsWith(FILE_EXTENSIONS.INFO_PLIST)
         ) {
             onDidChangeCodeLensesEmitter.fire();
         }
@@ -29,15 +30,15 @@ export function initializeCodeLensProvider(): vscode.CodeLensProvider {
                 return [];
             }
 
-            if (document.fileName.endsWith('package.json')) {
+            if (document.fileName.endsWith(FILE_EXTENSIONS.PACKAGE_JSON)) {
                 return getPackageJsonCodeLenses(document);
             }
 
-            if (document.fileName.endsWith('build.gradle')) {
+            if (document.fileName.endsWith(FILE_EXTENSIONS.BUILD_GRADLE)) {
                 return getAndroidCodeLenses(document);
             }
 
-            if (document.fileName.endsWith('Info.plist')) {
+            if (document.fileName.endsWith(FILE_EXTENSIONS.INFO_PLIST)) {
                 return await getIOSCodeLenses(document);
             }
 
@@ -66,9 +67,9 @@ export function registerCodeLensProvider(context: vscode.ExtensionContext): vsco
 
     const disposable = vscode.languages.registerCodeLensProvider(
         [
-            { language: 'json', pattern: '**/package.json' },
-            { pattern: '**/build.gradle' },
-            { pattern: '**/Info.plist' },
+            { language: 'json', pattern: FILE_PATTERNS.PACKAGE_JSON_PATTERN },
+            { pattern: FILE_PATTERNS.BUILD_GRADLE_PATTERN },
+            { pattern: FILE_PATTERNS.INFO_PLIST_PATTERN },
         ],
         provider
     );

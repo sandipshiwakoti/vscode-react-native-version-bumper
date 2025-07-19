@@ -1,38 +1,39 @@
 import * as fs from 'fs';
 import path from 'path';
 
+import { DEFAULT_VALUES, FILE_EXTENSIONS, FILE_PATTERNS, REGEX_PATTERNS } from '../constants';
 import { ProjectType } from '../types';
 
 import { getPackageJsonName } from './packageUtils';
 
 export async function detectProjectType(rootPath: string): Promise<ProjectType> {
-    const androidPath = path.join(rootPath, 'android');
-    const iosPath = path.join(rootPath, 'ios');
+    const androidPath = path.join(rootPath, FILE_PATTERNS.ANDROID_FOLDER);
+    const iosPath = path.join(rootPath, FILE_PATTERNS.IOS_FOLDER);
     const hasAndroid = fs.existsSync(androidPath);
     const hasIos = fs.existsSync(iosPath);
     return hasAndroid || hasIos ? 'react-native' : 'unknown';
 }
 
 export function isReactNativeProject(rootPath: string): boolean {
-    const androidPath = path.join(rootPath, 'android');
-    const iosPath = path.join(rootPath, 'ios');
+    const androidPath = path.join(rootPath, FILE_PATTERNS.ANDROID_FOLDER);
+    const iosPath = path.join(rootPath, FILE_PATTERNS.IOS_FOLDER);
     return fs.existsSync(androidPath) || fs.existsSync(iosPath);
 }
 
 export function hasAndroidProject(rootPath: string): boolean {
-    const androidPath = path.join(rootPath, 'android');
-    const buildGradlePath = path.join(androidPath, 'app', 'build.gradle');
+    const androidPath = path.join(rootPath, FILE_PATTERNS.ANDROID_FOLDER);
+    const buildGradlePath = path.join(androidPath, 'app', FILE_EXTENSIONS.BUILD_GRADLE);
     return fs.existsSync(androidPath) && fs.existsSync(buildGradlePath);
 }
 
 export function hasIOSProject(rootPath: string): boolean {
-    const iosPath = path.join(rootPath, 'ios');
+    const iosPath = path.join(rootPath, FILE_PATTERNS.IOS_FOLDER);
     return fs.existsSync(iosPath);
 }
 
 export function getAppName(rootPath: string): string | null {
     try {
-        const appJsonPath = path.join(rootPath, 'app.json');
+        const appJsonPath = path.join(rootPath, FILE_EXTENSIONS.APP_JSON);
         if (fs.existsSync(appJsonPath)) {
             const appJson = JSON.parse(fs.readFileSync(appJsonPath, 'utf8'));
             if (appJson.name) {
@@ -48,18 +49,20 @@ export function getAppName(rootPath: string): string | null {
     try {
         const packageName = getPackageJsonName(rootPath);
         if (packageName) {
-            return packageName.replace(/[@\/\-_]/g, '').replace(/^\w/, (c: string) => c.toUpperCase());
+            return packageName
+                .replace(REGEX_PATTERNS.PACKAGE_NAME_CLEAN, '')
+                .replace(REGEX_PATTERNS.FIRST_CHAR_UPPER, (c: string) => c.toUpperCase());
         }
         // eslint-disable-next-line unused-imports/no-unused-vars
     } catch (error) {}
 
     try {
-        const iosPath = path.join(rootPath, 'ios');
+        const iosPath = path.join(rootPath, FILE_PATTERNS.IOS_FOLDER);
         if (fs.existsSync(iosPath)) {
             const iosContents = fs.readdirSync(iosPath);
-            const xcodeprojDir = iosContents.find((item) => item.endsWith('.xcodeproj'));
+            const xcodeprojDir = iosContents.find((item) => item.endsWith(FILE_EXTENSIONS.XCODEPROJ));
             if (xcodeprojDir) {
-                return xcodeprojDir.replace('.xcodeproj', '');
+                return xcodeprojDir.replace(FILE_EXTENSIONS.XCODEPROJ, '');
             }
         }
         // eslint-disable-next-line unused-imports/no-unused-vars
@@ -75,24 +78,24 @@ export async function findInfoPlistPath(iosPath: string): Promise<string | null>
     const possiblePlistPaths: string[] = [];
 
     if (appName) {
-        possiblePlistPaths.push(path.join(iosPath, appName, 'Info.plist'));
+        possiblePlistPaths.push(path.join(iosPath, appName, FILE_EXTENSIONS.INFO_PLIST));
     }
 
-    possiblePlistPaths.push(path.join(iosPath, 'Info.plist'));
+    possiblePlistPaths.push(path.join(iosPath, FILE_EXTENSIONS.INFO_PLIST));
 
     try {
         const iosContents = fs.readdirSync(iosPath);
         const projectDirs = iosContents.filter(
             (item) =>
                 fs.statSync(path.join(iosPath, item)).isDirectory() &&
-                !item.endsWith('.xcodeproj') &&
-                !item.endsWith('.xcworkspace')
+                !item.endsWith(FILE_EXTENSIONS.XCODEPROJ) &&
+                !item.endsWith(FILE_EXTENSIONS.XCWORKSPACE)
         );
 
         const sortedDirs = projectDirs.sort((a, b) => {
             if (appName) {
                 if (a === appName) {
-                    return -1;
+                    return DEFAULT_VALUES.VERSION_LINE_INDEX;
                 }
                 if (b === appName) {
                     return 1;
@@ -102,7 +105,7 @@ export async function findInfoPlistPath(iosPath: string): Promise<string | null>
         });
 
         sortedDirs.forEach((dir) => {
-            const plistPath = path.join(iosPath, dir, 'Info.plist');
+            const plistPath = path.join(iosPath, dir, FILE_EXTENSIONS.INFO_PLIST);
             if (!possiblePlistPaths.includes(plistPath)) {
                 possiblePlistPaths.push(plistPath);
             }
