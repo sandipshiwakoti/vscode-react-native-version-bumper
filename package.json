@@ -1,7 +1,7 @@
 {
     "name": "vscode-react-native-version-bumper",
     "displayName": "React Native Version Bumper",
-    "description": "Simplify version management for React Native projects with with semantic versioning, CodeLens and Git integration",
+    "description": "One-click version bumping for React Native. Sync package.json, Android & iOS versions with CodeLens, semantic versioning, and Git automation.",
     "icon": "assets/logo.png",
     "version": "0.0.1",
     "publisher": "sandipshiwakoti",
@@ -17,13 +17,18 @@
     ],
     "keywords": [
         "react-native",
-        "version",
-        "bump",
-        "semantic versioning",
+        "version-management",
+        "version-bump",
+        "semantic-versioning",
+        "cross-platform",
         "android",
         "ios",
-        "git",
-        "automation"
+        "git-workflow",
+        "automation",
+        "codelens",
+        "package-json",
+        "build-gradle",
+        "info-plist"
     ],
     "activationEvents": [
         "onStartupFinished",
@@ -34,47 +39,48 @@
         "commands": [
             {
                 "command": "vscode-react-native-version-bumper.bumpAppVersion",
-                "title": "Bump App Version",
-                "category": "RN Version Bumper"
+                "title": "Bump All Platform Versions",
+                "category": "Version Bumper"
             },
             {
                 "command": "vscode-react-native-version-bumper.bumpAppVersionWithGit",
-                "title": "Bump App Version with Git",
-                "category": "RN Version Bumper"
+                "title": "Bump All Platform Versions with Git Workflow",
+                "category": "Version Bumper"
             },
             {
                 "command": "vscode-react-native-version-bumper.showVersions",
-                "title": "Show Current Versions",
-                "category": "RN Version Bumper"
+                "title": "Show Current Platform Versions",
+                "category": "Version Bumper"
             },
             {
                 "command": "vscode-react-native-version-bumper.bumpPatch",
-                "title": "Bump Patch Version",
-                "category": "RN Version Bumper"
+                "title": "Bump Patch Version in Current File (0.0.X)",
+                "category": "Version Bumper"
             },
             {
                 "command": "vscode-react-native-version-bumper.bumpMinor",
-                "title": "Bump Minor Version",
-                "category": "RN Version Bumper"
+                "title": "Bump Minor Version in Current File (0.X.0)",
+                "category": "Version Bumper"
             },
             {
                 "command": "vscode-react-native-version-bumper.bumpMajor",
-                "title": "Bump Major Version",
-                "category": "RN Version Bumper"
+                "title": "Bump Major Version in Current File (X.0.0)",
+                "category": "Version Bumper"
             },
             {
                 "command": "vscode-react-native-version-bumper.syncVersions",
-                "title": "Sync All Platform Versions",
-                "category": "RN Version Bumper"
+                "title": "Sync Versions Across All Platforms",
+                "category": "Version Bumper"
             },
             {
                 "command": "vscode-react-native-version-bumper.syncVersionsWithGit",
-                "title": "Sync All Platform Versions with Git",
-                "category": "RN Version Bumper"
+                "title": "Sync Versions Across All Platforms with Git Workflow",
+                "category": "Version Bumper"
             },
             {
                 "command": "vscode-react-native-version-bumper.showCodeLens",
-                "title": "Enable Bumper Lens",
+                "title": "Enable Version CodeLens",
+                "category": "Version Bumper",
                 "icon": {
                     "light": "assets/light/codelens-enabled.svg",
                     "dark": "assets/dark/codelens-enabled.svg"
@@ -82,7 +88,8 @@
             },
             {
                 "command": "vscode-react-native-version-bumper.hideCodeLens",
-                "title": "Disable Bumper Lens",
+                "title": "Disable Version CodeLens",
+                "category": "Version Bumper",
                 "icon": {
                     "light": "assets/light/codelens-disabled.svg",
                     "dark": "assets/dark/codelens-disabled.svg"
@@ -112,6 +119,18 @@
                     "when": "workspaceFolderCount > 0"
                 },
                 {
+                    "command": "vscode-react-native-version-bumper.bumpPatch",
+                    "when": "workspaceFolderCount > 0"
+                },
+                {
+                    "command": "vscode-react-native-version-bumper.bumpMinor",
+                    "when": "workspaceFolderCount > 0"
+                },
+                {
+                    "command": "vscode-react-native-version-bumper.bumpMajor",
+                    "when": "workspaceFolderCount > 0"
+                },
+                {
                     "command": "vscode-react-native-version-bumper.showCodeLens",
                     "group": "navigation",
                     "when": "editorTextFocus && (resourceFilename == 'package.json' || resourceFilename == 'build.gradle' || resourceFilename =~ /Info\\.plist$/) && !reactNativeVersionBumper.codeLensEnabled"
@@ -138,45 +157,50 @@
         "configuration": {
             "title": "React Native Version Bumper",
             "properties": {
+                "reactNativeVersionBumper.enableCodeLens": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Show clickable version bump actions directly in your code files. When enabled, you'll see 'Bump Version' buttons above version lines in package.json, build.gradle, and Info.plist files."
+                },
                 "reactNativeVersionBumper.skipPackageJson": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Skip bumping the package.json version (package.json is included by default)"
+                    "description": "Exclude package.json from version updates. Useful when using monorepos, different versioning strategies, or when package.json version is managed by other tools like Lerna or Nx."
                 },
                 "reactNativeVersionBumper.skipAndroid": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Skip bumping the Android version"
-                },
-                "reactNativeVersionBumper.android.buildGradlePath": {
-                    "type": "string",
-                    "default": "android/app/build.gradle",
-                    "description": "Custom path to the Android build.gradle file"
+                    "description": "Exclude Android from version updates. Useful for iOS-only releases, when Android uses different versioning strategy, or during platform-specific development phases."
                 },
                 "reactNativeVersionBumper.skipIOS": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Skip bumping the iOS version"
+                    "description": "Exclude iOS from version updates. Useful for Android-only releases, when iOS uses different versioning strategy, or during platform-specific development phases."
+                },
+                "reactNativeVersionBumper.android.buildGradlePath": {
+                    "type": "string",
+                    "default": "android/app/build.gradle",
+                    "description": "Custom path to Android build.gradle file. Default is 'android/app/build.gradle'. Change this if you have a custom project structure, e.g., 'packages/mobile/android/app/build.gradle' for monorepos."
                 },
                 "reactNativeVersionBumper.ios.infoPlistPath": {
                     "type": "string",
                     "default": null,
-                    "description": "Custom path to the iOS Info.plist file. If not set, the extension will attempt to find it."
+                    "description": "Custom path to iOS Info.plist file. Leave empty for auto-detection. Set manually for custom structures, e.g., 'packages/mobile/ios/MyApp/Info.plist' or when using multiple targets."
                 },
                 "reactNativeVersionBumper.ios.projectPbxprojPath": {
                     "type": "string",
                     "default": null,
-                    "description": "Custom path to the iOS project.pbxproj file. If not set, the extension will attempt to find it based on the first .xcodeproj file in the ios directory."
+                    "description": "Custom path to iOS project.pbxproj file. Leave empty for auto-detection from .xcodeproj folder. Set manually for complex Xcode projects, e.g., 'ios/MyApp.xcodeproj/project.pbxproj'."
                 },
                 "reactNativeVersionBumper.git.autoCommit": {
                     "type": "boolean",
                     "default": true,
-                    "description": "Automatically commit changes to Git"
+                    "description": "Automatically create Git commits after version bumping. Disable if you prefer to review changes manually or use different commit workflows. When enabled, saves time by committing all version changes at once."
                 },
                 "reactNativeVersionBumper.git.commitMessageTemplate": {
                     "type": "string",
-                    "default": "chore: bump {platforms}",
-                    "description": "Template for the Git commit message. Placeholders: {type}, {platforms}, {version}, {date}, {androidVersion}, {iosVersion}, {androidBuildNumber}, {iosBuildNumber}"
+                    "default": "chore: version bump",
+                    "description": "Git commit message template. Variables: {type}, {platforms}, {version}, {date}, {androidVersion}, {iosVersion}, {androidBuildNumber}, {iosBuildNumber}. Note: {platforms} includes detailed version info. Example: 'chore: version bump' or 'chore: bump to v{version}' becomes 'chore: bump to v2.0.0'."
                 },
                 "reactNativeVersionBumper.git.skipBranch": {
                     "type": "boolean",
@@ -186,12 +210,12 @@
                 "reactNativeVersionBumper.git.autoCreateBranch": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Automatically create a new Git branch"
+                    "description": "Automatically create a new Git branch before version bumping. Useful for teams requiring pull requests for version changes or when following GitFlow. Creates isolated branches for version updates."
                 },
                 "reactNativeVersionBumper.git.branchNameTemplate": {
                     "type": "string",
-                    "default": "",
-                    "description": "Template for the Git branch name. Placeholders: {type}, {version}, {date}, {androidVersion}, {iosVersion}, {androidBuildNumber}, {iosBuildNumber}. Defaults to 'version-bump/android-v{androidVersion}-ios-v{iosVersion}' for both platforms, 'version-bump/android-v{androidVersion}' for Android only, 'version-bump/ios-v{iosVersion}' for iOS only, or 'version-bump/v{version}' for package.json or Git tag."
+                    "default": "version-bump/{version}",
+                    "description": "Git branch name template. Variables: {type}, {version}, {date}, {androidVersion}, {iosVersion}, {androidBuildNumber}, {iosBuildNumber}. Example: 'version-bump/{version}' becomes 'version-bump/1.2.3'."
                 },
                 "reactNativeVersionBumper.git.skipTag": {
                     "type": "boolean",
@@ -201,22 +225,17 @@
                 "reactNativeVersionBumper.git.autoCreateTag": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Automatically create a Git tag"
+                    "description": "Automatically create Git tags after version bumping. Essential for release tracking, CI/CD pipelines, and app store deployments. Tags mark specific versions for easy checkout and deployment."
                 },
                 "reactNativeVersionBumper.git.tagNameTemplate": {
                     "type": "string",
                     "default": "v{version}",
-                    "description": "Template for the Git tag name. Placeholders: {type}, {version}, {date}, {androidVersion}, {iosVersion}, {androidBuildNumber}, {iosBuildNumber}. Uses latest Git tag version by default."
+                    "description": "Git tag name template. Variables: {type}, {version}, {date}, {androidVersion}, {iosVersion}, {androidBuildNumber}, {iosBuildNumber}. Example: 'v{version}' becomes 'v1.2.3', 'release-{version}-{date}' becomes 'release-1.2.3-2024-01-15'."
                 },
                 "reactNativeVersionBumper.git.skipPush": {
                     "type": "boolean",
                     "default": false,
                     "description": "Skip pushing changes to the remote repository"
-                },
-                "reactNativeVersionBumper.enableCodeLens": {
-                    "type": "boolean",
-                    "default": true,
-                    "description": "Enable or disable code lenses for version bumping"
                 }
             }
         }
