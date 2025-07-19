@@ -54,7 +54,7 @@ export const CONFIG = {
 
 export const CODELENS = {
     ENABLED_KEY: 'codeLensEnabled',
-    CONTEXT_KEY: `${EXTENSION_FULL_ID}.codeLensEnabled`,
+    CONTEXT_KEY: 'reactNativeVersionBumper.codeLensEnabled',
 } as const;
 
 export const PLATFORM_ICONS: { [key in PlatformKey]: string } = {
