@@ -21,12 +21,13 @@ import {
     INITIAL_SEMANTIC_VERSION,
 } from '../constants';
 import { BumpResult, BumpType } from '../types';
-import { getPlaceholderValues, replacePlaceholders } from '../utils/helperUtils';
-import { bumpSemanticVersion, getLatestGitTagVersion } from '../utils/versionUtils';
+
+import { getPlaceholderValues, replacePlaceholders } from './helperUtils';
+import { bumpSemanticVersion, getLatestGitTagVersion } from './versionUtils';
 
 const execAsync = promisify(exec);
 
-export async function handleGitOperations(rootPath: string, type: BumpType, results: BumpResult[]): Promise<void> {
+export async function executeGitWorkflow(rootPath: string, type: BumpType, results: BumpResult[]): Promise<void> {
     const config = vscode.workspace.getConfiguration('reactNativeVersionBumper');
 
     let branchCreated = false;

@@ -2,9 +2,11 @@ import * as vscode from 'vscode';
 import path from 'path';
 
 import { CONFIG_ANDROID_BUILD_GRADLE_PATH, CONFIG_IOS_INFO_PLIST_PATH } from '../constants';
-import { updateStatusBar } from '../extension';
-import { bumpAndroidVersion, bumpIOSVersion, bumpPackageJsonVersion } from '../services/bumpService';
 import { BumpResult, BumpType } from '../types';
+import { bumpAndroidVersion } from '../utils/androidUtils';
+import { bumpIOSVersion } from '../utils/iosUtils';
+import { bumpPackageJsonVersion } from '../utils/packageUtils';
+import { updateStatusBar } from '../utils/statusBarUtils';
 
 export async function bumpVersionByType(type: BumpType): Promise<void> {
     const editor = vscode.window.activeTextEditor;

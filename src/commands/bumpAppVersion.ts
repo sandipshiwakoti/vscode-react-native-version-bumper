@@ -1,9 +1,14 @@
 import * as vscode from 'vscode';
 
 import { CONFIG_SKIP_ANDROID, CONFIG_SKIP_IOS, CONFIG_SKIP_PACKAGE_JSON, INITIAL_SEMANTIC_VERSION } from '../constants';
-import { bumpVersion } from '../services/bumpService';
-import { BumpType } from '../types';
-import { hasAndroidProject, hasIOSProject } from '../utils/fileUtils';
+import { BumpResult, BumpType } from '../types';
+import { showBumpResults } from '../ui/resultsView';
+import { bumpAndroidVersion } from '../utils/androidUtils';
+import { detectProjectType, hasAndroidProject, hasIOSProject } from '../utils/fileUtils';
+import { executeGitWorkflow } from '../utils/gitUtils';
+import { bumpIOSVersion } from '../utils/iosUtils';
+import { bumpPackageJsonVersion } from '../utils/packageUtils';
+import { updateStatusBar } from '../utils/statusBarUtils';
 import { bumpSemanticVersion, getCurrentVersions } from '../utils/versionUtils';
 
 export async function bumpAppVersion(withGit: boolean) {
@@ -16,7 +21,6 @@ export async function bumpAppVersion(withGit: boolean) {
     }
 
     const rootPath = workspaceFolders[0].uri.fsPath;
-
     const hasAndroid = hasAndroidProject(rootPath);
     const hasIOS = hasIOSProject(rootPath);
 
@@ -112,5 +116,131 @@ export async function bumpAppVersion(withGit: boolean) {
         }
     }
 
-    await bumpVersion(bumpType.value as BumpType, includePackageJson, packageBumpType, withGit);
+    const type = bumpType.value as BumpType;
+    const projectType = await detectProjectType(rootPath);
+    const results: BumpResult[] = [];
+
+    if (config.get(CONFIG_SKIP_PACKAGE_JSON) && config.get(CONFIG_SKIP_ANDROID) && config.get(CONFIG_SKIP_IOS)) {
+        vscode.window.showWarningMessage(
+            'All version bump operations (package.json, Android, iOS) are skipped. No changes will be made.'
+        );
+        return;
+    }
+
+    await vscode.window.withProgress(
+        {
+            location: vscode.ProgressLocation.Notification,
+            title: `Bumping ${type} version...`,
+            cancellable: false,
+        },
+        async (progress) => {
+            progress.report({ increment: 0 });
+            const tasks: Promise<BumpResult>[] = [];
+
+            if (includePackageJson && !config.get(CONFIG_SKIP_PACKAGE_JSON)) {
+                try {
+                    tasks.push(bumpPackageJsonVersion(rootPath, packageBumpType));
+                } catch (error) {
+                    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                    results.push({
+                        platform: 'Package.json',
+                        success: false,
+                        oldVersion: '',
+                        newVersion: '',
+                        message: 'Package.json bumping failed',
+                        error: errorMessage,
+                    });
+                }
+            }
+
+            switch (projectType) {
+                case 'react-native':
+                    if (!config.get(CONFIG_SKIP_ANDROID) && hasAndroid) {
+                        tasks.push(bumpAndroidVersion(rootPath, type));
+                    }
+                    if (!config.get(CONFIG_SKIP_IOS) && hasIOS) {
+                        tasks.push(bumpIOSVersion(rootPath, type));
+                    }
+                    break;
+                case 'unknown':
+                    results.push({
+                        platform: 'Project Detection',
+                        success: false,
+                        oldVersion: '',
+                        newVersion: '',
+                        message: 'No React Native project detected. Android or iOS folders not found.',
+                    });
+                    break;
+                default:
+                    results.push({
+                        platform: 'Unknown',
+                        success: false,
+                        oldVersion: '',
+                        newVersion: '',
+                        message: `Unsupported project type: ${projectType}`,
+                    });
+            }
+
+            progress.report({ increment: 20 });
+            const taskResults = await Promise.allSettled(tasks);
+            let completedTasks = 0;
+
+            taskResults.forEach((result, index) => {
+                if (result.status === 'fulfilled') {
+                    results.push(result.value);
+                    completedTasks++;
+                } else {
+                    results.push({
+                        platform: `Task ${index + 1}`,
+                        success: false,
+                        oldVersion: '',
+                        newVersion: '',
+                        message: '',
+                        error: result.reason.toString(),
+                    });
+                }
+            });
+
+            const totalTasks = tasks.length || 1;
+            progress.report({
+                increment: Math.min(60 * (completedTasks / totalTasks), 60),
+            });
+
+            if (withGit && tasks.length > 0) {
+                try {
+                    await executeGitWorkflow(rootPath, type, results);
+                    progress.report({ increment: 90 });
+                } catch (error) {
+                    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                    results.push({
+                        platform: 'Git',
+                        success: false,
+                        oldVersion: '',
+                        newVersion: '',
+                        message: '',
+                        error: errorMessage,
+                    });
+                    vscode.window.showErrorMessage(`Git operation failed: ${errorMessage}`);
+                }
+            } else if (tasks.length === 0) {
+                return;
+            }
+
+            progress.report({ increment: 100 });
+
+            const hasSuccessfulOperations = results.some((result) => result.success);
+            const hasCompletedTasks = tasks.length > 0 && completedTasks > 0;
+
+            if (hasSuccessfulOperations && hasCompletedTasks) {
+                showBumpResults(type, results);
+                updateStatusBar();
+            } else if (results.length > 0 && !hasSuccessfulOperations) {
+                const errorMessages = results
+                    .filter((r) => !r.success)
+                    .map((r) => `${r.platform}: ${r.error || r.message}`)
+                    .join('\n');
+                vscode.window.showErrorMessage(`Version bump failed:\n${errorMessages}`);
+            }
+        }
+    );
 }

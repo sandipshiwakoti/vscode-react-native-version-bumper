@@ -3,6 +3,8 @@ import path from 'path';
 
 import { ProjectType } from '../types';
 
+import { getPackageJsonName } from './packageUtils';
+
 export async function detectProjectType(rootPath: string): Promise<ProjectType> {
     const androidPath = path.join(rootPath, 'android');
     const iosPath = path.join(rootPath, 'ios');
@@ -44,12 +46,9 @@ export function getAppName(rootPath: string): string | null {
     } catch (error) {}
 
     try {
-        const packageJsonPath = path.join(rootPath, 'package.json');
-        if (fs.existsSync(packageJsonPath)) {
-            const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-            if (packageJson.name) {
-                return packageJson.name.replace(/[@\/\-_]/g, '').replace(/^\w/, (c: string) => c.toUpperCase());
-            }
+        const packageName = getPackageJsonName(rootPath);
+        if (packageName) {
+            return packageName.replace(/[@\/\-_]/g, '').replace(/^\w/, (c: string) => c.toUpperCase());
         }
         // eslint-disable-next-line unused-imports/no-unused-vars
     } catch (error) {}

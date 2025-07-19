@@ -230,6 +230,7 @@
         "lint:fix": "eslint src --ext ts,js --fix",
         "format": "prettier --write \"src/**/*.{ts,json}\" \"*.{json,md,yml}\"",
         "format:check": "prettier --check \"src/**/*.{ts,json}\" \"*.{json,md,yml}\"",
+        "fix": "bun lint:fix && bun format",
         "test": "vscode-test",
         "package": "vsce package",
         "publish": "vsce publish",
