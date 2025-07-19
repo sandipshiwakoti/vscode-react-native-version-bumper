@@ -20,11 +20,11 @@ export function activate(context: vscode.ExtensionContext) {
     initializeStatusBar();
 
     const commands = [
-        vscode.commands.registerCommand(COMMANDS.BUMP_APP_VERSION, () => bumpAppVersion(false)),
-        vscode.commands.registerCommand(COMMANDS.BUMP_APP_VERSION_WITH_GIT, () => bumpAppVersion(true)),
-        vscode.commands.registerCommand(COMMANDS.SYNC_VERSIONS, () => bumpSyncVersion(false)),
-        vscode.commands.registerCommand(COMMANDS.SYNC_VERSIONS_WITH_GIT, () => bumpSyncVersion(true)),
-        vscode.commands.registerCommand(COMMANDS.SHOW_VERSIONS, showCurrentVersions),
+        vscode.commands.registerCommand(COMMANDS.BUMP_APP_VERSION, () => bumpAppVersion(false, context)),
+        vscode.commands.registerCommand(COMMANDS.BUMP_APP_VERSION_WITH_GIT, () => bumpAppVersion(true, context)),
+        vscode.commands.registerCommand(COMMANDS.SYNC_VERSIONS, () => bumpSyncVersion(false, context)),
+        vscode.commands.registerCommand(COMMANDS.SYNC_VERSIONS_WITH_GIT, () => bumpSyncVersion(true, context)),
+        vscode.commands.registerCommand(COMMANDS.SHOW_VERSIONS, () => showCurrentVersions(context)),
         vscode.commands.registerCommand(COMMANDS.BUMP_PATCH, () => bumpVersionByType(BumpType.PATCH)),
         vscode.commands.registerCommand(COMMANDS.BUMP_MINOR, () => bumpVersionByType(BumpType.MINOR)),
         vscode.commands.registerCommand(COMMANDS.BUMP_MAJOR, () => bumpVersionByType(BumpType.MAJOR)),

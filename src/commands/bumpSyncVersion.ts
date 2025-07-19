@@ -11,7 +11,7 @@ import { syncPackageJsonVersion } from '../utils/packageUtils';
 import { updateStatusBar } from '../utils/statusBarUtils';
 import { getCurrentVersions, getHighestVersion } from '../utils/versionUtils';
 
-export async function bumpSyncVersion(withGit: boolean) {
+export async function bumpSyncVersion(withGit: boolean, context?: vscode.ExtensionContext) {
     const config = vscode.workspace.getConfiguration(EXTENSION_ID);
     const workspaceFolders = vscode.workspace.workspaceFolders;
 
@@ -277,7 +277,7 @@ export async function bumpSyncVersion(withGit: boolean) {
                 const hasCompletedTasks = tasks.length > 0 && completedTasks > 0;
 
                 if (hasSuccessfulOperations && hasCompletedTasks) {
-                    showBumpResults(BumpType.PATCH, results);
+                    showBumpResults(BumpType.PATCH, results, context);
                     updateStatusBar();
                 } else if (results.length > 0 && !hasSuccessfulOperations) {
                     const errorMessages = results
