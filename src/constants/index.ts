@@ -61,7 +61,7 @@ export const PLATFORM_ICONS: { [key in PlatformKey]: string } = {
     'Package.json': '📦',
     Android: '🤖',
     iOS: '🍎',
-    Git: '🔄',
+    Git: '🔀',
 };
 
 export const FILE_EXTENSIONS = {
@@ -163,5 +163,9 @@ export const BUMP_TYPE_LABELS = {
     MAJOR: {
         ICON: '🚀',
         LABEL: 'Major',
+    },
+    CUSTOM: {
+        ICON: '✏️',
+        LABEL: 'Custom',
     },
 } as const;

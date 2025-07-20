@@ -171,3 +171,62 @@ export function getHighestVersion(versions: string[]): string {
             return 0;
         })[0].original;
 }
+
+export function validateVersion(version: string): string | null {
+    if (!version.trim()) {
+        return 'Version cannot be empty';
+    }
+
+    const semverRegex = /^\d+\.\d+\.\d+$/;
+    if (!semverRegex.test(version.trim())) {
+        return 'Version must be in format x.y.z (e.g., 1.2.3)';
+    }
+
+    return null;
+}
+
+export async function getCustomVersionForPlatform(
+    platformName: string,
+    currentVersion: string
+): Promise<string | null> {
+    const customVersion = await vscode.window.showInputBox({
+        prompt: `Enter custom ${platformName} version`,
+        value: currentVersion,
+        validateInput: validateVersion,
+        placeHolder: `Current: ${currentVersion} → New: e.g., 2.1.0`,
+        ignoreFocusOut: true,
+    });
+
+    return customVersion?.trim() || null;
+}
+
+export async function getCustomBuildNumber(
+    platformName: string,
+    currentBuildNumber: string | number
+): Promise<number | null> {
+    const buildNumberStr = currentBuildNumber.toString();
+    const customBuildNumber = await vscode.window.showInputBox({
+        prompt: `Enter custom ${platformName} build number (leave empty to keep current: ${buildNumberStr})`,
+        value: (parseInt(buildNumberStr) + 1).toString(),
+        validateInput: (value) => {
+            if (!value.trim()) {
+                return null;
+            }
+            const num = parseInt(value.trim());
+            if (isNaN(num) || num < 1) {
+                return 'Build number must be a positive integer';
+            }
+            return null;
+        },
+        placeHolder: `Current: ${buildNumberStr} → Auto-increment: ${parseInt(buildNumberStr) + 1} (or leave empty to keep ${buildNumberStr})`,
+        ignoreFocusOut: true,
+    });
+
+    if (customBuildNumber === undefined) {
+        return null;
+    }
+    if (!customBuildNumber.trim()) {
+        return null;
+    }
+    return parseInt(customBuildNumber.trim());
+}

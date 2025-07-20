@@ -44,7 +44,7 @@
             },
             {
                 "command": "vscode-react-native-version-bumper.bumpAppVersionWithGit",
-                "title": "Bump All Platform Versions with Git Workflow",
+                "title": "Bump All Platform Versions + Git Workflow",
                 "category": "Version Bumper"
             },
             {
@@ -74,7 +74,7 @@
             },
             {
                 "command": "vscode-react-native-version-bumper.syncVersionsWithGit",
-                "title": "Sync Versions Across All Platforms with Git Workflow",
+                "title": "Sync Versions Across All Platforms + Git Workflow",
                 "category": "Version Bumper"
             },
             {

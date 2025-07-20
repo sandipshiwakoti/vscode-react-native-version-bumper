@@ -2,6 +2,7 @@ export enum BumpType {
     MAJOR = 'major',
     MINOR = 'minor',
     PATCH = 'patch',
+    CUSTOM = 'custom',
 }
 
 export type ProjectType = 'react-native' | 'unknown';

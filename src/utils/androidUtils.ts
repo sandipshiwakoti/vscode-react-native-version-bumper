@@ -126,6 +126,55 @@ export async function syncAndroidVersion(
     };
 }
 
+export async function syncAndroidVersionWithBuildNumber(
+    rootPath: string,
+    targetVersion: string,
+    targetBuildNumber: number,
+    currentAndroid: { versionCode: number; versionName: string } | undefined
+): Promise<BumpResult> {
+    if (!currentAndroid) {
+        throw new Error('Android version information not available');
+    }
+
+    const versionInfo = readAndroidVersionInfo(rootPath);
+    const oldVersionDisplay = `${versionInfo.versionName} (${versionInfo.versionCode})`;
+    const newVersionDisplay = `${targetVersion} (${targetBuildNumber})`;
+
+    writeAndroidVersionInfo(versionInfo, targetBuildNumber, targetVersion);
+
+    return {
+        platform: 'Android',
+        success: true,
+        oldVersion: oldVersionDisplay,
+        newVersion: newVersionDisplay,
+        message: `Version Name: ${versionInfo.versionName} → ${targetVersion}\nVersion Code: ${versionInfo.versionCode} → ${targetBuildNumber}`,
+    };
+}
+
+export async function syncAndroidVersionOnly(
+    rootPath: string,
+    targetVersion: string,
+    currentAndroid: { versionCode: number; versionName: string } | undefined
+): Promise<BumpResult> {
+    if (!currentAndroid) {
+        throw new Error('Android version information not available');
+    }
+
+    const versionInfo = readAndroidVersionInfo(rootPath);
+    const oldVersionDisplay = `${versionInfo.versionName} (${versionInfo.versionCode})`;
+    const newVersionDisplay = `${targetVersion} (${versionInfo.versionCode})`;
+
+    writeAndroidVersionInfo(versionInfo, versionInfo.versionCode, targetVersion);
+
+    return {
+        platform: 'Android',
+        success: true,
+        oldVersion: oldVersionDisplay,
+        newVersion: newVersionDisplay,
+        message: `Version Name: ${versionInfo.versionName} → ${targetVersion}\nVersion Code: ${versionInfo.versionCode} (unchanged)`,
+    };
+}
+
 export function getAndroidCodeLenses(document: vscode.TextDocument): vscode.CodeLens[] {
     const codeLenses: vscode.CodeLens[] = [];
     const text = document.getText();

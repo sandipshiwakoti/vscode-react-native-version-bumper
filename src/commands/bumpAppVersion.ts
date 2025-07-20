@@ -3,13 +3,18 @@ import * as vscode from 'vscode';
 import { BUMP_TYPE_LABELS, CONFIG, DEFAULT_VALUES, EXTENSION_ID, PROGRESS_INCREMENTS } from '../constants';
 import { BumpResult, BumpType } from '../types';
 import { showBumpResults } from '../ui/resultsView';
-import { bumpAndroidVersion } from '../utils/androidUtils';
+import { bumpAndroidVersion, syncAndroidVersionOnly, syncAndroidVersionWithBuildNumber } from '../utils/androidUtils';
 import { detectProjectType, hasAndroidProject, hasIOSProject } from '../utils/fileUtils';
 import { executeGitWorkflow } from '../utils/gitUtils';
-import { bumpIOSVersion } from '../utils/iosUtils';
-import { bumpPackageJsonVersion } from '../utils/packageUtils';
+import { bumpIOSVersion, syncIOSVersionOnly, syncIOSVersionWithBuildNumber } from '../utils/iosUtils';
+import { bumpPackageJsonVersion, syncPackageJsonVersion } from '../utils/packageUtils';
 import { updateStatusBar } from '../utils/statusBarUtils';
-import { bumpSemanticVersion, getCurrentVersions } from '../utils/versionUtils';
+import {
+    bumpSemanticVersion,
+    getCurrentVersions,
+    getCustomBuildNumber,
+    getCustomVersionForPlatform,
+} from '../utils/versionUtils';
 
 export async function bumpAppVersion(withGit: boolean, context?: vscode.ExtensionContext) {
     const config = vscode.workspace.getConfiguration(EXTENSION_ID);
@@ -74,6 +79,11 @@ export async function bumpAppVersion(withGit: boolean, context?: vscode.Extensio
                 label: `${BUMP_TYPE_LABELS.MAJOR.ICON} ${BUMP_TYPE_LABELS.MAJOR.LABEL} (${getPlatformLabel(BumpType.MAJOR)})`,
                 value: BumpType.MAJOR,
             },
+            {
+                label: `${BUMP_TYPE_LABELS.CUSTOM.ICON} ${BUMP_TYPE_LABELS.CUSTOM.LABEL}`,
+                value: BumpType.CUSTOM,
+                description: 'Set specific version numbers for each platform',
+            },
         ],
         {
             placeHolder:
@@ -85,8 +95,42 @@ export async function bumpAppVersion(withGit: boolean, context?: vscode.Extensio
         return;
     }
 
+    let customAndroidVersion: string | null = null;
+    let customAndroidBuildNumber: number | null = null;
+    let customIOSVersion: string | null = null;
+    let customIOSBuildNumber: number | null = null;
+
+    if (bumpType.value === BumpType.CUSTOM) {
+        if (!config.get(CONFIG.SKIP_ANDROID) && hasAndroid && versions?.android) {
+            customAndroidVersion = await getCustomVersionForPlatform('Android', androidVersion);
+            if (customAndroidVersion === null) {
+                return;
+            }
+
+            customAndroidBuildNumber = await getCustomBuildNumber('Android', versions.android.versionCode);
+
+            if (customAndroidBuildNumber === null) {
+                return;
+            }
+        }
+
+        if (!config.get(CONFIG.SKIP_IOS) && hasIOS && versions.ios) {
+            customIOSVersion = await getCustomVersionForPlatform('iOS', iosVersion);
+            if (customIOSVersion === null) {
+                return;
+            }
+
+            customIOSBuildNumber = await getCustomBuildNumber('iOS', versions.ios.buildNumber);
+
+            if (customIOSBuildNumber === null) {
+                return;
+            }
+        }
+    }
+
     let includePackageJson = true;
     let packageBumpType: BumpType = bumpType.value as BumpType;
+    let customPackageJsonVersion: string | null = null;
 
     if (config.get(CONFIG.SKIP_PACKAGE_JSON)) {
         includePackageJson = false;
@@ -105,12 +149,24 @@ export async function bumpAppVersion(withGit: boolean, context?: vscode.Extensio
                     label: `${BUMP_TYPE_LABELS.MAJOR.ICON} ${BUMP_TYPE_LABELS.MAJOR.LABEL} (v${bumpSemanticVersion(packageJsonVersion, BumpType.MAJOR)})`,
                     value: BumpType.MAJOR,
                 },
+                {
+                    label: `${BUMP_TYPE_LABELS.CUSTOM.ICON} ${BUMP_TYPE_LABELS.CUSTOM.LABEL}`,
+                    value: BumpType.CUSTOM,
+                    description: `Current: v${packageJsonVersion} → Set custom version`,
+                },
             ],
             { placeHolder: 'Choose package.json version increment type' }
         );
 
         if (packageBumpTypeSelection) {
             packageBumpType = packageBumpTypeSelection.value as BumpType;
+
+            if (packageBumpType === BumpType.CUSTOM) {
+                customPackageJsonVersion = await getCustomVersionForPlatform('package.json', packageJsonVersion);
+                if (customPackageJsonVersion === null) {
+                    return;
+                }
+            }
         } else {
             return;
         }
@@ -130,7 +186,7 @@ export async function bumpAppVersion(withGit: boolean, context?: vscode.Extensio
     await vscode.window.withProgress(
         {
             location: vscode.ProgressLocation.Notification,
-            title: `Bumping ${type} version...`,
+            title: type === 'custom' ? 'Applying custom versions...' : `Bumping ${type} version...`,
             cancellable: false,
         },
         async (progress) => {
@@ -139,7 +195,11 @@ export async function bumpAppVersion(withGit: boolean, context?: vscode.Extensio
 
             if (includePackageJson && !config.get(CONFIG.SKIP_PACKAGE_JSON)) {
                 try {
-                    tasks.push(bumpPackageJsonVersion(rootPath, packageBumpType));
+                    if (customPackageJsonVersion) {
+                        tasks.push(syncPackageJsonVersion(rootPath, customPackageJsonVersion, packageJsonVersion));
+                    } else {
+                        tasks.push(bumpPackageJsonVersion(rootPath, packageBumpType));
+                    }
                 } catch (error) {
                     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                     results.push({
@@ -156,10 +216,44 @@ export async function bumpAppVersion(withGit: boolean, context?: vscode.Extensio
             switch (projectType) {
                 case 'react-native':
                     if (!config.get(CONFIG.SKIP_ANDROID) && hasAndroid) {
-                        tasks.push(bumpAndroidVersion(rootPath, type));
+                        if (customAndroidVersion) {
+                            if (customAndroidBuildNumber === null) {
+                                // Keep current build number - only change version
+                                tasks.push(syncAndroidVersionOnly(rootPath, customAndroidVersion, versions.android));
+                            } else {
+                                // Use custom build number
+                                tasks.push(
+                                    syncAndroidVersionWithBuildNumber(
+                                        rootPath,
+                                        customAndroidVersion,
+                                        customAndroidBuildNumber,
+                                        versions.android
+                                    )
+                                );
+                            }
+                        } else {
+                            tasks.push(bumpAndroidVersion(rootPath, type));
+                        }
                     }
                     if (!config.get(CONFIG.SKIP_IOS) && hasIOS) {
-                        tasks.push(bumpIOSVersion(rootPath, type));
+                        if (customIOSVersion) {
+                            if (customIOSBuildNumber === null) {
+                                // Keep current build number - only change version
+                                tasks.push(syncIOSVersionOnly(rootPath, customIOSVersion, versions.ios));
+                            } else {
+                                // Use custom build number
+                                tasks.push(
+                                    syncIOSVersionWithBuildNumber(
+                                        rootPath,
+                                        customIOSVersion,
+                                        customIOSBuildNumber,
+                                        versions.ios
+                                    )
+                                );
+                            }
+                        } else {
+                            tasks.push(bumpIOSVersion(rootPath, type));
+                        }
                     }
                     break;
                 case 'unknown':

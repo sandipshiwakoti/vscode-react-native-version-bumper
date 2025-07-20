@@ -400,6 +400,82 @@ export async function syncIOSVersion(
         message: `Build Number: ${result.oldBuildNumber} → ${result.newBuildNumber}\nVersion: ${result.oldVersion} → ${result.newVersion}`,
     };
 }
+
+export async function syncIOSVersionWithBuildNumber(
+    rootPath: string,
+    targetVersion: string,
+    targetBuildNumber: number,
+    currentIOS: { buildNumber: string; version: string } | undefined
+): Promise<BumpResult> {
+    if (!currentIOS) {
+        throw new Error('iOS version information not available');
+    }
+
+    const iosPath = path.join(rootPath, FILE_PATTERNS.IOS_FOLDER);
+    if (!fs.existsSync(iosPath)) {
+        throw new Error('iOS project not found');
+    }
+
+    const currentVersionInfo = await readIOSVersionInfo(rootPath);
+    if (!currentVersionInfo) {
+        throw new Error('Could not read iOS version information');
+    }
+
+    const oldVersion = currentVersionInfo.version;
+    const oldBuildNumber = currentVersionInfo.buildNumber;
+    const newBuildNumber = targetBuildNumber.toString();
+
+    if (currentVersionInfo.usesVariables) {
+        await updateIOSVariables(rootPath, currentVersionInfo, targetVersion, newBuildNumber);
+    } else {
+        await updateIOSDirectValues(rootPath, targetVersion, newBuildNumber);
+    }
+
+    return {
+        platform: 'iOS',
+        success: true,
+        oldVersion: `${oldVersion} (${oldBuildNumber})`,
+        newVersion: `${targetVersion} (${newBuildNumber})`,
+        message: `Build Number: ${oldBuildNumber} → ${newBuildNumber}\nVersion: ${oldVersion} → ${targetVersion}`,
+    };
+}
+
+export async function syncIOSVersionOnly(
+    rootPath: string,
+    targetVersion: string,
+    currentIOS: { buildNumber: string; version: string } | undefined
+): Promise<BumpResult> {
+    if (!currentIOS) {
+        throw new Error('iOS version information not available');
+    }
+
+    const iosPath = path.join(rootPath, FILE_PATTERNS.IOS_FOLDER);
+    if (!fs.existsSync(iosPath)) {
+        throw new Error('iOS project not found');
+    }
+
+    const currentVersionInfo = await readIOSVersionInfo(rootPath);
+    if (!currentVersionInfo) {
+        throw new Error('Could not read iOS version information');
+    }
+
+    const oldVersion = currentVersionInfo.version;
+    const oldBuildNumber = currentVersionInfo.buildNumber;
+
+    if (currentVersionInfo.usesVariables) {
+        await updateIOSVariables(rootPath, currentVersionInfo, targetVersion, oldBuildNumber);
+    } else {
+        await updateIOSDirectValues(rootPath, targetVersion, oldBuildNumber);
+    }
+
+    return {
+        platform: 'iOS',
+        success: true,
+        oldVersion: `${oldVersion} (${oldBuildNumber})`,
+        newVersion: `${targetVersion} (${oldBuildNumber})`,
+        message: `Build Number: ${oldBuildNumber} (unchanged)\nVersion: ${oldVersion} → ${targetVersion}`,
+    };
+}
 export async function getIOSCodeLenses(document: vscode.TextDocument): Promise<vscode.CodeLens[]> {
     const codeLenses: vscode.CodeLens[] = [];
 
