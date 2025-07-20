@@ -1,44 +1,194 @@
-# Welcome to your VS Code Extension
+# 🚀 React Native Version Bumper - Quick Start Guide
 
-## What's in the folder
+Welcome to **React Native Version Bumper**! This guide will get you up and running in minutes.
 
-- This folder contains all of the files necessary for your extension.
-- `package.json` - this is the manifest file in which you declare your extension and command.
-    - The sample plugin registers a command and defines its title and command name. With this information VS Code can show the command in the command palette. It doesn’t yet need to load the plugin.
-- `src/extension.ts` - this is the main file where you will provide the implementation of your command.
-    - The file exports one function, `activate`, which is called the very first time your extension is activated (in this case by executing the command). Inside the `activate` function we call `registerCommand`.
-    - We pass the function containing the implementation of the command as the second parameter to `registerCommand`.
+## 🎯 What This Extension Does
 
-## Get up and running straight away
+**Problem:** Managing versions across React Native platforms is tedious and error-prone.
 
-- Press `F5` to open a new window with your extension loaded.
-- Run your command from the command palette by pressing (`Ctrl+Shift+P` or `Cmd+Shift+P` on Mac) and typing `Hello World`.
-- Set breakpoints in your code inside `src/extension.ts` to debug your extension.
-- Find output from your extension in the debug console.
+**Solution:** One-click version bumping with automatic sync across package.json, Android, and iOS.
 
-## Make changes
+## ⚡ 5-Minute Setup
 
-- You can relaunch the extension from the debug toolbar after changing code in `src/extension.ts`.
-- You can also reload (`Ctrl+R` or `Cmd+R` on Mac) the VS Code window with your extension to load your changes.
+### 1. **Install the Extension**
 
-## Explore the API
+- Open VS Code
+- Go to Extensions (`Ctrl+Shift+P` → "Extensions: Install Extensions")
+- Search "React Native Version Bumper"
+- Click **Install**
 
-- You can open the full set of our API when you open the file `node_modules/@types/vscode/index.d.ts`.
+### 2. **Open Your React Native Project**
 
-## Run tests
+Make sure your project has:
 
-- Install the [Extension Test Runner](https://marketplace.visualstudio.com/items?itemName=ms-vscode.extension-test-runner)
-- Run the "watch" task via the **Tasks: Run Task** command. Make sure this is running, or tests might not be discovered.
-- Open the Testing view from the activity bar and click the Run Test" button, or use the hotkey `Ctrl/Cmd + ; A`
-- See the output of the test result in the Test Results view.
-- Make changes to `src/test/extension.test.ts` or create new test files inside the `test` folder.
-    - The provided test runner will only consider files matching the name pattern `**.test.ts`.
-    - You can create folders inside the `test` folder to structure your tests any way you want.
+- ✅ `package.json` (required)
+- ✅ `android/app/build.gradle` (optional)
+- ✅ `ios/` folder with `Info.plist` (optional)
 
-## Go further
+### 3. **Try Your First Version Bump**
 
-- [Follow UX guidelines](https://code.visualstudio.com/api/ux-guidelines/overview) to create extensions that seamlessly integrate with VS Code's native interface and patterns.
-- Reduce the extension size and improve the startup time by [bundling your extension](https://code.visualstudio.com/api/working-with-extensions/bundling-extension).
-- [Publish your extension](https://code.visualstudio.com/api/working-with-extensions/publishing-extension) on the VS Code extension marketplace.
-- Automate builds by setting up [Continuous Integration](https://code.visualstudio.com/api/working-with-extensions/continuous-integration).
-- Integrate to the [report issue](https://code.visualstudio.com/api/get-started/wrapping-up#issue-reporting) flow to get issue and feature requests reported by users.
+1. Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on Mac)
+2. Type "Version Bumper"
+3. Select **"Bump All Platform Versions"**
+4. Choose **"Patch"** (1.0.0 → 1.0.1)
+5. Watch the magic happen! ✨
+
+## 🎨 Visual Features
+
+### CodeLens Integration
+
+When you edit version files, you'll see clickable links:
+
+```json
+// In package.json
+{
+  "version": "1.0.0"  ← Click "Bump Patch: 1.0.0 → 1.0.1"
+}
+```
+
+### Interactive Results
+
+After each version bump, see a beautiful results page showing:
+
+- ✅ What was updated successfully
+- ❌ Any errors (with helpful solutions)
+- 🔗 Quick actions for Git workflows
+
+### Status Bar Integration
+
+Your current package.json version appears in the VS Code status bar - click it for quick actions!
+
+## 🔄 Common Workflows
+
+### 🚀 **Release Workflow**
+
+Perfect for production releases:
+
+1. **Command:** "Bump All Platform Versions with Git Workflow"
+2. **Choose:** Patch/Minor/Major
+3. **Result:**
+    - All platforms updated
+    - Git commit created
+    - Tag created (e.g., v1.0.1)
+    - Pushed to remote
+    - Ready for app store!
+
+### 🔧 **Development Workflow**
+
+For regular development:
+
+1. **Command:** "Bump All Platform Versions"
+2. **Choose:** Usually "Patch"
+3. **Result:** All platforms updated, no Git operations
+
+### 🔄 **Sync Workflow**
+
+When versions get out of sync:
+
+1. **Command:** "Sync Versions Across All Platforms"
+2. **Choose:** Source version (package.json, Android, iOS, or custom)
+3. **Result:** All platforms aligned to same version
+
+## ⚙️ Essential Configuration
+
+Add these to your VS Code `settings.json`:
+
+```json
+{
+    // Enable CodeLens (clickable version links)
+    "reactNativeVersionBumper.enableCodeLens": true,
+
+    // Git automation for releases
+    "reactNativeVersionBumper.git.autoCommit": true,
+    "reactNativeVersionBumper.git.autoCreateTag": true,
+    "reactNativeVersionBumper.git.commitMessageTemplate": "🚀 Release v{version}",
+
+    // Skip platforms you don't use
+    "reactNativeVersionBumper.skipAndroid": false,
+    "reactNativeVersionBumper.skipIOS": false
+}
+```
+
+## 🎯 Pro Tips
+
+### 💡 **Tip 1: Use CodeLens for Quick Bumps**
+
+Instead of running commands, just click the "Bump Patch" link that appears above version lines in your files.
+
+### 💡 **Tip 2: Customize Git Messages**
+
+Use template variables in your commit messages:
+
+```json
+"reactNativeVersionBumper.git.commitMessageTemplate": "🚀 Release v{version}\n\nPlatforms updated:\n{platforms}"
+```
+
+### 💡 **Tip 3: Branch-Based Workflow**
+
+For team environments, enable branch creation:
+
+```json
+"reactNativeVersionBumper.git.autoCreateBranch": true,
+"reactNativeVersionBumper.git.branchNameTemplate": "release/v{version}"
+```
+
+### 💡 **Tip 4: Status Bar Quick Access**
+
+Click the version number in your status bar for instant access to version commands.
+
+### 💡 **Tip 5: Version Dashboard**
+
+Use "Show Current Platform Versions" to get a visual overview of all your versions and sync status.
+
+## 🚨 Troubleshooting
+
+### **Issue: "No React Native project detected"**
+
+**Solution:** Make sure you have a `package.json` file in your workspace root.
+
+### **Issue: "Android/iOS files not found"**
+
+**Solution:** Check your project structure or configure custom paths in settings:
+
+```json
+{
+    "reactNativeVersionBumper.android.buildGradlePath": "android/app/build.gradle",
+    "reactNativeVersionBumper.ios.infoPlistPath": "ios/MyApp/Info.plist"
+}
+```
+
+### **Issue: "Git operations failed"**
+
+**Solution:** Make sure you're in a Git repository and have proper remote access.
+
+### **Issue: "CodeLens not showing"**
+
+**Solution:** Enable it in settings:
+
+```json
+{
+    "reactNativeVersionBumper.enableCodeLens": true
+}
+```
+
+## 🎉 You're Ready!
+
+That's it! You now have a powerful version management system for your React Native projects.
+
+### **Next Steps:**
+
+1. ⭐ [Star the repository](https://github.com/sandipshiwakoti/vscode-react-native-version-bumper) if you find it helpful
+2. 📝 [Report issues](https://github.com/sandipshiwakoti/vscode-react-native-version-bumper/issues) or suggest features
+3. 📢 Share with your React Native team!
+
+### **Need Help?**
+
+- 📖 [Full Documentation](README.md)
+- 🐛 [Report Issues](https://github.com/sandipshiwakoti/vscode-react-native-version-bumper/issues)
+- 💬 [Join Discussions](https://github.com/sandipshiwakoti/vscode-react-native-version-bumper/discussions)
+
+---
+
+<p align="center">
+  <strong>Happy version bumping! 🚀</strong><br>
+  Made wi
