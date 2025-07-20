@@ -19,7 +19,7 @@ suite('React Native Version Bumper Extension Tests', function () {
     const backupPath = path.resolve(__dirname, '../../testWorkspaceBackup');
     const packageJsonPath = path.join(workspacePath, 'package.json');
     const buildGradlePath = path.join(workspacePath, 'android', 'app', 'build.gradle');
-    const infoPlistPath = path.join(workspacePath, 'ios', 'Info.plist');
+    const infoPlistPath = path.join(workspacePath, 'ios', 'TestApp', 'Info.plist');
     const customBuildGradlePath = path.join(workspacePath, 'custom', 'build.gradle');
     const customInfoPlistPath = path.join(workspacePath, 'custom', 'Info.plist');
     const customXcodeProjPath = path.join(workspacePath, 'custom', 'project.pbxproj');
@@ -127,8 +127,8 @@ suite('React Native Version Bumper Extension Tests', function () {
             skipPackageJson: false,
         });
 
-        // Mock user responses: patch version bump, confirm changes, patch for iOS
-        const originalShowQuickPick = createQuickPickMock(['patch', 'Yes', 'patch']);
+        // Mock user responses: patch version bump, patch for package.json
+        const originalShowQuickPick = createQuickPickMock(['Patch', 'Patch']);
 
         try {
             // Execute the version bump command
@@ -191,7 +191,7 @@ suite('React Native Version Bumper Extension Tests', function () {
         });
 
         // Mock user responses
-        const originalShowQuickPick = createQuickPickMock(['patch', 'Yes', 'patch']);
+        const originalShowQuickPick = createQuickPickMock(['Patch']);
 
         try {
             // Execute the version bump command
@@ -244,8 +244,8 @@ suite('React Native Version Bumper Extension Tests', function () {
     test('Bump custom iOS only', async function () {
         // Configure extension to use custom file paths and skip Android/package.json
         await setExtensionSettings(EXTENSION_ID, {
-            CONFIG_ANDROID_BUILD_GRADLE_PATH: 'custom/build.gradle',
-            CONFIG_IOS_INFO_PLIST_PATH: 'custom/Info.plist',
+            [CONFIG.ANDROID_BUILD_GRADLE_PATH]: 'custom/build.gradle',
+            [CONFIG.IOS_INFO_PLIST_PATH]: 'custom/Info.plist',
             'ios.projectPbxprojPath': 'custom/project.pbxproj',
             skipAndroid: true,
             skipIOS: false,
@@ -253,7 +253,7 @@ suite('React Native Version Bumper Extension Tests', function () {
         });
 
         // Mock user responses
-        const originalShowQuickPick = createQuickPickMock(['patch', 'Yes', 'patch']);
+        const originalShowQuickPick = createQuickPickMock(['Patch']);
 
         try {
             // Execute the version bump command
