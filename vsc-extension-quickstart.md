@@ -99,7 +99,6 @@ Add these to your VS Code `settings.json`:
     "reactNativeVersionBumper.enableCodeLens": true,
 
     // Git automation for releases
-    "reactNativeVersionBumper.git.autoCommit": true,
     "reactNativeVersionBumper.git.autoCreateTag": true,
     "reactNativeVersionBumper.git.commitMessageTemplate": "🚀 Release v{version}",
 

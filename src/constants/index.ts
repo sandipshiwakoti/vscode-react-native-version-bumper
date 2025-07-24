@@ -41,7 +41,6 @@ export const CONFIG = {
     ANDROID_BUILD_GRADLE_PATH: 'android.buildGradlePath',
     IOS_INFO_PLIST_PATH: 'ios.infoPlistPath',
     IOS_PROJECT_PB_XPROJ_PATH: 'ios.projectPbxprojPath',
-    GIT_AUTO_COMMIT: 'git.autoCommit',
     GIT_AUTO_CREATE_BRANCH: 'git.autoCreateBranch',
     GIT_SKIP_BRANCH: 'git.skipBranch',
     GIT_AUTO_CREATE_TAG: 'git.autoCreateTag',

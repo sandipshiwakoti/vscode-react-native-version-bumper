@@ -155,7 +155,6 @@ Adjust settings in `settings.json` to fit your workflow:
 | `reactNativeVersionBumper.skipIOS`                   | Skip iOS version bump                             | `false`                      |
 | `reactNativeVersionBumper.ios.infoPlistPath`         | Path to `Info.plist` (auto-detected if null)      | `null`                       |
 | `reactNativeVersionBumper.ios.projectPbxprojPath`    | Path to `project.pbxproj` (auto-detected if null) | `null`                       |
-| `reactNativeVersionBumper.git.autoCommit`            | Auto-commit changes                               | `true`                       |
 | `reactNativeVersionBumper.git.commitMessageTemplate` | Commit message template                           | `"chore: version bump"`      |
 | `reactNativeVersionBumper.git.skipBranch`            | Skip branch creation                              | `false`                      |
 | `reactNativeVersionBumper.git.autoCreateBranch`      | Auto-create branch                                | `false`                      |
@@ -183,7 +182,6 @@ Adjust settings in `settings.json` to fit your workflow:
     "reactNativeVersionBumper.enableCodeLens": true,
 
     // Git automation for releases
-    "reactNativeVersionBumper.git.autoCommit": true,
     "reactNativeVersionBumper.git.autoCreateTag": true,
     "reactNativeVersionBumper.git.commitMessageTemplate": "🚀 Release v{version}",
 
@@ -197,7 +195,6 @@ Adjust settings in `settings.json` to fit your workflow:
 
 ```json
 {
-    "reactNativeVersionBumper.git.autoCommit": true,
     "reactNativeVersionBumper.git.commitMessageTemplate": "chore: bump to v{version}",
     "reactNativeVersionBumper.git.autoCreateTag": true,
     "reactNativeVersionBumper.git.tagNameTemplate": "v{version}",

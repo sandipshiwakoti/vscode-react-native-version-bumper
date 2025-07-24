@@ -192,11 +192,6 @@
                     "default": null,
                     "description": "Custom path to iOS project.pbxproj file. Leave empty for auto-detection from .xcodeproj folder. Set manually for complex Xcode projects, e.g., 'ios/MyApp.xcodeproj/project.pbxproj'."
                 },
-                "reactNativeVersionBumper.git.autoCommit": {
-                    "type": "boolean",
-                    "default": true,
-                    "description": "Automatically create Git commits after version bumping. Disable if you prefer to review changes manually or use different commit workflows. When enabled, saves time by committing all version changes at once."
-                },
                 "reactNativeVersionBumper.git.commitMessageTemplate": {
                     "type": "string",
                     "default": "chore: version bump {platforms}",

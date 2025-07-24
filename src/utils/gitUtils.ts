@@ -77,22 +77,6 @@ export async function executeGitWorkflow(rootPath: string, type: BumpType, resul
 
         const placeholderValues = getPlaceholderValues(type, results, mainVersion, versionMap, buildNumberMap);
 
-        let shouldCommit = config.get(CONFIG.GIT_AUTO_COMMIT, false);
-        if (!shouldCommit) {
-            const response = await vscode.window.showQuickPick(
-                [
-                    { label: 'Yes', value: true },
-                    { label: 'No', value: false },
-                ],
-                { placeHolder: 'Commit version changes to Git? (Recommended for tracking releases)' }
-            );
-            shouldCommit = response?.value ?? false;
-        }
-
-        if (!shouldCommit) {
-            return;
-        }
-
         let shouldCreateBranch = config.get(CONFIG.GIT_AUTO_CREATE_BRANCH, false);
         if (!config.get(CONFIG.GIT_SKIP_BRANCH) && !shouldCreateBranch) {
             const createBranchResponse = await vscode.window.showQuickPick(
@@ -201,17 +185,12 @@ export async function executeGitWorkflow(rootPath: string, type: BumpType, resul
 
         const commitMessageTemplate = config.get(CONFIG.GIT_COMMIT_MESSAGE_TEMPLATE, commitMessage);
         const defaultCommitMessage = replacePlaceholders(commitMessageTemplate, placeholderValues);
-        let customCommitMessage: string | undefined;
 
-        if (config.get(CONFIG.GIT_AUTO_COMMIT)) {
-            customCommitMessage = defaultCommitMessage;
-        } else {
-            customCommitMessage = await vscode.window.showInputBox({
-                placeHolder: 'e.g., chore: bump version to 1.2.3',
-                prompt: 'Customize commit message (or press Enter for default)',
-                value: defaultCommitMessage,
-            });
-        }
+        const customCommitMessage = await vscode.window.showInputBox({
+            placeHolder: 'e.g., chore: bump version to 1.2.3',
+            prompt: 'Customize commit message (or press Enter for default)',
+            value: defaultCommitMessage,
+        });
 
         if (!customCommitMessage) {
             vscode.window.showErrorMessage('Commit message is required');
