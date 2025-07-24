@@ -189,31 +189,84 @@ export function generateResultsHTML(
                 }
 
                 .action-button {
-                    background-color: var(--vscode-button-background);
-                    color: var(--vscode-button-foreground);
                     border: none;
-                    padding: 12px 20px;
+                    padding: 10px 16px;
                     border-radius: 6px;
                     font-weight: 500;
+                    font-size: 0.9rem;
                     cursor: pointer;
                     display: inline-flex;
                     align-items: center;
                     gap: 8px;
-                    transition: background-color 0.2s ease;
+                    transition: all 0.2s ease;
                     text-decoration: none;
+                    position: relative;
+                    overflow: hidden;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                    white-space: nowrap;
                 }
 
                 .action-button:hover {
-                    background-color: var(--vscode-button-hoverBackground);
+                    transform: translateY(-1px);
+                    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
                 }
 
-                .action-button.secondary {
-                    background-color: var(--vscode-button-secondaryBackground);
-                    color: var(--vscode-button-secondaryForeground);
+                .action-button:active {
+                    transform: translateY(0);
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
                 }
 
-                .action-button.secondary:hover {
-                    background-color: var(--vscode-button-secondaryHoverBackground);
+                .release-btn {
+                    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+                    color: white;
+                    border: 1px solid #16a34a;
+                }
+
+                .release-btn:hover {
+                    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+                }
+
+                .pr-btn {
+                    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+                    color: white;
+                    border: 1px solid #2563eb;
+                }
+
+                .pr-btn:hover {
+                    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+                }
+
+                .button-icon {
+                    width: 16px;
+                    height: 16px;
+                    fill: currentColor;
+                    flex-shrink: 0;
+                }
+
+                .button-text {
+                    font-weight: 600;
+                    font-size: 0.9rem;
+                }
+
+                .button-info {
+                    background-color: rgba(255, 255, 255, 0.25);
+                    padding: 2px 8px;
+                    border-radius: 10px;
+                    font-size: 0.75rem;
+                    font-weight: 500;
+                    font-family: 'Courier New', monospace;
+                    margin-left: 4px;
+                    max-width: 100px;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                }
+
+                .action-buttons {
+                    display: flex;
+                    gap: 12px;
+                    justify-content: center;
+                    flex-wrap: wrap;
                 }
             </style>
         </head>
@@ -288,27 +341,36 @@ export function generateResultsHTML(
 
     html += `</div>`;
 
-    if (tagName || (branchName && hasCommit)) {
+    const hasReleaseAction = tagName && pushSuccess;
+    const hasPRAction = branchName && hasCommit && pushSuccess;
+
+    if (hasReleaseAction || hasPRAction) {
         html += `
             <div class="action-section">
                 <h2 class="action-title">Next Steps</h2>
                 <div class="action-buttons">
         `;
 
-        if (tagName) {
+        if (hasReleaseAction) {
             html += `
-                <button class="action-button" id="createReleaseBtn">
-                    <span>🏷️</span>
-                    <span>Create Release for ${tagName}</span>
+                <button class="action-button release-btn" id="createReleaseBtn" title="Create GitHub release for tag ${tagName}">
+                    <svg class="button-icon" viewBox="0 0 24 24">
+                        <path d="M9 11H7v3h2v-3zm4 0h-2v3h2v-3zm4 0h-2v3h2v-3zm2-7h-3V2h-2v2H8V2H6v2H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H3V9h18v11z"/>
+                    </svg>
+                    <span class="button-text">Release</span>
+                    <span class="button-info">${tagName}</span>
                 </button>
             `;
         }
 
-        if (branchName && hasCommit && pushSuccess) {
+        if (hasPRAction) {
             html += `
-                <button class="action-button secondary" id="createPRBtn">
-                    <span>🔀</span>
-                    <span>Create PR for ${branchName}</span>
+                <button class="action-button pr-btn" id="createPRBtn" title="Create pull request for branch ${branchName}">
+                    <svg class="button-icon" viewBox="0 0 24 24">
+                        <path d="M6 2c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6H6zm0 2h7v5h5v11H6V4zm2 8v2h8v-2H8zm0 4v2h8v-2H8z"/>
+                    </svg>
+                    <span class="button-text">Pull Request</span>
+                    <span class="button-info">${branchName}</span>
                 </button>
             `;
         }
