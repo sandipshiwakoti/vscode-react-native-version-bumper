@@ -29,7 +29,7 @@ Make sure your project has:
 
 1. Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on Mac)
 2. Type "Version Bumper"
-3. Select **"Bump All Platform Versions"**
+3. Select **"Bump All"**
 4. Choose **"Patch"** (1.0.0 → 1.0.1)
 5. Watch the magic happen! ✨
 
@@ -77,7 +77,7 @@ Perfect for production releases:
 
 For regular development:
 
-1. **Command:** "Bump All Platform Versions"
+1. **Command:** "Bump All"
 2. **Choose:** Usually "Patch"
 3. **Result:** All platforms updated, no Git operations
 
@@ -85,7 +85,7 @@ For regular development:
 
 When versions get out of sync:
 
-1. **Command:** "Sync Versions Across All Platforms"
+1. **Command:** "Sync All"
 2. **Choose:** Source version (package.json, Android, iOS, or custom)
 3. **Result:** All platforms aligned to same version
 
@@ -137,7 +137,7 @@ Click the version number in your status bar for instant access to version comman
 
 ### 💡 **Tip 5: Version Dashboard**
 
-Use "Show Current Platform Versions" to get a visual overview of all your versions and sync status.
+Use "Show Versions" to get a visual overview of all your versions and sync status.
 
 ## 🚨 Troubleshooting
 

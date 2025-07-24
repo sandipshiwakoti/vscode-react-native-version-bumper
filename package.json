@@ -39,47 +39,47 @@
         "commands": [
             {
                 "command": "vscode-react-native-version-bumper.bumpAppVersion",
-                "title": "Bump All Platform Versions",
+                "title": "Bump All",
                 "category": "Version Bumper"
             },
             {
                 "command": "vscode-react-native-version-bumper.bumpAppVersionWithGit",
-                "title": "Bump All Platform Versions + Git Workflow",
+                "title": "Bump All + Git",
                 "category": "Version Bumper"
             },
             {
                 "command": "vscode-react-native-version-bumper.showVersions",
-                "title": "Show Current Platform Versions",
+                "title": "Show Versions",
                 "category": "Version Bumper"
             },
             {
                 "command": "vscode-react-native-version-bumper.bumpPatch",
-                "title": "Bump Patch Version in Current File (0.0.X)",
+                "title": "Bump Patch (Current File)",
                 "category": "Version Bumper"
             },
             {
                 "command": "vscode-react-native-version-bumper.bumpMinor",
-                "title": "Bump Minor Version in Current File (0.X.0)",
+                "title": "Bump Minor (Current File)",
                 "category": "Version Bumper"
             },
             {
                 "command": "vscode-react-native-version-bumper.bumpMajor",
-                "title": "Bump Major Version in Current File (X.0.0)",
+                "title": "Bump Major (Current File)",
                 "category": "Version Bumper"
             },
             {
                 "command": "vscode-react-native-version-bumper.syncVersions",
-                "title": "Sync Versions Across All Platforms",
+                "title": "Sync All",
                 "category": "Version Bumper"
             },
             {
                 "command": "vscode-react-native-version-bumper.syncVersionsWithGit",
-                "title": "Sync Versions Across All Platforms + Git Workflow",
+                "title": "Sync All + Git",
                 "category": "Version Bumper"
             },
             {
                 "command": "vscode-react-native-version-bumper.showCodeLens",
-                "title": "Enable Version CodeLens",
+                "title": "Enable CodeLens",
                 "category": "Version Bumper",
                 "icon": {
                     "light": "assets/light/codelens-enabled.svg",
@@ -88,7 +88,7 @@
             },
             {
                 "command": "vscode-react-native-version-bumper.hideCodeLens",
-                "title": "Disable Version CodeLens",
+                "title": "Disable CodeLens",
                 "category": "Version Bumper",
                 "icon": {
                     "light": "assets/light/codelens-disabled.svg",

@@ -223,7 +223,7 @@ Perfect for production releases:
 
 For regular development:
 
-1. **Command:** "Bump All Platform Versions"
+1. **Command:** "Bump All"
 2. **Choose:** Usually "Patch"
 3. **Result:** All platforms updated, no Git operations
 
@@ -231,7 +231,7 @@ For regular development:
 
 When versions get out of sync:
 
-1. **Command:** "Sync Versions Across All Platforms"
+1. **Command:** "Sync All"
 2. **Choose:** Source version (package.json, Android, iOS, or custom)
 3. **Result:** All platforms aligned to same version
 
