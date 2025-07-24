@@ -241,11 +241,7 @@ export async function bumpSyncVersion(withGit: boolean, context?: vscode.Extensi
 
                 if (withGit && tasks.length > 0) {
                     try {
-                        const syncResults: BumpResult[] = results.map((result) => ({
-                            ...result,
-                            platform: result.platform === 'Package.json' ? 'Sync' : result.platform,
-                            newVersion: targetVersion,
-                        }));
+                        const syncResults: BumpResult[] = [...results];
 
                         syncResults.push({
                             platform: 'SyncOperation',
@@ -257,6 +253,11 @@ export async function bumpSyncVersion(withGit: boolean, context?: vscode.Extensi
 
                         await executeGitWorkflow(rootPath, BumpType.PATCH, syncResults);
                         progress.report({ increment: PROGRESS_INCREMENTS.GIT_COMPLETED });
+
+                        const gitResult = syncResults.find((r) => r.platform === 'Git');
+                        if (gitResult) {
+                            results.push(gitResult);
+                        }
                     } catch (error) {
                         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                         results.push({
