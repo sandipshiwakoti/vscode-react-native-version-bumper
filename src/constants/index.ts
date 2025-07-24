@@ -168,3 +168,13 @@ export const BUMP_TYPE_LABELS = {
         LABEL: 'Custom',
     },
 } as const;
+
+export const RELEASE_TEMPLATE_PATHS = [
+    '.github/RELEASE_TEMPLATE.md',
+    '.github/release_template.md',
+    '.github/RELEASE_NOTES_TEMPLATE.md',
+    '.gitlab/RELEASE_TEMPLATE.md',
+    '.gitlab/release_template.md',
+    'RELEASE_TEMPLATE.md',
+    'release_template.md',
+];

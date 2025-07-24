@@ -167,12 +167,55 @@ Adjust settings in `settings.json` to fit your workflow:
 
 ### Template Placeholders
 
+**For commit messages, branch names, and tag names:**
+
 - `{type}`: Bump type (e.g., "patch")
 - `{platforms}`: Affected platforms (e.g., "android to v1.0.1 (2)")
 - `{version}`: Latest version (from Git tag or `package.json`)
 - `{date}`: Current date (YYYY-MM-DD)
 - `{androidVersion}`, `{iosVersion}`: Platform-specific versions
 - `{androidBuildNumber}`, `{iosBuildNumber}`: Build numbers
+
+### Release Notes
+
+The extension automatically generates release notes with the following behavior:
+
+**1. Uses existing project templates** (if found):
+
+- `.github/RELEASE_TEMPLATE.md`
+- `.github/release_template.md`
+- `.github/RELEASE_NOTES_TEMPLATE.md`
+- `.gitlab/RELEASE_TEMPLATE.md`
+- Similar variations
+
+**2. Appends version information** at the end (only if not already present):
+
+```markdown
+**Version Updates:**
+
+- Android: 1.0.0 → 1.0.1 (build 123)
+- iOS: 1.0.0 → 1.0.1 (build 456)
+
+**Full Changelog**: https://github.com/user/repo/compare/v1.0.0...v1.0.1
+```
+
+**3. Falls back to simple default** if no template exists:
+
+```markdown
+**What's Changed:**
+
+<!-- Add your changes here -->
+
+-
+- **Version Updates:**
+
+- Android: 1.0.0 → 1.0.1 (build 123)
+- iOS: 1.0.0 → 1.0.1 (build 456)
+
+**Full Changelog**: https://github.com/user/repo/compare/v1.0.0...v1.0.1
+```
+
+**To customize release notes**: Create a `.github/RELEASE_TEMPLATE.md` file in your project with your preferred format. The extension will automatically use it and append version information at the end.
 
 ### 🎛️ Essential Settings for New Users
 

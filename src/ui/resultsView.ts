@@ -4,6 +4,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 
 import { BumpResult, BumpType } from '../types';
+import { generateReleaseNotes } from '../utils/releaseUtils';
 
 const execAsync = promisify(exec);
 
@@ -261,13 +262,6 @@ export function generateResultsHTML(
                     text-overflow: ellipsis;
                     white-space: nowrap;
                 }
-
-                .action-buttons {
-                    display: flex;
-                    gap: 12px;
-                    justify-content: center;
-                    flex-wrap: wrap;
-                }
             </style>
         </head>
         <body>
@@ -490,7 +484,9 @@ export function showBumpResults(type: BumpType, results: BumpResult[], context?:
             switch (message.command) {
                 case 'createRelease':
                     if (tagName) {
-                        const releaseUrl = `${repoUrl}/releases/new?tag=${tagName}`;
+                        const releaseNotes = await generateReleaseNotes(type, results, tagName, repoUrl);
+                        const encodedNotes = encodeURIComponent(releaseNotes);
+                        const releaseUrl = `${repoUrl}/releases/new?tag=${tagName}&title=${encodeURIComponent(`Release ${tagName}`)}&body=${encodedNotes}`;
                         vscode.env.openExternal(vscode.Uri.parse(releaseUrl));
                     }
                     break;
