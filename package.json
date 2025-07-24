@@ -199,7 +199,7 @@
                 },
                 "reactNativeVersionBumper.git.commitMessageTemplate": {
                     "type": "string",
-                    "default": "chore: version bump",
+                    "default": "chore: version bump {platforms}",
                     "description": "Git commit message template. Variables: {type}, {platforms}, {version}, {date}, {androidVersion}, {iosVersion}, {androidBuildNumber}, {iosBuildNumber}. Note: {platforms} includes detailed version info. Example: 'chore: version bump' or 'chore: bump to v{version}' becomes 'chore: bump to v2.0.0'."
                 },
                 "reactNativeVersionBumper.git.skipBranch": {
