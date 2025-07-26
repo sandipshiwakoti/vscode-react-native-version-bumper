@@ -148,24 +148,24 @@ Click the status bar item to quickly see the current `package.json` version or t
 
 Adjust settings in `settings.json` to fit your workflow:
 
-| Setting                                              | Description                                           | Default                      |
-| ---------------------------------------------------- | ----------------------------------------------------- | ---------------------------- |
-| `reactNativeVersionBumper.skipPackageJson`           | Skip `package.json` version bump                      | `false`                      |
-| `reactNativeVersionBumper.skipAndroid`               | Skip Android version bump                             | `false`                      |
-| `reactNativeVersionBumper.android.buildGradlePath`   | Path to `build.gradle`                                | `"android/app/build.gradle"` |
-| `reactNativeVersionBumper.skipIOS`                   | Skip iOS version bump                                 | `false`                      |
-| `reactNativeVersionBumper.ios.infoPlistPath`         | Path to `Info.plist` (auto-detected if null)          | `null`                       |
-| `reactNativeVersionBumper.ios.projectPbxprojPath`    | Path to `project.pbxproj` (auto-detected if null)     | `null`                       |
-| `reactNativeVersionBumper.git.commitMessageTemplate` | Commit message template                               | `"chore: version bump"`      |
-| `reactNativeVersionBumper.git.skipBranch`            | Skip branch creation                                  | `false`                      |
-| `reactNativeVersionBumper.git.autoCreateBranch`      | Auto-create branch                                    | `false`                      |
-| `reactNativeVersionBumper.git.branchNameTemplate`    | Branch name template                                  | `"version-bump/{version}"`   |
-| `reactNativeVersionBumper.git.skipTag`               | Skip tag creation                                     | `false`                      |
-| `reactNativeVersionBumper.git.autoCreateTag`         | Auto-create tag                                       | `false`                      |
-| `reactNativeVersionBumper.git.tagNameTemplate`       | Tag name template                                     | `"v{version}"`               |
-| `reactNativeVersionBumper.git.skipPush`              | Skip pushing to remote                                | `false`                      |
-| `reactNativeVersionBumper.enableCodeLens`            | Enable or disable CodeLens for version bumping        | `true`                       |
-| `reactNativeVersionBumper.batchMode`                 | Preview all operations before execution (recommended) | `true`                       |
+| Setting                                              | Description                                              | Default                      |
+| ---------------------------------------------------- | -------------------------------------------------------- | ---------------------------- |
+| `reactNativeVersionBumper.skipPackageJson`           | Skip `package.json` version bump                         | `false`                      |
+| `reactNativeVersionBumper.skipAndroid`               | Skip Android version bump                                | `false`                      |
+| `reactNativeVersionBumper.android.buildGradlePath`   | Path to `build.gradle`                                   | `"android/app/build.gradle"` |
+| `reactNativeVersionBumper.skipIOS`                   | Skip iOS version bump                                    | `false`                      |
+| `reactNativeVersionBumper.ios.infoPlistPath`         | Custom path to `Info.plist` (auto-detected if null)      | `null`                       |
+| `reactNativeVersionBumper.ios.projectPbxprojPath`    | Custom path to `project.pbxproj` (auto-detected if null) | `null`                       |
+| `reactNativeVersionBumper.git.commitMessageTemplate` | Commit message template                                  | `"chore: version bump"`      |
+| `reactNativeVersionBumper.git.skipBranch`            | Skip branch creation                                     | `false`                      |
+| `reactNativeVersionBumper.git.autoCreateBranch`      | Auto-create branch                                       | `false`                      |
+| `reactNativeVersionBumper.git.branchNameTemplate`    | Branch name template                                     | `"version-bump/{version}"`   |
+| `reactNativeVersionBumper.git.skipTag`               | Skip tag creation                                        | `false`                      |
+| `reactNativeVersionBumper.git.autoCreateTag`         | Auto-create tag                                          | `false`                      |
+| `reactNativeVersionBumper.git.tagNameTemplate`       | Tag name template                                        | `"v{version}"`               |
+| `reactNativeVersionBumper.git.skipPush`              | Skip pushing to remote                                   | `false`                      |
+| `reactNativeVersionBumper.enableCodeLens`            | Enable or disable CodeLens for version bumping           | `true`                       |
+| `reactNativeVersionBumper.batchMode`                 | Preview all operations before execution (recommended)    | `true`                       |
 
 ### Template Placeholders
 
@@ -243,7 +243,12 @@ The extension automatically generates release notes with the following behavior:
     "reactNativeVersionBumper.git.commitMessageTemplate": "chore: bump to v{version}",
     "reactNativeVersionBumper.git.autoCreateTag": true,
     "reactNativeVersionBumper.git.tagNameTemplate": "v{version}",
-    "reactNativeVersionBumper.enableCodeLens": true
+    "reactNativeVersionBumper.enableCodeLens": true,
+
+    // Custom file paths (optional)
+    "reactNativeVersionBumper.android.buildGradlePath": "android/app/build.gradle",
+    "reactNativeVersionBumper.ios.infoPlistPath": "ios/MyApp/Info.plist",
+    "reactNativeVersionBumper.ios.projectPbxprojPath": "ios/MyApp.xcodeproj/project.pbxproj"
 }
 ```
 
@@ -296,6 +301,8 @@ A: Click the editor title bar button when editing `package.json`, `build.gradle`
 
 **Q: What if my project structure is different?**  
 A: Customize file paths in the settings (e.g., `android.buildGradlePath`, `ios.infoPlistPath`, `ios.projectPbxprojPath`). The extension auto-detects `Info.plist` and `project.pbxproj` for iOS if not specified, ensuring compatibility with non-standard React Native project structures.
+
+**Important:** Custom iOS paths are fully supported - if you configure `ios.infoPlistPath` to point to a custom location (e.g., `custom/Info.plist`), all version operations including CodeLens will respect this custom path.
 
 **Q: Does this work with Expo projects?**  
 A: Yes! The extension works with any React Native project structure, including Expo managed and bare workflows.
