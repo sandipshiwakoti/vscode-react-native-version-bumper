@@ -130,3 +130,13 @@ export interface VersionOperationOptions {
     isSync?: boolean;
     context?: vscode.ExtensionContext;
 }
+
+export type PlatformType = 'android' | 'ios' | 'package';
+
+export interface PlatformConfig {
+    type: PlatformType;
+    rootPath: string;
+    targetVersion?: string;
+    buildNumber?: number;
+    bumpType?: BumpType;
+}

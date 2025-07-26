@@ -4,6 +4,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 
 import { CONFIG, EXTENSION_ID, PROGRESS_INCREMENTS, TEMPLATES } from '../constants';
+import { updatePlatformVersion } from '../services/platformService';
 import {
     BatchExecutionPlan,
     BatchGitConfig,
@@ -15,17 +16,9 @@ import {
     ProjectVersions,
 } from '../types';
 
-import {
-    bumpAndroidVersion,
-    syncAndroidVersion,
-    syncAndroidVersionOnly,
-    syncAndroidVersionWithBuildNumber,
-} from './androidUtils';
 import { detectProjectType, hasAndroidProject, hasIOSProject } from './fileUtils';
 import { executeGitWorkflow } from './gitUtils';
 import { getPlaceholderValues, replacePlaceholders } from './helperUtils';
-import { bumpIOSVersion, syncIOSVersion, syncIOSVersionOnly, syncIOSVersionWithBuildNumber } from './iosUtils';
-import { bumpPackageJsonVersion, syncPackageJsonVersion } from './packageUtils';
 import { bumpSemanticVersion, getCurrentVersions, getLatestGitTagVersion } from './versionUtils';
 
 export async function createBatchExecutionPlan(
@@ -541,51 +534,38 @@ export async function executeBatchOperations(
 
                     switch (op.platform) {
                         case 'Package.json':
-                            if (customVersions?.packageJson) {
-                                result = await syncPackageJsonVersion(
-                                    rootPath,
-                                    customVersions.packageJson,
-                                    versions.packageJson!
-                                );
-                            } else {
-                                result = await bumpPackageJsonVersion(rootPath, bumpType);
-                            }
+                            result = await updatePlatformVersion({
+                                type: 'package',
+                                rootPath,
+                                targetVersion: customVersions?.packageJson,
+                                bumpType: customVersions?.packageJson ? undefined : bumpType,
+                            });
                             break;
 
                         case 'Android':
-                            if (isSync || customVersions?.android) {
-                                const targetVersion = customVersions?.android?.version || versions.android!.versionName;
-                                if (customVersions?.android?.buildNumber !== undefined) {
-                                    result = await syncAndroidVersionWithBuildNumber(
-                                        rootPath,
-                                        targetVersion,
-                                        customVersions.android.buildNumber,
-                                        versions.android!
-                                    );
-                                } else {
-                                    result = await syncAndroidVersion(rootPath, targetVersion, versions.android!);
-                                }
-                            } else {
-                                result = await bumpAndroidVersion(rootPath, bumpType);
-                            }
+                            result = await updatePlatformVersion({
+                                type: 'android',
+                                rootPath,
+                                targetVersion:
+                                    isSync || customVersions?.android
+                                        ? customVersions?.android?.version || versions.android!.versionName
+                                        : undefined,
+                                buildNumber: customVersions?.android?.buildNumber,
+                                bumpType: isSync || customVersions?.android ? undefined : bumpType,
+                            });
                             break;
 
                         case 'iOS':
-                            if (isSync || customVersions?.ios) {
-                                const targetVersion = customVersions?.ios?.version || versions.ios!.version;
-                                if (customVersions?.ios?.buildNumber !== undefined) {
-                                    result = await syncIOSVersionWithBuildNumber(
-                                        rootPath,
-                                        targetVersion,
-                                        customVersions.ios.buildNumber,
-                                        versions.ios!
-                                    );
-                                } else {
-                                    result = await syncIOSVersion(rootPath, targetVersion, versions.ios!);
-                                }
-                            } else {
-                                result = await bumpIOSVersion(rootPath, bumpType);
-                            }
+                            result = await updatePlatformVersion({
+                                type: 'ios',
+                                rootPath,
+                                targetVersion:
+                                    isSync || customVersions?.ios
+                                        ? customVersions?.ios?.version || versions.ios!.version
+                                        : undefined,
+                                buildNumber: customVersions?.ios?.buildNumber,
+                                bumpType: isSync || customVersions?.ios ? undefined : bumpType,
+                            });
                             break;
 
                         default:
@@ -983,16 +963,16 @@ async function executeVersionTasks(
 ): Promise<void> {
     if (!config.get(CONFIG.SKIP_PACKAGE_JSON) && versions.packageJson) {
         try {
-            if (options.customVersions?.packageJson) {
-                tasks.push(
-                    syncPackageJsonVersion(options.rootPath, options.customVersions.packageJson, versions.packageJson)
-                );
-            } else if (options.isSync) {
-                const targetVersion = options.customVersions?.packageJson || versions.packageJson;
-                tasks.push(syncPackageJsonVersion(options.rootPath, targetVersion, versions.packageJson));
-            } else {
-                tasks.push(bumpPackageJsonVersion(options.rootPath, options.packageBumpType || options.bumpType));
-            }
+            const targetVersion =
+                options.customVersions?.packageJson || (options.isSync ? versions.packageJson : undefined);
+            tasks.push(
+                updatePlatformVersion({
+                    type: 'package',
+                    rootPath: options.rootPath,
+                    targetVersion,
+                    bumpType: targetVersion ? undefined : options.packageBumpType || options.bumpType,
+                })
+            );
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             tasks.push(
@@ -1011,55 +991,35 @@ async function executeVersionTasks(
     switch (projectType) {
         case 'react-native':
             if (!config.get(CONFIG.SKIP_ANDROID) && hasAndroid && versions.android) {
-                if (options.isSync) {
-                    const targetVersion = options.customVersions?.android?.version || versions.android.versionName;
-                    tasks.push(syncAndroidVersion(options.rootPath, targetVersion, versions.android));
-                } else if (options.customVersions?.android) {
-                    if (options.customVersions.android.buildNumber !== undefined) {
-                        tasks.push(
-                            syncAndroidVersionWithBuildNumber(
-                                options.rootPath,
-                                options.customVersions.android.version,
-                                options.customVersions.android.buildNumber,
-                                versions.android
-                            )
-                        );
-                    } else {
-                        tasks.push(
-                            syncAndroidVersionOnly(
-                                options.rootPath,
-                                options.customVersions.android.version,
-                                versions.android
-                            )
-                        );
-                    }
-                } else {
-                    tasks.push(bumpAndroidVersion(options.rootPath, options.bumpType));
-                }
+                const targetVersion = options.isSync
+                    ? options.customVersions?.android?.version || versions.android.versionName
+                    : options.customVersions?.android?.version;
+
+                tasks.push(
+                    updatePlatformVersion({
+                        type: 'android',
+                        rootPath: options.rootPath,
+                        targetVersion,
+                        buildNumber: options.customVersions?.android?.buildNumber,
+                        bumpType: targetVersion ? undefined : options.bumpType,
+                    })
+                );
             }
 
             if (!config.get(CONFIG.SKIP_IOS) && hasIOS && versions.ios) {
-                if (options.isSync) {
-                    const targetVersion = options.customVersions?.ios?.version || versions.ios.version;
-                    tasks.push(syncIOSVersion(options.rootPath, targetVersion, versions.ios));
-                } else if (options.customVersions?.ios) {
-                    if (options.customVersions.ios.buildNumber !== undefined) {
-                        tasks.push(
-                            syncIOSVersionWithBuildNumber(
-                                options.rootPath,
-                                options.customVersions.ios.version,
-                                options.customVersions.ios.buildNumber,
-                                versions.ios
-                            )
-                        );
-                    } else {
-                        tasks.push(
-                            syncIOSVersionOnly(options.rootPath, options.customVersions.ios.version, versions.ios)
-                        );
-                    }
-                } else {
-                    tasks.push(bumpIOSVersion(options.rootPath, options.bumpType));
-                }
+                const targetVersion = options.isSync
+                    ? options.customVersions?.ios?.version || versions.ios.version
+                    : options.customVersions?.ios?.version;
+
+                tasks.push(
+                    updatePlatformVersion({
+                        type: 'ios',
+                        rootPath: options.rootPath,
+                        targetVersion,
+                        buildNumber: options.customVersions?.ios?.buildNumber,
+                        bumpType: targetVersion ? undefined : options.bumpType,
+                    })
+                );
             }
             break;
 

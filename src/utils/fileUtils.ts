@@ -2,9 +2,8 @@ import * as fs from 'fs';
 import path from 'path';
 
 import { DEFAULT_VALUES, FILE_EXTENSIONS, FILE_PATTERNS, REGEX_PATTERNS } from '../constants';
+import { getPackageJsonName } from '../services/platformService';
 import { ProjectType } from '../types';
-
-import { getPackageJsonName } from './packageUtils';
 
 export async function detectProjectType(rootPath: string): Promise<ProjectType> {
     const androidPath = path.join(rootPath, FILE_PATTERNS.ANDROID_FOLDER);

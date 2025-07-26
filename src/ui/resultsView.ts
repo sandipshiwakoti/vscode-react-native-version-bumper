@@ -3,9 +3,10 @@ import * as vscode from 'vscode';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
+import { readIOSVersionInfo } from '../services/platformService';
 import { BumpResult, BumpType, GitWorkflowResult, IOSVersionInfo } from '../types';
+import { refreshCodeLenses } from '../utils/codeLensUtils';
 import { getAppName } from '../utils/fileUtils';
-import { readIOSVersionInfo } from '../utils/iosUtils';
 import { generateReleaseNotes } from '../utils/releaseUtils';
 
 import { generatePageHeaderHTML, PAGE_HEADER_CSS, SHARED_BASE_CSS } from './shared/pageHeader';
@@ -435,6 +436,9 @@ export async function showBumpResults(
         logoUri,
         rootPath
     );
+
+    // Refresh CodeLens to show updated version information
+    refreshCodeLenses();
 
     // Handle messages from the webview
     panel.webview.onDidReceiveMessage(

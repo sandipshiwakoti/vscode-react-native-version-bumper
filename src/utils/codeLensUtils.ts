@@ -2,10 +2,7 @@ import * as vscode from 'vscode';
 
 import { isCodeLensEnabled } from '../commands/toggleCodeLens';
 import { FILE_EXTENSIONS, FILE_PATTERNS } from '../constants';
-
-import { getAndroidCodeLenses } from './androidUtils';
-import { getIOSCodeLenses } from './iosUtils';
-import { getPackageJsonCodeLenses } from './packageUtils';
+import { getAndroidCodeLenses, getIOSCodeLenses, getPackageJsonCodeLenses } from '../services/platformService';
 
 let onDidChangeCodeLensesEmitter: vscode.EventEmitter<void>;
 let textDocumentListener: vscode.Disposable;
@@ -17,7 +14,8 @@ export function initializeCodeLensProvider(): vscode.CodeLensProvider {
         if (
             e.document.fileName.endsWith(FILE_EXTENSIONS.PACKAGE_JSON) ||
             e.document.fileName.endsWith(FILE_EXTENSIONS.BUILD_GRADLE) ||
-            e.document.fileName.endsWith(FILE_EXTENSIONS.INFO_PLIST)
+            e.document.fileName.endsWith(FILE_EXTENSIONS.INFO_PLIST) ||
+            e.document.fileName.endsWith(FILE_EXTENSIONS.PROJECT_PBXPROJ)
         ) {
             onDidChangeCodeLensesEmitter.fire();
         }

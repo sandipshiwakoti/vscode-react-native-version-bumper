@@ -1,35 +1,11 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
-import path from 'path';
 
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
-import { DEFAULT_VALUES, FILE_PATTERNS, REGEX_PATTERNS, VERSION_PART_INDICES } from '../constants';
+import { DEFAULT_VALUES, VERSION_PART_INDICES } from '../constants';
+import { getAndroidVersionInfo, getPackageJsonVersion, readIOSVersionInfo } from '../services/platformService';
 import { BumpType, ProjectVersions } from '../types';
-
-function getAndroidVersionInfo(rootPath: string): { versionCode: number; versionName: string } | null {
-    const buildGradlePath = path.join(rootPath, FILE_PATTERNS.ANDROID_BUILD_GRADLE_DEFAULT);
-    if (!fs.existsSync(buildGradlePath)) {
-        return null;
-    }
-
-    const content = fs.readFileSync(buildGradlePath, 'utf8');
-    const versionCodeMatch = content.match(REGEX_PATTERNS.VERSION_CODE);
-    const versionNameMatch = content.match(REGEX_PATTERNS.VERSION_NAME);
-
-    if (versionCodeMatch && versionNameMatch) {
-        return {
-            versionCode: parseInt(versionCodeMatch[1]),
-            versionName: versionNameMatch[1],
-        };
-    }
-
-    return null;
-}
-
-import { readIOSVersionInfo } from './iosUtils';
-import { getPackageJsonVersion } from './packageUtils';
 
 const execAsync = promisify(exec);
 

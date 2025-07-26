@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 
 import { COMMANDS, CONFIG, DEFAULT_VALUES, EXTENSION_ID } from '../constants';
+import { getPackageJsonName } from '../services/platformService';
 
 import { isReactNativeProject } from './fileUtils';
-import { getPackageJsonName } from './packageUtils';
 import { getCurrentVersions } from './versionUtils';
 
 let statusBarItem: vscode.StatusBarItem;

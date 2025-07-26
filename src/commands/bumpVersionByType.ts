@@ -2,10 +2,9 @@ import * as vscode from 'vscode';
 import path from 'path';
 
 import { CONFIG, EXTENSION_ID, FILE_EXTENSIONS, FILE_PATTERNS, PROGRESS_INCREMENTS } from '../constants';
+import { updatePlatformVersion } from '../services/platformService';
 import { BumpResult, BumpType } from '../types';
-import { bumpAndroidVersion } from '../utils/androidUtils';
-import { bumpIOSVersion } from '../utils/iosUtils';
-import { bumpPackageJsonVersion } from '../utils/packageUtils';
+import { refreshCodeLenses } from '../utils/codeLensUtils';
 import { updateStatusBar } from '../utils/statusBarUtils';
 
 export async function bumpVersionByType(type: BumpType): Promise<void> {
@@ -44,7 +43,7 @@ export async function bumpVersionByType(type: BumpType): Promise<void> {
                 let result: BumpResult | undefined;
 
                 if (filePath.endsWith(FILE_EXTENSIONS.PACKAGE_JSON)) {
-                    result = await bumpPackageJsonVersion(rootPath, type);
+                    result = await updatePlatformVersion({ type: 'package', rootPath, bumpType: type });
                 } else if (filePath.endsWith(FILE_EXTENSIONS.BUILD_GRADLE)) {
                     if (normalizedFilePath !== normalizedBuildGradlePath && normalizedBuildGradlePath) {
                         const answer = await vscode.window.showWarningMessage(
@@ -67,7 +66,7 @@ export async function bumpVersionByType(type: BumpType): Promise<void> {
                             );
                         }
                     }
-                    result = await bumpAndroidVersion(rootPath, type);
+                    result = await updatePlatformVersion({ type: 'android', rootPath, bumpType: type });
                 } else if (
                     filePath.endsWith(FILE_EXTENSIONS.INFO_PLIST) ||
                     filePath.includes(FILE_EXTENSIONS.XCODEPROJ)
@@ -97,7 +96,7 @@ export async function bumpVersionByType(type: BumpType): Promise<void> {
                             );
                         }
                     }
-                    result = await bumpIOSVersion(rootPath, type);
+                    result = await updatePlatformVersion({ type: 'ios', rootPath, bumpType: type });
                 } else {
                     vscode.window.showInformationMessage(
                         `Please open a version file (${FILE_EXTENSIONS.PACKAGE_JSON}, ${FILE_EXTENSIONS.BUILD_GRADLE}, or iOS ${FILE_EXTENSIONS.INFO_PLIST}) to bump its version`
@@ -111,6 +110,8 @@ export async function bumpVersionByType(type: BumpType): Promise<void> {
                     vscode.window.showInformationMessage(
                         `${result.platform} version bumped successfully: ${result.message}`
                     );
+                    // Refresh CodeLens to show updated version information
+                    refreshCodeLenses();
                 } else {
                     vscode.window.showErrorMessage(`Failed to bump version: ${result?.error || 'Unknown error'}`);
                 }

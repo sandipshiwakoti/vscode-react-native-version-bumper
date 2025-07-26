@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 
+import { readIOSVersionInfo } from '../services/platformService';
 import { IOSVersionInfo, ProjectType, ProjectVersions } from '../types';
 import { getAppName } from '../utils/fileUtils';
-import { readIOSVersionInfo } from '../utils/iosUtils';
 
 import { generatePageHeaderHTML, PAGE_HEADER_CSS, SHARED_BASE_CSS } from './shared/pageHeader';
 import { generateVersionCardHTML, VERSION_CARD_CSS } from './shared/versionCard';
