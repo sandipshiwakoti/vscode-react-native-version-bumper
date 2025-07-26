@@ -7,9 +7,51 @@ export enum BumpType {
     CUSTOM = 'custom',
 }
 
-export type ProjectType = 'react-native' | 'unknown';
+export enum ProjectType {
+    REACT_NATIVE = 'react-native',
+    UNKNOWN = 'unknown',
+}
 
-export type PlatformKey = 'Package.json' | 'Android' | 'iOS' | 'Git';
+export enum Platform {
+    PACKAGE_JSON = 'Package.json',
+    ANDROID = 'Android',
+    IOS = 'iOS',
+    GIT = 'Git',
+}
+
+export enum PlatformType {
+    ANDROID = 'android',
+    IOS = 'ios',
+    PACKAGE = 'package',
+}
+
+export enum SyncSource {
+    PACKAGE_JSON = 'package.json',
+    ANDROID = 'android',
+    IOS = 'ios',
+    CUSTOM = 'custom',
+}
+
+export enum OperationType {
+    VERSION = 'version',
+    GIT = 'git',
+}
+
+export enum GitAction {
+    CREATE_BRANCH = 'Create branch',
+    COMMIT_CHANGES = 'Commit changes',
+    CREATE_TAG = 'Create tag',
+    PUSH_TO_REMOTE = 'Push to remote',
+}
+
+export enum VersionAction {
+    SYNC_VERSION = 'Sync version',
+    UPDATE_VERSION = 'Update version',
+    SYNC_VERSION_AND_BUILD = 'Sync version and increment build',
+    UPDATE_VERSION_AND_BUILD = 'Update version and build number',
+}
+
+export type PlatformKey = Platform;
 
 export interface BumpResult {
     platform: string;
@@ -49,21 +91,15 @@ export interface IOSUpdateResult {
     newBuildNumber: string;
 }
 
-export interface PackageJsonData {
-    version?: string;
-    name?: string;
-    [key: string]: unknown;
-}
-
 export interface SyncOption {
     label: string;
     description: string;
     version: string;
-    source: 'package.json' | 'android' | 'ios' | 'custom';
+    source: SyncSource;
 }
 
 export interface BatchOperation {
-    type: 'version' | 'git';
+    type: OperationType;
     platform: string;
     action: string;
     oldValue: string;
@@ -131,12 +167,16 @@ export interface VersionOperationOptions {
     context?: vscode.ExtensionContext;
 }
 
-export type PlatformType = 'android' | 'ios' | 'package';
-
 export interface PlatformConfig {
     type: PlatformType;
     rootPath: string;
     targetVersion?: string;
     buildNumber?: number;
     bumpType?: BumpType;
+}
+
+export interface PackageJsonContent {
+    version?: string;
+    name?: string;
+    [key: string]: unknown;
 }

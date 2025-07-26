@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { CONFIG, DEFAULT_VALUES, EXTENSION_ID, REGEX_PATTERNS } from '../constants';
-import { BumpResult, BumpType, ProjectVersions, SyncOption, VersionOperationOptions } from '../types';
+import { BumpResult, BumpType, ProjectVersions, SyncOption, SyncSource, VersionOperationOptions } from '../types';
 import { showBumpResults } from '../ui/resultsView';
 import { hasAndroidProject, hasIOSProject } from '../utils/fileUtils';
 import {
@@ -326,7 +326,7 @@ function buildSyncOptions(
             label: `Use package.json version: ${versions.packageJson}`,
             description: 'Sync all platforms to match package.json version',
             version: versions.packageJson,
-            source: 'package.json',
+            source: SyncSource.PACKAGE_JSON,
         });
     }
 
@@ -335,7 +335,7 @@ function buildSyncOptions(
             label: `Use Android version: ${versions.android.versionName}`,
             description: 'Sync all platforms to match Android versionName',
             version: versions.android.versionName,
-            source: 'android',
+            source: SyncSource.ANDROID,
         });
     }
 
@@ -344,7 +344,7 @@ function buildSyncOptions(
             label: `Use iOS version: ${versions.ios.version}`,
             description: 'Sync all platforms to match iOS version',
             version: versions.ios.version,
-            source: 'ios',
+            source: SyncSource.IOS,
         });
     }
 
@@ -352,14 +352,14 @@ function buildSyncOptions(
         label: 'Enter custom version',
         description: 'Specify a new version for all platforms',
         version: '',
-        source: 'custom',
+        source: SyncSource.CUSTOM,
     });
 
     return syncOptions;
 }
 
 async function getTargetVersion(selectedOption: SyncOption, versions: ProjectVersions): Promise<string | null> {
-    if (selectedOption.source !== 'custom') {
+    if (selectedOption.source !== SyncSource.CUSTOM) {
         return selectedOption.version;
     }
 

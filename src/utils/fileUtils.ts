@@ -10,7 +10,7 @@ export async function detectProjectType(rootPath: string): Promise<ProjectType> 
     const iosPath = path.join(rootPath, FILE_PATTERNS.IOS_FOLDER);
     const hasAndroid = fs.existsSync(androidPath);
     const hasIos = fs.existsSync(iosPath);
-    return hasAndroid || hasIos ? 'react-native' : 'unknown';
+    return hasAndroid || hasIos ? ProjectType.REACT_NATIVE : ProjectType.UNKNOWN;
 }
 
 export function isReactNativeProject(rootPath: string): boolean {

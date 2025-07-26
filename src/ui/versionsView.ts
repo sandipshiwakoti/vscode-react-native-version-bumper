@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { readIOSVersionInfo } from '../services/platformService';
-import { IOSVersionInfo, ProjectType, ProjectVersions } from '../types';
+import { IOSVersionInfo, Platform, ProjectType, ProjectVersions } from '../types';
 import { getAppName } from '../utils/fileUtils';
 
 import { generatePageHeaderHTML, PAGE_HEADER_CSS, SHARED_BASE_CSS } from './shared/pageHeader';
@@ -136,14 +136,14 @@ export async function generateVersionsHTML(
     `;
 
     html += generateVersionCardHTML({
-        platform: 'Package.json',
+        platform: Platform.PACKAGE_JSON,
         available: !!versions.packageJson,
         version: versions.packageJson,
         location: 'package.json',
     });
 
     html += generateVersionCardHTML({
-        platform: 'Android',
+        platform: Platform.ANDROID,
         available: !!versions.android,
         versionName: versions.android?.versionName,
         versionCode: versions.android?.versionCode,
@@ -151,7 +151,7 @@ export async function generateVersionsHTML(
     });
 
     html += generateVersionCardHTML({
-        platform: 'iOS',
+        platform: Platform.IOS,
         available: !!versions.ios,
         version: versions.ios?.version,
         buildNumber: versions.ios?.buildNumber,

@@ -6,7 +6,16 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 
 import { CONFIG, DEFAULT_VALUES, EXTENSION_ID, REGEX_PATTERNS, RELEASE_TEMPLATE_PATHS, TEMPLATES } from '../constants';
-import { BatchGitConfig, BatchOperation, BumpResult, BumpType, GitWorkflowResult } from '../types';
+import {
+    BatchGitConfig,
+    BatchOperation,
+    BumpResult,
+    BumpType,
+    GitAction,
+    GitWorkflowResult,
+    OperationType,
+    Platform,
+} from '../types';
 import { getPlaceholderValues, replacePlaceholders } from '../utils/helperUtils';
 import { bumpSemanticVersion, getLatestGitTagVersion } from '../utils/versionUtils';
 
@@ -27,7 +36,7 @@ export async function collectGitConfiguration(
     const buildNumberMap: { [platform: string]: string } = {};
 
     operations
-        .filter((op) => op.type === 'version')
+        .filter((op) => op.type === OperationType.VERSION)
         .forEach((op) => {
             const platformKey = op.platform;
             let semanticVersion = '0.0.0';
@@ -51,7 +60,7 @@ export async function collectGitConfiguration(
 
     const mockResults: BumpResult[] = [];
     operations
-        .filter((op) => op.type === 'version')
+        .filter((op) => op.type === OperationType.VERSION)
         .forEach((op) => {
             if (op.platform === 'Android' || op.platform === 'iOS') {
                 mockResults.push({
@@ -299,7 +308,7 @@ export async function executeGitOperationsWithProgress(
         async (progress) => {
             try {
                 if (gitConfig.shouldCreateBranch && gitConfig.branchName) {
-                    const branchOp = gitOps.find((op) => op.action === 'Create branch');
+                    const branchOp = gitOps.find((op) => op.action === GitAction.CREATE_BRANCH);
                     if (branchOp) {
                         progress.report({
                             increment: 100 / totalOps,
@@ -327,7 +336,7 @@ export async function executeGitOperationsWithProgress(
                     }
                 }
 
-                const commitOp = gitOps.find((op) => op.action === 'Commit changes');
+                const commitOp = gitOps.find((op) => op.action === GitAction.COMMIT_CHANGES);
                 if (commitOp) {
                     progress.report({
                         increment: 100 / totalOps,
@@ -356,7 +365,7 @@ export async function executeGitOperationsWithProgress(
                 }
 
                 if (gitConfig.shouldTag && gitConfig.tagName && commitSuccess) {
-                    const tagOp = gitOps.find((op) => op.action === 'Create tag');
+                    const tagOp = gitOps.find((op) => op.action === GitAction.CREATE_TAG);
                     if (tagOp) {
                         progress.report({
                             increment: 100 / totalOps,
@@ -394,7 +403,7 @@ export async function executeGitOperationsWithProgress(
                 }
 
                 if (gitConfig.shouldPush && commitSuccess) {
-                    const pushOp = gitOps.find((op) => op.action === 'Push to remote');
+                    const pushOp = gitOps.find((op) => op.action === GitAction.PUSH_TO_REMOTE);
                     if (pushOp) {
                         progress.report({
                             increment: 100 / totalOps,
@@ -446,7 +455,7 @@ export async function executeGitOperationsWithProgress(
                 }
 
                 results.push({
-                    platform: 'Git',
+                    platform: Platform.GIT,
                     success: true,
                     oldVersion: '',
                     newVersion: '',
@@ -465,7 +474,7 @@ export async function executeGitOperationsWithProgress(
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                 results.push({
-                    platform: 'Git',
+                    platform: Platform.GIT,
                     success: false,
                     oldVersion: '',
                     newVersion: '',
@@ -643,7 +652,7 @@ export async function executeGitWorkflow(
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                 vscode.window.showErrorMessage(`Failed to create branch: ${errorMessage}`);
                 results.push({
-                    platform: 'Git',
+                    platform: Platform.GIT,
                     success: false,
                     oldVersion: '',
                     newVersion: '',
@@ -701,7 +710,7 @@ export async function executeGitWorkflow(
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             results.push({
-                platform: 'Git',
+                platform: Platform.GIT,
                 success: false,
                 oldVersion: '',
                 newVersion: '',
@@ -831,7 +840,7 @@ export async function executeGitWorkflow(
                     }
                 } else {
                     results.push({
-                        platform: 'Git',
+                        platform: Platform.GIT,
                         success: false,
                         oldVersion: '',
                         newVersion: '',
@@ -884,7 +893,7 @@ export async function executeGitWorkflow(
                 gitMessage += `Push: ❌ Failed to push to remote: ${pushError}`;
 
                 results.push({
-                    platform: 'Git',
+                    platform: Platform.GIT,
                     success: false,
                     oldVersion: '',
                     newVersion: '',
@@ -919,7 +928,7 @@ export async function executeGitWorkflow(
         }
 
         results.push({
-            platform: 'Git',
+            platform: Platform.GIT,
             success: true,
             oldVersion: '',
             newVersion: '',
@@ -951,7 +960,7 @@ export async function executeGitWorkflow(
         gitMessage += `Operation failed: ${errorMessage}`;
 
         results.push({
-            platform: 'Git',
+            platform: Platform.GIT,
             success: false,
             oldVersion: '',
             newVersion: '',
@@ -1013,7 +1022,7 @@ async function appendVersionInfoToTemplate(
     tagName: string,
     repoUrl: string
 ): Promise<string> {
-    const successfulResults = results.filter((r) => r.success && r.platform !== 'Git');
+    const successfulResults = results.filter((r) => r.success && r.platform !== Platform.GIT);
 
     let notes = template;
 
@@ -1060,7 +1069,7 @@ async function generateDefaultReleaseNotes(
     tagName: string,
     repoUrl: string
 ): Promise<string> {
-    const successfulResults = results.filter((r) => r.success && r.platform !== 'Git');
+    const successfulResults = results.filter((r) => r.success && r.platform !== Platform.GIT);
 
     let notes = `**What's Changed:**\n`;
     notes += `<!-- Add your changes here -->\n`;

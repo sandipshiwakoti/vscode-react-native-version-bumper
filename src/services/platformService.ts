@@ -13,7 +13,17 @@ import {
     IOS_PLIST_KEYS,
     REGEX_PATTERNS,
 } from '../constants';
-import { AndroidVersionInfo, BumpResult, BumpType, IOSUpdateResult, IOSVersionInfo, PlatformConfig } from '../types';
+import {
+    AndroidVersionInfo,
+    BumpResult,
+    BumpType,
+    IOSUpdateResult,
+    IOSVersionInfo,
+    PackageJsonContent,
+    Platform,
+    PlatformConfig,
+    PlatformType,
+} from '../types';
 import { findInfoPlistPath } from '../utils/fileUtils';
 import { bumpSemanticVersion } from '../utils/versionUtils';
 
@@ -296,15 +306,15 @@ export async function getIOSCodeLenses(document: vscode.TextDocument): Promise<v
 
 export async function updatePlatformVersion(config: PlatformConfig): Promise<BumpResult> {
     switch (config.type) {
-        case 'android':
+        case PlatformType.ANDROID:
             return config.targetVersion
                 ? syncAndroidVersion(config.rootPath, config.targetVersion, config.buildNumber)
                 : bumpAndroidVersion(config.rootPath, config.bumpType!);
-        case 'ios':
+        case PlatformType.IOS:
             return config.targetVersion
                 ? syncIOSVersion(config.rootPath, config.targetVersion, config.buildNumber)
                 : bumpIOSVersion(config.rootPath, config.bumpType!);
-        case 'package':
+        case PlatformType.PACKAGE:
             return config.targetVersion
                 ? syncPackageVersion(config.rootPath, config.targetVersion)
                 : bumpPackageVersion(config.rootPath, config.bumpType!);
@@ -322,7 +332,7 @@ async function bumpAndroidVersion(rootPath: string, type: BumpType): Promise<Bum
         updateAndroidVersionInfo(versionInfo, newVersionName, newVersionCode);
 
         return {
-            platform: 'Android',
+            platform: Platform.ANDROID,
             success: true,
             oldVersion: `${versionInfo.versionName} (${versionInfo.versionCode})`,
             newVersion: `${newVersionName} (${newVersionCode})`,
@@ -330,7 +340,7 @@ async function bumpAndroidVersion(rootPath: string, type: BumpType): Promise<Bum
         };
     } catch (error) {
         return {
-            platform: 'Android',
+            platform: Platform.ANDROID,
             success: false,
             oldVersion: '',
             newVersion: '',
@@ -348,7 +358,7 @@ async function syncAndroidVersion(rootPath: string, targetVersion: string, build
         updateAndroidVersionInfo(versionInfo, targetVersion, newVersionCode);
 
         return {
-            platform: 'Android',
+            platform: Platform.ANDROID,
             success: true,
             oldVersion: `${versionInfo.versionName} (${versionInfo.versionCode})`,
             newVersion: `${targetVersion} (${newVersionCode})`,
@@ -356,7 +366,7 @@ async function syncAndroidVersion(rootPath: string, targetVersion: string, build
         };
     } catch (error) {
         return {
-            platform: 'Android',
+            platform: Platform.ANDROID,
             success: false,
             oldVersion: '',
             newVersion: '',
@@ -384,7 +394,7 @@ async function bumpIOSVersion(rootPath: string, type: BumpType): Promise<BumpRes
         const updateResult = await updateIOSVersion(rootPath, newVersion, newBuildNumber);
 
         return {
-            platform: 'iOS',
+            platform: Platform.IOS,
             success: true,
             oldVersion: `${updateResult.oldVersion} (${updateResult.oldBuildNumber})`,
             newVersion: `${updateResult.newVersion} (${updateResult.newBuildNumber})`,
@@ -392,7 +402,7 @@ async function bumpIOSVersion(rootPath: string, type: BumpType): Promise<BumpRes
         };
     } catch (error) {
         return {
-            platform: 'iOS',
+            platform: Platform.IOS,
             success: false,
             oldVersion: '',
             newVersion: '',
@@ -418,7 +428,7 @@ async function syncIOSVersion(rootPath: string, targetVersion: string, buildNumb
         const updateResult = await updateIOSVersion(rootPath, targetVersion, newBuildNumber);
 
         return {
-            platform: 'iOS',
+            platform: Platform.IOS,
             success: true,
             oldVersion: `${updateResult.oldVersion} (${updateResult.oldBuildNumber})`,
             newVersion: `${updateResult.newVersion} (${updateResult.newBuildNumber})`,
@@ -426,7 +436,7 @@ async function syncIOSVersion(rootPath: string, targetVersion: string, buildNumb
         };
     } catch (error) {
         return {
-            platform: 'iOS',
+            platform: Platform.IOS,
             success: false,
             oldVersion: '',
             newVersion: '',
@@ -449,7 +459,7 @@ async function bumpPackageVersion(rootPath: string, type: BumpType): Promise<Bum
         );
 
         return {
-            platform: 'Package.json',
+            platform: Platform.PACKAGE_JSON,
             success: true,
             oldVersion,
             newVersion,
@@ -457,7 +467,7 @@ async function bumpPackageVersion(rootPath: string, type: BumpType): Promise<Bum
         };
     } catch (error) {
         return {
-            platform: 'Package.json',
+            platform: Platform.PACKAGE_JSON,
             success: false,
             oldVersion: '',
             newVersion: '',
@@ -479,7 +489,7 @@ async function syncPackageVersion(rootPath: string, targetVersion: string): Prom
         );
 
         return {
-            platform: 'Package.json',
+            platform: Platform.PACKAGE_JSON,
             success: true,
             oldVersion,
             newVersion: targetVersion,
@@ -487,7 +497,7 @@ async function syncPackageVersion(rootPath: string, targetVersion: string): Prom
         };
     } catch (error) {
         return {
-            platform: 'Package.json',
+            platform: Platform.PACKAGE_JSON,
             success: false,
             oldVersion: '',
             newVersion: '',
@@ -787,7 +797,7 @@ function findPbxprojPath(iosPath: string, rootPath: string): string | null {
     return null;
 }
 
-function readPackageJson(rootPath: string): { packageJson: any; packageJsonPath: string } {
+function readPackageJson(rootPath: string): { packageJson: PackageJsonContent; packageJsonPath: string } {
     const packageJsonPath = path.join(rootPath, 'package.json');
 
     if (!fs.existsSync(packageJsonPath)) {

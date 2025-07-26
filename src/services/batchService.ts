@@ -7,7 +7,11 @@ import {
     BumpResult,
     BumpType,
     ExecutionOptions,
+    GitAction,
     GitWorkflowResult,
+    OperationType,
+    Platform,
+    PlatformType,
     ProjectVersions,
 } from '../types';
 import { detectProjectType, hasAndroidProject, hasIOSProject } from '../utils/fileUtils';
@@ -46,8 +50,8 @@ export async function createBatchExecutionPlan(
 
         if (oldVersion !== newVersion || !isSync) {
             operations.push({
-                type: 'version',
-                platform: 'Package.json',
+                type: OperationType.VERSION,
+                platform: Platform.PACKAGE_JSON,
                 action: isSync ? 'Sync version' : 'Update version',
                 oldValue: oldVersion,
                 newValue: newVersion,
@@ -74,8 +78,8 @@ export async function createBatchExecutionPlan(
         }
 
         operations.push({
-            type: 'version',
-            platform: 'Android',
+            type: OperationType.VERSION,
+            platform: Platform.ANDROID,
             action: isSync ? 'Sync version and increment build' : 'Update version and build number',
             oldValue: `${oldVersion} (${oldBuildNumber})`,
             newValue: `${newVersion} (${newBuildNumber})`,
@@ -103,8 +107,8 @@ export async function createBatchExecutionPlan(
         }
 
         operations.push({
-            type: 'version',
-            platform: 'iOS',
+            type: OperationType.VERSION,
+            platform: Platform.IOS,
             action: isSync ? 'Sync version and increment build' : 'Update version and build number',
             oldValue: `${oldVersion} (${oldBuildNumber})`,
             newValue: `${newVersion} (${newBuildNumber.toString()})`,
@@ -156,18 +160,18 @@ export async function executeBatchOperations(
                     let result: BumpResult;
 
                     switch (op.platform) {
-                        case 'Package.json':
+                        case Platform.PACKAGE_JSON:
                             result = await updatePlatformVersion({
-                                type: 'package',
+                                type: PlatformType.PACKAGE,
                                 rootPath,
                                 targetVersion: customVersions?.packageJson,
                                 bumpType: customVersions?.packageJson ? undefined : bumpType,
                             });
                             break;
 
-                        case 'Android':
+                        case Platform.ANDROID:
                             result = await updatePlatformVersion({
-                                type: 'android',
+                                type: PlatformType.ANDROID,
                                 rootPath,
                                 targetVersion:
                                     isSync || customVersions?.android
@@ -178,9 +182,9 @@ export async function executeBatchOperations(
                             });
                             break;
 
-                        case 'iOS':
+                        case Platform.IOS:
                             result = await updatePlatformVersion({
-                                type: 'ios',
+                                type: PlatformType.IOS,
                                 rootPath,
                                 targetVersion:
                                     isSync || customVersions?.ios
@@ -265,9 +269,9 @@ async function executeBatchMode(
         if (gitConfig) {
             if (gitConfig.shouldCreateBranch && gitConfig.branchName) {
                 plan.operations.push({
-                    type: 'git',
-                    platform: 'Git',
-                    action: 'Create branch',
+                    type: OperationType.GIT,
+                    platform: Platform.GIT,
+                    action: GitAction.CREATE_BRANCH,
                     oldValue: 'current branch',
                     newValue: gitConfig.branchName,
                     description: `Create branch: ${gitConfig.branchName}`,
@@ -275,9 +279,9 @@ async function executeBatchMode(
             }
 
             plan.operations.push({
-                type: 'git',
-                platform: 'Git',
-                action: 'Commit changes',
+                type: OperationType.GIT,
+                platform: Platform.GIT,
+                action: GitAction.COMMIT_CHANGES,
                 oldValue: '',
                 newValue: gitConfig.commitMessage,
                 description: `Commit: "${gitConfig.commitMessage}"`,
@@ -285,9 +289,9 @@ async function executeBatchMode(
 
             if (gitConfig.shouldTag && gitConfig.tagName) {
                 plan.operations.push({
-                    type: 'git',
-                    platform: 'Git',
-                    action: 'Create tag',
+                    type: OperationType.GIT,
+                    platform: Platform.GIT,
+                    action: GitAction.CREATE_TAG,
                     oldValue: '',
                     newValue: gitConfig.tagName,
                     description: `Tag: ${gitConfig.tagName}`,
@@ -296,9 +300,9 @@ async function executeBatchMode(
 
             if (gitConfig.shouldPush) {
                 plan.operations.push({
-                    type: 'git',
-                    platform: 'Git',
-                    action: 'Push to remote',
+                    type: OperationType.GIT,
+                    platform: Platform.GIT,
+                    action: GitAction.PUSH_TO_REMOTE,
                     oldValue: '',
                     newValue: 'origin',
                     description: `Push changes to remote repository`,
@@ -401,7 +405,7 @@ async function executeNormalMode(
                 } catch (error) {
                     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                     results.push({
-                        platform: 'Git',
+                        platform: Platform.GIT,
                         success: false,
                         oldVersion: '',
                         newVersion: '',
@@ -432,7 +436,7 @@ async function executeVersionTasks(
                 options.customVersions?.packageJson || (options.isSync ? versions.packageJson : undefined);
             tasks.push(
                 updatePlatformVersion({
-                    type: 'package',
+                    type: PlatformType.PACKAGE,
                     rootPath: options.rootPath,
                     targetVersion,
                     bumpType: targetVersion ? undefined : options.packageBumpType || options.bumpType,
@@ -442,7 +446,7 @@ async function executeVersionTasks(
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             tasks.push(
                 Promise.resolve({
-                    platform: 'Package.json',
+                    platform: Platform.PACKAGE_JSON,
                     success: false,
                     oldVersion: '',
                     newVersion: '',
@@ -462,7 +466,7 @@ async function executeVersionTasks(
 
                 tasks.push(
                     updatePlatformVersion({
-                        type: 'android',
+                        type: PlatformType.ANDROID,
                         rootPath: options.rootPath,
                         targetVersion,
                         buildNumber: options.customVersions?.android?.buildNumber,
@@ -478,7 +482,7 @@ async function executeVersionTasks(
 
                 tasks.push(
                     updatePlatformVersion({
-                        type: 'ios',
+                        type: PlatformType.IOS,
                         rootPath: options.rootPath,
                         targetVersion,
                         buildNumber: options.customVersions?.ios?.buildNumber,

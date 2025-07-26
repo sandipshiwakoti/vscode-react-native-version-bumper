@@ -1,5 +1,5 @@
 import { REGEX_PATTERNS } from '../constants';
-import { BumpResult, BumpType } from '../types';
+import { BumpResult, BumpType, Platform } from '../types';
 
 export function replacePlaceholders(template: string, values: Record<string, string>): string {
     return template.replace(REGEX_PATTERNS.PLACEHOLDER_REPLACE, (_, key) => values[key] || '');
@@ -13,7 +13,7 @@ export function getPlaceholderValues(
     buildNumberMap: { [platform: string]: string }
 ): Record<string, string> {
     const platforms = results
-        .filter((r) => r.success && r.newVersion && (r.platform === 'Android' || r.platform === 'iOS'))
+        .filter((r) => r.success && r.newVersion && (r.platform === Platform.ANDROID || r.platform === Platform.IOS))
         .map((r) => `${r.platform.toLowerCase()} to v${versionMap[r.platform]} (${buildNumberMap[r.platform]})`)
         .join(' and ');
     const date = new Date().toISOString().split('T')[0];
@@ -22,9 +22,9 @@ export function getPlaceholderValues(
         platforms,
         version: mainVersion || 'manual',
         date,
-        androidVersion: versionMap['Android'] || 'unknown',
-        iosVersion: versionMap['iOS'] || 'unknown',
-        androidBuildNumber: buildNumberMap['Android'] || 'N/A',
-        iosBuildNumber: buildNumberMap['iOS'] || 'N/A',
+        androidVersion: versionMap[Platform.ANDROID] || 'unknown',
+        iosVersion: versionMap[Platform.IOS] || 'unknown',
+        androidBuildNumber: buildNumberMap[Platform.ANDROID] || 'N/A',
+        iosBuildNumber: buildNumberMap[Platform.IOS] || 'N/A',
     };
 }

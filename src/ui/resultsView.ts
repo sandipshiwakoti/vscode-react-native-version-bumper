@@ -6,7 +6,7 @@ import { promisify } from 'util';
 import { generateReleaseNotes } from '../services/gitService';
 import { readIOSVersionInfo } from '../services/platformService';
 import { refreshCodeLenses } from '../services/uiService';
-import { BumpResult, BumpType, GitWorkflowResult, IOSVersionInfo } from '../types';
+import { BumpResult, BumpType, GitWorkflowResult, IOSVersionInfo, Platform } from '../types';
 import { getAppName } from '../utils/fileUtils';
 
 import { generatePageHeaderHTML, PAGE_HEADER_CSS, SHARED_BASE_CSS } from './shared/pageHeader';
@@ -273,13 +273,13 @@ export async function generateResultsHTML(
         let location = '';
 
         switch (result.platform) {
-            case 'Package.json':
+            case Platform.PACKAGE_JSON:
                 location = 'package.json';
                 break;
-            case 'Android':
+            case Platform.ANDROID:
                 location = 'android/app/build.gradle';
                 break;
-            case 'iOS':
+            case Platform.IOS:
                 location = iosPath;
                 break;
         }
@@ -405,7 +405,7 @@ export async function showBumpResults(
         hasCommit = gitWorkflowResult.commitSuccess;
         pushSuccess = gitWorkflowResult.pushSuccess;
     } else {
-        const gitResult = results.find((r) => r.platform === 'Git');
+        const gitResult = results.find((r) => r.platform === Platform.GIT);
         if (gitResult && gitResult.success) {
             const tagMatch = gitResult.message.match(/Tagged ([\w.-]+)/i);
             if (tagMatch) {

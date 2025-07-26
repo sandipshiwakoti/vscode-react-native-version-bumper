@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 
 import { isCodeLensEnabled } from '../commands/toggleCodeLens';
 import { COMMANDS, CONFIG, DEFAULT_VALUES, EXTENSION_ID, FILE_EXTENSIONS, FILE_PATTERNS } from '../constants';
+import { Platform } from '../types';
 import { isReactNativeProject } from '../utils/fileUtils';
 import { getCurrentVersions } from '../utils/versionUtils';
 
@@ -63,10 +64,10 @@ export async function updateStatusBar(): Promise<void> {
             platforms.push('Package.json');
         }
         if (versions.android) {
-            platforms.push('Android');
+            platforms.push(Platform.ANDROID);
         }
         if (versions.ios) {
-            platforms.push('iOS');
+            platforms.push(Platform.IOS);
         }
 
         const allVersions = [versions.packageJson, versions.android?.versionName, versions.ios?.version].filter(

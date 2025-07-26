@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
 
-import { BatchExecutionPlan } from '../types';
+import { BatchExecutionPlan, GitAction, OperationType } from '../types';
 
 export async function showBatchPreview(plan: BatchExecutionPlan): Promise<boolean> {
-    const versionOps = plan.operations.filter((op) => op.type === 'version');
-    const gitOps = plan.operations.filter((op) => op.type === 'git');
+    const versionOps = plan.operations.filter((op) => op.type === OperationType.VERSION);
+    const gitOps = plan.operations.filter((op) => op.type === OperationType.GIT);
 
     const versions = versionOps.map((op) => {
         const match = op.description.match(/^(\w+(?:\.\w+)?): (.+) → (.+)$/);
@@ -32,10 +32,10 @@ export async function showBatchPreview(plan: BatchExecutionPlan): Promise<boolea
     if (gitOps.length > 0) {
         previewMessage += `\n🔧 Git Operations:\n`;
 
-        const branchOp = gitOps.find((op) => op.action === 'Create branch');
-        const commitOp = gitOps.find((op) => op.action === 'Commit changes');
-        const tagOp = gitOps.find((op) => op.action === 'Create tag');
-        const pushOp = gitOps.find((op) => op.action === 'Push to remote');
+        const branchOp = gitOps.find((op) => op.action === GitAction.CREATE_BRANCH);
+        const commitOp = gitOps.find((op) => op.action === GitAction.COMMIT_CHANGES);
+        const tagOp = gitOps.find((op) => op.action === GitAction.CREATE_TAG);
+        const pushOp = gitOps.find((op) => op.action === GitAction.PUSH_TO_REMOTE);
 
         let gitIndex = 1;
         if (branchOp) {
