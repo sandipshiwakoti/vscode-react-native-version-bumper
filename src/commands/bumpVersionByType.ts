@@ -3,9 +3,9 @@ import path from 'path';
 
 import { CONFIG, EXTENSION_ID, FILE_EXTENSIONS, FILE_PATTERNS, PROGRESS_INCREMENTS } from '../constants';
 import { updatePlatformVersion } from '../services/platformService';
+import { refreshCodeLenses } from '../services/uiService';
+import { updateStatusBar } from '../services/uiService';
 import { BumpResult, BumpType } from '../types';
-import { refreshCodeLenses } from '../utils/codeLensUtils';
-import { updateStatusBar } from '../utils/statusBarUtils';
 
 export async function bumpVersionByType(type: BumpType): Promise<void> {
     const editor = vscode.window.activeTextEditor;

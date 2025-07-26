@@ -3,11 +3,11 @@ import * as vscode from 'vscode';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
+import { generateReleaseNotes } from '../services/gitService';
 import { readIOSVersionInfo } from '../services/platformService';
+import { refreshCodeLenses } from '../services/uiService';
 import { BumpResult, BumpType, GitWorkflowResult, IOSVersionInfo } from '../types';
-import { refreshCodeLenses } from '../utils/codeLensUtils';
 import { getAppName } from '../utils/fileUtils';
-import { generateReleaseNotes } from '../utils/releaseUtils';
 
 import { generatePageHeaderHTML, PAGE_HEADER_CSS, SHARED_BASE_CSS } from './shared/pageHeader';
 import { generateVersionCardHTML, VERSION_CARD_CSS } from './shared/versionCard';

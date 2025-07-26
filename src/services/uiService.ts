@@ -1,12 +1,20 @@
 import * as vscode from 'vscode';
 
-import { COMMANDS, CONFIG, DEFAULT_VALUES, EXTENSION_ID } from '../constants';
-import { getPackageJsonName } from '../services/platformService';
+import { isCodeLensEnabled } from '../commands/toggleCodeLens';
+import { COMMANDS, CONFIG, DEFAULT_VALUES, EXTENSION_ID, FILE_EXTENSIONS, FILE_PATTERNS } from '../constants';
+import { isReactNativeProject } from '../utils/fileUtils';
+import { getCurrentVersions } from '../utils/versionUtils';
 
-import { isReactNativeProject } from './fileUtils';
-import { getCurrentVersions } from './versionUtils';
+import {
+    getAndroidCodeLenses,
+    getIOSCodeLenses,
+    getPackageJsonCodeLenses,
+    getPackageJsonName,
+} from './platformService';
 
 let statusBarItem: vscode.StatusBarItem;
+let onDidChangeCodeLensesEmitter: vscode.EventEmitter<void>;
+let textDocumentListener: vscode.Disposable;
 
 export function initializeStatusBar(): void {
     statusBarItem = vscode.window.createStatusBarItem(
@@ -98,4 +106,73 @@ export function disposeStatusBar(): void {
     if (statusBarItem) {
         statusBarItem.dispose();
     }
+}
+
+export function initializeCodeLensProvider(): vscode.CodeLensProvider {
+    onDidChangeCodeLensesEmitter = new vscode.EventEmitter<void>();
+
+    textDocumentListener = vscode.workspace.onDidChangeTextDocument((e) => {
+        if (
+            e.document.fileName.endsWith(FILE_EXTENSIONS.PACKAGE_JSON) ||
+            e.document.fileName.endsWith(FILE_EXTENSIONS.BUILD_GRADLE) ||
+            e.document.fileName.endsWith(FILE_EXTENSIONS.INFO_PLIST) ||
+            e.document.fileName.endsWith(FILE_EXTENSIONS.PROJECT_PBXPROJ)
+        ) {
+            onDidChangeCodeLensesEmitter.fire();
+        }
+    });
+
+    return {
+        onDidChangeCodeLenses: onDidChangeCodeLensesEmitter.event,
+        provideCodeLenses: async (document: vscode.TextDocument): Promise<vscode.CodeLens[]> => {
+            if (!isCodeLensEnabled()) {
+                return [];
+            }
+
+            if (document.fileName.endsWith(FILE_EXTENSIONS.PACKAGE_JSON)) {
+                return getPackageJsonCodeLenses(document);
+            }
+
+            if (document.fileName.endsWith(FILE_EXTENSIONS.BUILD_GRADLE)) {
+                return getAndroidCodeLenses(document);
+            }
+
+            if (document.fileName.endsWith(FILE_EXTENSIONS.INFO_PLIST)) {
+                return await getIOSCodeLenses(document);
+            }
+
+            return [];
+        },
+    };
+}
+
+export function refreshCodeLenses(): void {
+    if (onDidChangeCodeLensesEmitter) {
+        onDidChangeCodeLensesEmitter.fire();
+    }
+}
+
+export function disposeCodeLensProvider(): void {
+    if (onDidChangeCodeLensesEmitter) {
+        onDidChangeCodeLensesEmitter.dispose();
+    }
+    if (textDocumentListener) {
+        textDocumentListener.dispose();
+    }
+}
+
+export function registerCodeLensProvider(context: vscode.ExtensionContext): vscode.Disposable {
+    const provider = initializeCodeLensProvider();
+
+    const disposable = vscode.languages.registerCodeLensProvider(
+        [
+            { language: 'json', pattern: FILE_PATTERNS.PACKAGE_JSON_PATTERN },
+            { pattern: FILE_PATTERNS.BUILD_GRADLE_PATTERN },
+            { pattern: FILE_PATTERNS.INFO_PLIST_PATTERN },
+        ],
+        provider
+    );
+
+    context.subscriptions.push(disposable);
+    return disposable;
 }

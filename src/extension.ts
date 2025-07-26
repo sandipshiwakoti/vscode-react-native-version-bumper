@@ -12,7 +12,7 @@ import {
     showCodeLens,
 } from './commands/toggleCodeLens';
 import { registerCommands } from './services/commandService';
-import { disposeStatusBar, initializeStatusBar } from './utils/statusBarUtils';
+import { disposeStatusBar, initializeStatusBar } from './services/uiService';
 import { COMMANDS } from './constants';
 import { BumpType } from './types';
 

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { CODELENS } from '../constants';
-import { disposeCodeLensProvider, refreshCodeLenses, registerCodeLensProvider } from '../utils/codeLensUtils';
+import { disposeCodeLensProvider, refreshCodeLenses, registerCodeLensProvider } from '../services/uiService';
 
 let codeLensDisposable: vscode.Disposable;
 let extensionContext: vscode.ExtensionContext;
