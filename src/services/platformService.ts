@@ -575,13 +575,28 @@ function updateAndroidVersionInfo(
 }
 
 async function readIOSVersionInfoInternal(rootPath: string): Promise<IOSVersionInfo | null> {
-    const iosPath = path.join(rootPath, FILE_PATTERNS.IOS_FOLDER);
+    const config = vscode.workspace.getConfiguration(EXTENSION_ID);
 
-    if (!fs.existsSync(iosPath)) {
-        return null;
+    // Check for custom Info.plist path first
+    let plistPath: string | null = null;
+    const customPlistPath = config.get<string>(CONFIG.IOS_INFO_PLIST_PATH);
+
+    if (customPlistPath) {
+        const fullCustomPath = path.join(rootPath, customPlistPath);
+        if (fs.existsSync(fullCustomPath)) {
+            plistPath = fullCustomPath;
+        }
     }
 
-    const plistPath = await findInfoPlistPath(iosPath);
+    // Fall back to auto-detection if custom path not found
+    if (!plistPath) {
+        const iosPath = path.join(rootPath, FILE_PATTERNS.IOS_FOLDER);
+        if (!fs.existsSync(iosPath)) {
+            return null;
+        }
+        plistPath = await findInfoPlistPath(iosPath);
+    }
+
     if (!plistPath) {
         return null;
     }
@@ -629,6 +644,7 @@ async function readIOSVersionInfoInternal(rootPath: string): Promise<IOSVersionI
         }
 
         if (usesVariables) {
+            const iosPath = path.join(rootPath, FILE_PATTERNS.IOS_FOLDER);
             const pbxprojPath = findPbxprojPath(iosPath, rootPath);
             if (pbxprojPath && (versionVarName || buildVarName)) {
                 const pbxprojContent = fs.readFileSync(pbxprojPath, 'utf8');
@@ -694,8 +710,26 @@ async function updateIOSVersion(
 }
 
 async function updateIOSVersionInPlist(rootPath: string, newVersion: string, newBuildNumber: string): Promise<void> {
-    const iosPath = path.join(rootPath, FILE_PATTERNS.IOS_FOLDER);
-    const plistPath = await findInfoPlistPath(iosPath);
+    const config = vscode.workspace.getConfiguration(EXTENSION_ID);
+
+    // Check for custom Info.plist path first
+    let plistPath: string | null = null;
+    const customPlistPath = config.get<string>(CONFIG.IOS_INFO_PLIST_PATH);
+
+    if (customPlistPath) {
+        const fullCustomPath = path.join(rootPath, customPlistPath);
+        if (fs.existsSync(fullCustomPath)) {
+            plistPath = fullCustomPath;
+        }
+    }
+
+    // Fall back to auto-detection if custom path not found
+    if (!plistPath) {
+        const iosPath = path.join(rootPath, FILE_PATTERNS.IOS_FOLDER);
+        if (fs.existsSync(iosPath)) {
+            plistPath = await findInfoPlistPath(iosPath);
+        }
+    }
 
     if (!plistPath) {
         throw new Error('Info.plist not found');
