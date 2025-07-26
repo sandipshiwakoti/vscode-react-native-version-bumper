@@ -49,6 +49,7 @@ export const CONFIG = {
     GIT_BRANCH_NAME_TEMPLATE: 'git.branchNameTemplate',
     GIT_COMMIT_MESSAGE_TEMPLATE: 'git.commitMessageTemplate',
     GIT_TAG_NAME_TEMPLATE: 'git.tagNameTemplate',
+    BATCH_MODE: 'batchMode',
 } as const;
 
 export const CODELENS = {

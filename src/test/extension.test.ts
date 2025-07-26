@@ -98,6 +98,7 @@ suite('React Native Version Bumper Extension Tests', function () {
             CONFIG.ANDROID_BUILD_GRADLE_PATH,
             CONFIG.IOS_INFO_PLIST_PATH,
             CONFIG.IOS_PROJECT_PB_XPROJ_PATH,
+            CONFIG.BATCH_MODE,
         ];
 
         for (const setting of settingsToReset) {
@@ -125,6 +126,7 @@ suite('React Native Version Bumper Extension Tests', function () {
             skipAndroid: false,
             skipIOS: false,
             skipPackageJson: false,
+            batchMode: false,
         });
 
         // Mock user responses: patch version bump, patch for package.json
@@ -188,6 +190,7 @@ suite('React Native Version Bumper Extension Tests', function () {
             [CONFIG.SKIP_ANDROID]: false,
             [CONFIG.SKIP_IOS]: true,
             [CONFIG.SKIP_PACKAGE_JSON]: true,
+            [CONFIG.BATCH_MODE]: false,
         });
 
         // Mock user responses
@@ -250,6 +253,7 @@ suite('React Native Version Bumper Extension Tests', function () {
             skipAndroid: true,
             skipIOS: false,
             skipPackageJson: true,
+            batchMode: false,
         });
 
         // Mock user responses

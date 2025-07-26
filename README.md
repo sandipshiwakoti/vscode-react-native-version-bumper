@@ -51,6 +51,7 @@
 - 🛠️ **Flexible Configuration**: Customize file paths, skip platforms, and tweak Git behaviors via settings.
 - 🖱️ **User-Friendly**: Interactive prompts guide you through version bumps and Git operations.
 - 🔄 **Cross-Platform Sync**: Sync versions across all platforms to maintain consistency.
+- **Smart Batch Mode**: Preview all operations before execution - see exactly what will change across all platforms and Git operations, then execute everything atomically with one click.
 
 ---
 
@@ -147,23 +148,24 @@ Click the status bar item to quickly see the current `package.json` version or t
 
 Adjust settings in `settings.json` to fit your workflow:
 
-| Setting                                              | Description                                       | Default                      |
-| ---------------------------------------------------- | ------------------------------------------------- | ---------------------------- |
-| `reactNativeVersionBumper.skipPackageJson`           | Skip `package.json` version bump                  | `false`                      |
-| `reactNativeVersionBumper.skipAndroid`               | Skip Android version bump                         | `false`                      |
-| `reactNativeVersionBumper.android.buildGradlePath`   | Path to `build.gradle`                            | `"android/app/build.gradle"` |
-| `reactNativeVersionBumper.skipIOS`                   | Skip iOS version bump                             | `false`                      |
-| `reactNativeVersionBumper.ios.infoPlistPath`         | Path to `Info.plist` (auto-detected if null)      | `null`                       |
-| `reactNativeVersionBumper.ios.projectPbxprojPath`    | Path to `project.pbxproj` (auto-detected if null) | `null`                       |
-| `reactNativeVersionBumper.git.commitMessageTemplate` | Commit message template                           | `"chore: version bump"`      |
-| `reactNativeVersionBumper.git.skipBranch`            | Skip branch creation                              | `false`                      |
-| `reactNativeVersionBumper.git.autoCreateBranch`      | Auto-create branch                                | `false`                      |
-| `reactNativeVersionBumper.git.branchNameTemplate`    | Branch name template                              | `"version-bump/{version}"`   |
-| `reactNativeVersionBumper.git.skipTag`               | Skip tag creation                                 | `false`                      |
-| `reactNativeVersionBumper.git.autoCreateTag`         | Auto-create tag                                   | `false`                      |
-| `reactNativeVersionBumper.git.tagNameTemplate`       | Tag name template                                 | `"v{version}"`               |
-| `reactNativeVersionBumper.git.skipPush`              | Skip pushing to remote                            | `false`                      |
-| `reactNativeVersionBumper.enableCodeLens`            | Enable or disable CodeLens for version bumping    | `true`                       |
+| Setting                                              | Description                                           | Default                      |
+| ---------------------------------------------------- | ----------------------------------------------------- | ---------------------------- |
+| `reactNativeVersionBumper.skipPackageJson`           | Skip `package.json` version bump                      | `false`                      |
+| `reactNativeVersionBumper.skipAndroid`               | Skip Android version bump                             | `false`                      |
+| `reactNativeVersionBumper.android.buildGradlePath`   | Path to `build.gradle`                                | `"android/app/build.gradle"` |
+| `reactNativeVersionBumper.skipIOS`                   | Skip iOS version bump                                 | `false`                      |
+| `reactNativeVersionBumper.ios.infoPlistPath`         | Path to `Info.plist` (auto-detected if null)          | `null`                       |
+| `reactNativeVersionBumper.ios.projectPbxprojPath`    | Path to `project.pbxproj` (auto-detected if null)     | `null`                       |
+| `reactNativeVersionBumper.git.commitMessageTemplate` | Commit message template                               | `"chore: version bump"`      |
+| `reactNativeVersionBumper.git.skipBranch`            | Skip branch creation                                  | `false`                      |
+| `reactNativeVersionBumper.git.autoCreateBranch`      | Auto-create branch                                    | `false`                      |
+| `reactNativeVersionBumper.git.branchNameTemplate`    | Branch name template                                  | `"version-bump/{version}"`   |
+| `reactNativeVersionBumper.git.skipTag`               | Skip tag creation                                     | `false`                      |
+| `reactNativeVersionBumper.git.autoCreateTag`         | Auto-create tag                                       | `false`                      |
+| `reactNativeVersionBumper.git.tagNameTemplate`       | Tag name template                                     | `"v{version}"`               |
+| `reactNativeVersionBumper.git.skipPush`              | Skip pushing to remote                                | `false`                      |
+| `reactNativeVersionBumper.enableCodeLens`            | Enable or disable CodeLens for version bumping        | `true`                       |
+| `reactNativeVersionBumper.batchMode`                 | Preview all operations before execution (recommended) | `true`                       |
 
 ### Template Placeholders
 
@@ -281,9 +283,6 @@ When versions get out of sync:
 ---
 
 ## ❓ FAQ
-
-**Q: Why not use a CLI tool instead?**  
-A: This extension keeps you in VS Code, offering an integrated experience with interactive prompts, visual feedback, Git support, and CodeLens for version bumping—no terminal required!
 
 **Q: How do I create a release or merge request?**  
 A: Use the "Bump All Platform Versions with Git Workflow 🔄" command. After a successful bump, the webview shows buttons to:

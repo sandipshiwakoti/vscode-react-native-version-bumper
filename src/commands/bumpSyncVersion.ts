@@ -1,13 +1,10 @@
 import * as vscode from 'vscode';
 
-import { CONFIG, DEFAULT_VALUES, EXTENSION_ID, PROGRESS_INCREMENTS, REGEX_PATTERNS } from '../constants';
+import { CONFIG, DEFAULT_VALUES, EXTENSION_ID, REGEX_PATTERNS } from '../constants';
 import { BumpResult, BumpType, SyncOption } from '../types';
 import { showBumpResults } from '../ui/resultsView';
-import { syncAndroidVersion } from '../utils/androidUtils';
+import { executeVersionOperations } from '../utils/batchUtils';
 import { hasAndroidProject, hasIOSProject } from '../utils/fileUtils';
-import { executeGitWorkflow } from '../utils/gitUtils';
-import { syncIOSVersion } from '../utils/iosUtils';
-import { syncPackageJsonVersion } from '../utils/packageUtils';
 import { updateStatusBar } from '../utils/statusBarUtils';
 import { getCurrentVersions, getHighestVersion } from '../utils/versionUtils';
 
@@ -173,122 +170,46 @@ export async function bumpSyncVersion(withGit: boolean, context?: vscode.Extensi
                 );
             }
         }
+        const customVersions = {
+            android: versions.android ? { version: targetVersion } : undefined,
+            ios: versions.ios ? { version: targetVersion } : undefined,
+            packageJson: versions.packageJson ? targetVersion : undefined,
+        };
 
-        const confirmMessage = `Sync all platforms to version ${targetVersion}?\n\n${syncDetails.join('\n')}`;
+        const batchMode = config.get(CONFIG.BATCH_MODE, true);
+        if (!batchMode) {
+            const confirmMessage = `Sync all platforms to version ${targetVersion}?\n\n${syncDetails.join('\n')}`;
+            const confirmed = await vscode.window.showInformationMessage(
+                confirmMessage,
+                { modal: true },
+                'Yes, Sync All',
+                'Cancel'
+            );
 
-        const confirmed = await vscode.window.showInformationMessage(
-            confirmMessage,
-            { modal: true },
-            'Yes, Sync All',
-            'Cancel'
-        );
-
-        if (confirmed !== 'Yes, Sync All') {
-            return;
+            if (confirmed !== 'Yes, Sync All') {
+                return;
+            }
         }
 
-        const results: BumpResult[] = [];
+        const results = await executeVersionOperations({
+            rootPath,
+            bumpType: BumpType.PATCH,
+            withGit,
+            customVersions,
+            isSync: true,
+        });
 
-        await vscode.window.withProgress(
-            {
-                location: vscode.ProgressLocation.Notification,
-                title: `Syncing all platforms to version ${targetVersion}...`,
-                cancellable: false,
-            },
-            async (progress) => {
-                progress.report({ increment: PROGRESS_INCREMENTS.START });
-                const tasks: Promise<BumpResult>[] = [];
-
-                if (versions.packageJson && !config.get(CONFIG.SKIP_PACKAGE_JSON)) {
-                    tasks.push(syncPackageJsonVersion(rootPath, targetVersion, versions.packageJson));
-                }
-
-                if (hasAndroid && !config.get(CONFIG.SKIP_ANDROID)) {
-                    tasks.push(syncAndroidVersion(rootPath, targetVersion, versions.android));
-                }
-
-                if (hasIOS && !config.get(CONFIG.SKIP_IOS)) {
-                    tasks.push(syncIOSVersion(rootPath, targetVersion, versions.ios));
-                }
-
-                progress.report({ increment: PROGRESS_INCREMENTS.TASKS_PREPARED });
-                const taskResults = await Promise.allSettled(tasks);
-                let completedTasks = 0;
-
-                taskResults.forEach((result, index) => {
-                    if (result.status === 'fulfilled') {
-                        results.push(result.value);
-                        completedTasks++;
-                    } else {
-                        results.push({
-                            platform: `Sync Task ${index + 1}`,
-                            success: false,
-                            oldVersion: '',
-                            newVersion: targetVersion,
-                            message: 'Sync failed',
-                            error: result.reason.toString(),
-                        });
-                    }
-                });
-
-                const totalTasks = tasks.length || 1;
-                progress.report({
-                    increment: Math.min(
-                        PROGRESS_INCREMENTS.TASKS_COMPLETED_MAX * (completedTasks / totalTasks),
-                        PROGRESS_INCREMENTS.TASKS_COMPLETED_MAX
-                    ),
-                });
-
-                if (withGit && tasks.length > 0) {
-                    try {
-                        const syncResults: BumpResult[] = [...results];
-
-                        syncResults.push({
-                            platform: 'SyncOperation',
-                            success: true,
-                            oldVersion: '',
-                            newVersion: targetVersion,
-                            message: `Sync to version ${targetVersion}`,
-                        });
-
-                        await executeGitWorkflow(rootPath, BumpType.PATCH, syncResults);
-                        progress.report({ increment: PROGRESS_INCREMENTS.GIT_COMPLETED });
-
-                        const gitResult = syncResults.find((r) => r.platform === 'Git');
-                        if (gitResult) {
-                            results.push(gitResult);
-                        }
-                    } catch (error) {
-                        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                        results.push({
-                            platform: 'Git',
-                            success: false,
-                            oldVersion: '',
-                            newVersion: targetVersion,
-                            message: 'Git sync failed',
-                            error: errorMessage,
-                        });
-                        vscode.window.showErrorMessage(`Git operation failed: ${errorMessage}`);
-                    }
-                }
-
-                progress.report({ increment: PROGRESS_INCREMENTS.FINISHED });
-
-                const hasSuccessfulOperations = results.some((result) => result.success);
-                const hasCompletedTasks = tasks.length > 0 && completedTasks > 0;
-
-                if (hasSuccessfulOperations && hasCompletedTasks) {
-                    showBumpResults(BumpType.PATCH, results, context);
-                    updateStatusBar();
-                } else if (results.length > 0 && !hasSuccessfulOperations) {
-                    const errorMessages = results
-                        .filter((r) => !r.success)
-                        .map((r) => `${r.platform}: ${r.error || r.message}`)
-                        .join('\n');
-                    vscode.window.showErrorMessage(`Version sync failed:\n${errorMessages}`);
-                }
-            }
-        );
+        const hasSuccessfulOperations = results.some((result: BumpResult) => result.success);
+        if (hasSuccessfulOperations) {
+            showBumpResults(BumpType.PATCH, results, context);
+            updateStatusBar();
+        } else if (results.length > 0) {
+            const errorMessages = results
+                .filter((r: BumpResult) => !r.success)
+                .map((r: BumpResult) => `${r.platform}: ${r.error || r.message}`)
+                .join('\n');
+            vscode.window.showErrorMessage(`Sync operation failed:\n${errorMessages}`);
+        }
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         vscode.window.showErrorMessage(`Failed to sync versions: ${errorMessage}`);

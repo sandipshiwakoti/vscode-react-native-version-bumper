@@ -59,3 +59,40 @@ export interface SyncOption {
     version: string;
     source: 'package.json' | 'android' | 'ios' | 'custom';
 }
+
+export interface BatchOperation {
+    type: 'version' | 'git';
+    platform: string;
+    action: string;
+    oldValue: string;
+    newValue: string;
+    description: string;
+}
+
+export interface BatchGitConfig {
+    shouldCreateBranch: boolean;
+    branchName?: string;
+    commitMessage: string;
+    shouldTag: boolean;
+    tagName?: string;
+    shouldPush: boolean;
+}
+
+export interface BatchExecutionPlan {
+    operations: BatchOperation[];
+    gitConfig?: BatchGitConfig;
+    summary: string;
+}
+
+export interface ExecutionOptions {
+    rootPath: string;
+    bumpType: BumpType;
+    withGit: boolean;
+    customVersions?: {
+        android?: { version: string; buildNumber?: number };
+        ios?: { version: string; buildNumber?: number };
+        packageJson?: string;
+    };
+    packageBumpType?: BumpType;
+    isSync?: boolean;
+}

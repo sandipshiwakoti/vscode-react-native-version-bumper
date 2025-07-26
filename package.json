@@ -231,6 +231,11 @@
                     "type": "boolean",
                     "default": false,
                     "description": "Skip pushing changes to the remote repository"
+                },
+                "reactNativeVersionBumper.batchMode": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Preview all operations before execution (recommended). Shows exactly what will change across all platforms and Git operations, then executes everything together after confirmation."
                 }
             }
         }
