@@ -15,10 +15,15 @@ export async function showCurrentVersions(context?: vscode.ExtensionContext) {
 
         const rootPath = workspaceFolders[0].uri.fsPath;
         const projectType = await detectProjectType(rootPath);
-        const panel = vscode.window.createWebviewPanel('currentVersions', 'Current Versions', vscode.ViewColumn.One, {
-            enableScripts: true,
-            retainContextWhenHidden: true,
-        });
+        const panel = vscode.window.createWebviewPanel(
+            'currentVersions',
+            'React Native Version Bumper - Current Versions',
+            vscode.ViewColumn.One,
+            {
+                enableScripts: true,
+                retainContextWhenHidden: true,
+            }
+        );
 
         let logoUri: vscode.Uri | undefined;
         if (context) {
@@ -26,7 +31,7 @@ export async function showCurrentVersions(context?: vscode.ExtensionContext) {
             logoUri = panel.webview.asWebviewUri(onDiskPath);
         }
 
-        panel.webview.html = generateVersionsHTML(versions, projectType, logoUri);
+        panel.webview.html = await generateVersionsHTML(versions, projectType, logoUri, rootPath);
     } catch (error) {
         vscode.window.showErrorMessage(`Error getting versions: ${error}`);
     }

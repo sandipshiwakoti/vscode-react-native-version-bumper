@@ -106,3 +106,19 @@ export interface GitWorkflowResult {
     tagName?: string;
     pushSuccess: boolean;
 }
+
+export interface VersionCardData {
+    platform: string;
+    success?: boolean;
+    available?: boolean;
+    version?: string;
+    buildNumber?: string;
+    versionName?: string;
+    versionCode?: number;
+    oldVersion?: string;
+    newVersion?: string;
+    location?: string;
+    iosVersionInfo?: IOSVersionInfo | null;
+    message?: string;
+    error?: string;
+}

@@ -204,7 +204,7 @@ export async function bumpAppVersion(withGit: boolean, context?: vscode.Extensio
 
     const hasSuccessfulOperations = results.some((result) => result.success);
     if (hasSuccessfulOperations) {
-        showBumpResults(type, results, context, gitWorkflowResult);
+        await showBumpResults(type, results, context, gitWorkflowResult);
         updateStatusBar();
     } else if (results.length > 0) {
         const errorMessages = results

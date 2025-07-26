@@ -50,12 +50,46 @@ export async function updateStatusBar(): Promise<void> {
             projectName = packageName;
         }
 
-        statusBarItem.text = `📱 ${projectName}: v${packageVersion}`;
-        statusBarItem.tooltip = 'Click to show all versions';
+        const platforms = [];
+        if (versions.packageJson) {
+            platforms.push('Package.json');
+        }
+        if (versions.android) {
+            platforms.push('Android');
+        }
+        if (versions.ios) {
+            platforms.push('iOS');
+        }
+
+        const allVersions = [versions.packageJson, versions.android?.versionName, versions.ios?.version].filter(
+            Boolean
+        );
+        const uniqueVersions = [...new Set(allVersions)];
+        const isSynced = uniqueVersions.length <= 1 && allVersions.length > 1;
+        const syncIndicator = allVersions.length > 1 ? (isSynced ? '🟢' : '🟡') : '';
+
+        statusBarItem.text = `⚛️ ${projectName}: v${packageVersion} ${syncIndicator}`;
+
+        let tooltip = `React Native Version Bumper\n\n`;
+        tooltip += `Project: ${projectName}\n`;
+        tooltip += `Package.json: ${packageVersion}\n`;
+        if (versions.android) {
+            tooltip += `Android: ${versions.android.versionName} (${versions.android.versionCode})\n`;
+        }
+        if (versions.ios) {
+            tooltip += `iOS: ${versions.ios.version} (${versions.ios.buildNumber})\n`;
+        }
+        tooltip += `\nPlatforms: ${platforms.join(', ')} (${platforms.length}/3)\n`;
+        if (allVersions.length > 1) {
+            tooltip += `Sync Status: ${isSynced ? 'Synced ✅' : 'Different versions ⚠️'}\n`;
+        }
+        tooltip += `\nClick to view detailed version information`;
+
+        statusBarItem.tooltip = tooltip;
         statusBarItem.show();
     } catch {
-        statusBarItem.text = `📱 Version Bumper`;
-        statusBarItem.tooltip = 'React Native Version Bumper';
+        statusBarItem.text = `⚛️ Version Bumper`;
+        statusBarItem.tooltip = 'React Native Version Bumper\n\nClick to view current versions';
         statusBarItem.show();
     }
 }
