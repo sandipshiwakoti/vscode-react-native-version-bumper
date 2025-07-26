@@ -1,3 +1,5 @@
+import * as vscode from 'vscode';
+
 export enum BumpType {
     MAJOR = 'major',
     MINOR = 'minor',
@@ -121,4 +123,10 @@ export interface VersionCardData {
     iosVersionInfo?: IOSVersionInfo | null;
     message?: string;
     error?: string;
+}
+
+export interface VersionOperationOptions {
+    withGit: boolean;
+    isSync?: boolean;
+    context?: vscode.ExtensionContext;
 }
