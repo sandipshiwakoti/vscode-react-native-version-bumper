@@ -452,34 +452,57 @@ export async function showBatchPreview(plan: BatchExecutionPlan): Promise<boolea
     const versionOps = plan.operations.filter((op) => op.type === 'version');
     const gitOps = plan.operations.filter((op) => op.type === 'git');
 
-    let previewMessage = `Review Changes Before Execution\n\n`;
-    previewMessage += `The following operations will be performed:\n\n`;
+    const versions = versionOps.map((op) => {
+        const match = op.description.match(/^(\w+(?:\.\w+)?): (.+) → (.+)$/);
+        if (match) {
+            return `${match[1]}: ${match[2]} → ${match[3]}`;
+        }
+        return op.description;
+    });
 
-    if (versionOps.length > 0) {
-        previewMessage += `File Updates (${versionOps.length}):\n`;
-        versionOps.forEach((op, index) => {
-            previewMessage += `  ${index + 1}. ${op.description}\n`;
+    let previewMessage = `🚀 Ready to update ${versionOps.length} file${versionOps.length !== 1 ? 's' : ''}`;
+
+    if (gitOps.length > 0) {
+        previewMessage += ` + ${gitOps.length} Git operation${gitOps.length !== 1 ? 's' : ''}`;
+    }
+
+    previewMessage += `\n\n`;
+
+    if (versions.length > 0) {
+        previewMessage += `📦 Version Updates:\n`;
+        versions.forEach((version, index) => {
+            previewMessage += `   ${index + 1}. ${version}\n`;
         });
-        previewMessage += `\n`;
     }
 
     if (gitOps.length > 0) {
-        previewMessage += `Git Operations (${gitOps.length}):\n`;
-        gitOps.forEach((op, index) => {
-            previewMessage += `  ${index + 1}. ${op.description}\n`;
-        });
-        previewMessage += `\n`;
+        previewMessage += `\n🔧 Git Operations:\n`;
+
+        const branchOp = gitOps.find((op) => op.action === 'Create branch');
+        const commitOp = gitOps.find((op) => op.action === 'Commit changes');
+        const tagOp = gitOps.find((op) => op.action === 'Create tag');
+        const pushOp = gitOps.find((op) => op.action === 'Push to remote');
+
+        let gitIndex = 1;
+        if (branchOp) {
+            previewMessage += `   ${gitIndex++}. Branch: ${branchOp.newValue}\n`;
+        }
+        if (commitOp) {
+            const commitMessage =
+                commitOp.newValue.length > 100 ? commitOp.newValue.substring(0, 97) + '...' : commitOp.newValue;
+            previewMessage += `   ${gitIndex++}. Commit: "${commitMessage}"\n`;
+        }
+        if (tagOp) {
+            previewMessage += `   ${gitIndex++}. Tag: ${tagOp.newValue}\n`;
+        }
+        if (pushOp) {
+            previewMessage += `   ${gitIndex++}. Push: Yes\n`;
+        }
     }
 
-    previewMessage += `All operations will be executed together. You can safely cancel if anything looks incorrect.`;
+    const confirmed = await vscode.window.showInformationMessage(previewMessage, { modal: true }, 'Execute Changes');
 
-    const confirmed = await vscode.window.showInformationMessage(
-        previewMessage,
-        { modal: true },
-        'Proceed with Changes'
-    );
-
-    return confirmed === 'Proceed with Changes';
+    return confirmed === 'Execute Changes';
 }
 
 export async function executeBatchOperations(
@@ -580,19 +603,25 @@ export async function executeBatchOperations(
 
                     await new Promise((resolve) => setTimeout(resolve, 200));
                     progress.report({
-                        message: `[${completedOps}/${totalOps}] ✅ ${op.platform}`,
+                        message: `[${completedOps}/${totalOps}] ${result.success ? '✅' : '❌'} ${op.platform}`,
                     });
                 } catch (error) {
                     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                    results.push({
+                    const result = {
                         platform: op.platform,
                         success: false,
                         oldVersion: op.oldValue,
                         newVersion: op.newValue,
                         message: `${op.action} failed`,
                         error: errorMessage,
-                    });
+                    };
+                    results.push(result);
                     completedOps++;
+
+                    await new Promise((resolve) => setTimeout(resolve, 200));
+                    progress.report({
+                        message: `[${completedOps}/${totalOps}] ❌ ${op.platform}`,
+                    });
                 }
 
                 await new Promise((resolve) => setTimeout(resolve, 300));
@@ -600,35 +629,19 @@ export async function executeBatchOperations(
 
             if (plan.gitConfig) {
                 const gitOps = plan.operations.filter((op) => op.type === 'git');
-                for (let i = 0; i < gitOps.length; i++) {
-                    const op = gitOps[i];
-                    progress.report({
-                        increment: 100 / totalOps,
-                        message: `[${completedOps + 1}/${totalOps}] ${op.action}...`,
-                    });
-
-                    completedOps++;
-                    await new Promise((resolve) => setTimeout(resolve, 200));
-                    progress.report({
-                        message: `[${completedOps}/${totalOps}] ✅ ${op.action}`,
-                    });
-                    await new Promise((resolve) => setTimeout(resolve, 300));
-                }
-
                 let gitWorkflowResult: GitWorkflowResult | undefined;
-                try {
-                    gitWorkflowResult = await executeBatchGitWorkflow(rootPath, bumpType, results, plan.gitConfig);
-                } catch (error) {
-                    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                    results.push({
-                        platform: 'Git',
-                        success: false,
-                        oldVersion: '',
-                        newVersion: '',
-                        message: 'Git operations failed',
-                        error: errorMessage,
-                    });
-                }
+
+                gitWorkflowResult = await executeGitOperationsWithProgress(
+                    rootPath,
+                    bumpType,
+                    results,
+                    plan.gitConfig,
+                    gitOps,
+                    progress,
+                    completedOps,
+                    totalOps
+                );
+
                 return { results, gitWorkflowResult };
             }
 
@@ -637,73 +650,189 @@ export async function executeBatchOperations(
     );
 }
 
-async function executeBatchGitWorkflow(
+async function executeGitOperationsWithProgress(
     rootPath: string,
     bumpType: BumpType,
     results: BumpResult[],
-    gitConfig: BatchGitConfig
+    gitConfig: BatchGitConfig,
+    gitOps: BatchOperation[],
+    progress: vscode.Progress<{ message?: string; increment?: number }>,
+    initialCompletedOps: number,
+    totalOps: number
 ): Promise<GitWorkflowResult> {
     const execAsync = promisify(exec);
+    let completedOps = initialCompletedOps;
+
+    let branchCreated = false;
+    let commitSuccess = false;
+    let tagSuccess = false;
+    let pushSuccess = false;
 
     try {
         if (gitConfig.shouldCreateBranch && gitConfig.branchName) {
-            await execAsync(`git checkout -b "${gitConfig.branchName}"`, { cwd: rootPath });
-        }
+            const branchOp = gitOps.find((op) => op.action === 'Create branch');
+            if (branchOp) {
+                progress.report({
+                    increment: 100 / totalOps,
+                    message: `[${completedOps + 1}/${totalOps}] ${branchOp.action}...`,
+                });
 
-        await execAsync('git add .', { cwd: rootPath });
-        await execAsync(`git commit -m "${gitConfig.commitMessage}"`, { cwd: rootPath });
+                try {
+                    await execAsync(`git checkout -b "${gitConfig.branchName}"`, { cwd: rootPath });
+                    branchCreated = true;
+                    completedOps++;
 
-        if (gitConfig.shouldTag && gitConfig.tagName) {
-            try {
-                await execAsync(`git tag ${gitConfig.tagName}`, { cwd: rootPath });
-            } catch (tagError: unknown) {
-                if (tagError instanceof Error && tagError.message.includes('already exists')) {
-                    await execAsync(`git tag -d ${gitConfig.tagName}`, { cwd: rootPath });
-                    await execAsync(`git tag ${gitConfig.tagName}`, { cwd: rootPath });
+                    await new Promise((resolve) => setTimeout(resolve, 200));
+                    progress.report({
+                        message: `[${completedOps}/${totalOps}] ✅ ${branchOp.action}`,
+                    });
+                } catch (error) {
+                    completedOps++;
+                    await new Promise((resolve) => setTimeout(resolve, 200));
+                    progress.report({
+                        message: `[${completedOps}/${totalOps}] ❌ ${branchOp.action}`,
+                    });
+                    throw error;
                 }
+                await new Promise((resolve) => setTimeout(resolve, 300));
             }
         }
 
-        if (gitConfig.shouldPush) {
-            if (gitConfig.shouldCreateBranch && gitConfig.branchName) {
-                await execAsync(`git push origin "${gitConfig.branchName}"`, { cwd: rootPath });
-            } else {
-                await execAsync('git push', { cwd: rootPath });
-            }
+        const commitOp = gitOps.find((op) => op.action === 'Commit changes');
+        if (commitOp) {
+            progress.report({
+                increment: 100 / totalOps,
+                message: `[${completedOps + 1}/${totalOps}] ${commitOp.action}...`,
+            });
 
-            if (gitConfig.shouldTag && gitConfig.tagName) {
-                await execAsync(`git push origin ${gitConfig.tagName}`, { cwd: rootPath });
+            try {
+                await execAsync('git add .', { cwd: rootPath });
+                await execAsync(`git commit -m "${gitConfig.commitMessage}"`, { cwd: rootPath });
+                commitSuccess = true;
+                completedOps++;
+
+                await new Promise((resolve) => setTimeout(resolve, 200));
+                progress.report({
+                    message: `[${completedOps}/${totalOps}] ✅ ${commitOp.action}`,
+                });
+            } catch (error) {
+                completedOps++;
+                await new Promise((resolve) => setTimeout(resolve, 200));
+                progress.report({
+                    message: `[${completedOps}/${totalOps}] ❌ ${commitOp.action}`,
+                });
+                throw error;
+            }
+            await new Promise((resolve) => setTimeout(resolve, 300));
+        }
+
+        if (gitConfig.shouldTag && gitConfig.tagName && commitSuccess) {
+            const tagOp = gitOps.find((op) => op.action === 'Create tag');
+            if (tagOp) {
+                progress.report({
+                    increment: 100 / totalOps,
+                    message: `[${completedOps + 1}/${totalOps}] ${tagOp.action}...`,
+                });
+
+                try {
+                    try {
+                        await execAsync(`git tag ${gitConfig.tagName}`, { cwd: rootPath });
+                    } catch (tagError: unknown) {
+                        if (tagError instanceof Error && tagError.message.includes('already exists')) {
+                            await execAsync(`git tag -d ${gitConfig.tagName}`, { cwd: rootPath });
+                            await execAsync(`git tag ${gitConfig.tagName}`, { cwd: rootPath });
+                        } else {
+                            throw tagError;
+                        }
+                    }
+                    tagSuccess = true;
+                    completedOps++;
+
+                    await new Promise((resolve) => setTimeout(resolve, 200));
+                    progress.report({
+                        message: `[${completedOps}/${totalOps}] ✅ ${tagOp.action}`,
+                    });
+                } catch (error) {
+                    completedOps++;
+                    await new Promise((resolve) => setTimeout(resolve, 200));
+                    progress.report({
+                        message: `[${completedOps}/${totalOps}] ❌ ${tagOp.action}`,
+                    });
+                    throw error;
+                }
+                await new Promise((resolve) => setTimeout(resolve, 300));
+            }
+        }
+
+        if (gitConfig.shouldPush && commitSuccess) {
+            const pushOp = gitOps.find((op) => op.action === 'Push to remote');
+            if (pushOp) {
+                progress.report({
+                    increment: 100 / totalOps,
+                    message: `[${completedOps + 1}/${totalOps}] ${pushOp.action}...`,
+                });
+
+                try {
+                    if (gitConfig.shouldCreateBranch && gitConfig.branchName && branchCreated) {
+                        await execAsync(`git push origin "${gitConfig.branchName}"`, { cwd: rootPath });
+                    } else {
+                        await execAsync('git push', { cwd: rootPath });
+                    }
+
+                    if (gitConfig.shouldTag && gitConfig.tagName && tagSuccess) {
+                        await execAsync(`git push origin ${gitConfig.tagName}`, { cwd: rootPath });
+                    }
+
+                    pushSuccess = true;
+                    completedOps++;
+
+                    await new Promise((resolve) => setTimeout(resolve, 200));
+                    progress.report({
+                        message: `[${completedOps}/${totalOps}] ✅ ${pushOp.action}`,
+                    });
+                } catch {
+                    completedOps++;
+                    await new Promise((resolve) => setTimeout(resolve, 200));
+                    progress.report({
+                        message: `[${completedOps}/${totalOps}] ❌ ${pushOp.action}`,
+                    });
+                }
+                await new Promise((resolve) => setTimeout(resolve, 300));
             }
         }
 
         let gitMessage = '';
-        if (gitConfig.shouldCreateBranch && gitConfig.branchName) {
+        if (branchCreated && gitConfig.branchName) {
             gitMessage += `Branch: Created and switched to branch "${gitConfig.branchName}"<br>`;
         }
-        gitMessage += `Commit: Changes committed with message: "${gitConfig.commitMessage}"`;
-        if (gitConfig.shouldTag && gitConfig.tagName) {
+        if (commitSuccess) {
+            gitMessage += `Commit: Changes committed with message: "${gitConfig.commitMessage}"`;
+        }
+        if (tagSuccess && gitConfig.tagName) {
             gitMessage += `<br>Tag: Tagged ${gitConfig.tagName}`;
         }
-        if (gitConfig.shouldPush) {
-            gitMessage += `<br>Push: Pushed ${gitConfig.shouldCreateBranch ? 'branch and tag' : 'changes and tag'} to remote`;
+        if (pushSuccess) {
+            gitMessage += `<br>Push: Pushed ${branchCreated ? 'branch and tag' : 'changes and tag'} to remote`;
         }
 
-        results.push({
-            platform: 'Git',
-            success: true,
-            oldVersion: '',
-            newVersion: '',
-            message: gitMessage,
-        });
+        if (commitSuccess) {
+            results.push({
+                platform: 'Git',
+                success: true,
+                oldVersion: '',
+                newVersion: '',
+                message: gitMessage,
+            });
+        }
 
         return {
-            branchCreated: gitConfig.shouldCreateBranch,
+            branchCreated,
             branchName: gitConfig.branchName,
-            commitSuccess: true,
+            commitSuccess,
             commitMessage: gitConfig.commitMessage,
-            tagSuccess: gitConfig.shouldTag,
+            tagSuccess,
             tagName: gitConfig.tagName,
-            pushSuccess: gitConfig.shouldPush,
+            pushSuccess,
         };
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -717,16 +846,17 @@ async function executeBatchGitWorkflow(
         });
 
         return {
-            branchCreated: gitConfig.shouldCreateBranch,
+            branchCreated,
             branchName: gitConfig.branchName,
-            commitSuccess: false,
+            commitSuccess,
             commitMessage: gitConfig.commitMessage,
-            tagSuccess: false,
+            tagSuccess,
             tagName: gitConfig.tagName,
-            pushSuccess: false,
+            pushSuccess,
         };
     }
 }
+
 export async function executeVersionOperations(
     options: ExecutionOptions
 ): Promise<{ results: BumpResult[]; gitWorkflowResult?: GitWorkflowResult }> {

@@ -12,7 +12,11 @@ export function generatePageHeaderHTML(data: PageHeaderData): string {
         logoSrc = `<img src="${data.logoUri}" alt="Logo" class="header-logo">`;
     } else {
         logoSrc = `<svg class="header-logo header-logo-svg" viewBox="0 0 24 24">
-            <path d="M12 2L2 7v10l10 5 10-5V7l-10-5zM6.5 7.5L12 5l5.5 2.5L12 10 6.5 7.5zM4 8.5l7 3.5v7l-7-3.5v-7zm16 0v7l-7 3.5v-7l7-3.5z"/>
+            <path d="M12 2.5c-5.79 0-10.5 4.71-10.5 10.5S6.21 23.5 12 23.5s10.5-4.71 10.5-10.5S17.79 2.5 12 2.5zm0 18.5c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
+            <circle cx="12" cy="8" r="1.5"/>
+            <circle cx="8" cy="12" r="1.5"/>
+            <circle cx="16" cy="12" r="1.5"/>
+            <circle cx="12" cy="16" r="1.5"/>
         </svg>`;
     }
 

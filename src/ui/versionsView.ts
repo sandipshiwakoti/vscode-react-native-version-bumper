@@ -109,9 +109,9 @@ export async function generateVersionsHTML(
                 <div class="summary-grid">
                     <div class="summary-item">
                         <svg class="summary-icon" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2L2 7v10l10 5 10-5V7l-10-5z"/>
+                            <path d="M12 2.5L2 7v10l10 5 10-5V7l-10-4.5zM12 4.5L19.5 8L12 11.5L4.5 8L12 4.5zM4 9.5l7 3.5v7l-7-3.5v-7zm16 0v7l-7 3.5v-7l7-3.5z"/>
                         </svg>
-                        <span>Project Type: <strong>${projectType.replace('-', ' ')}</strong></span>
+                        <span>Project Type: <strong>${projectType === 'react-native' ? 'React Native' : projectType.replace('-', ' ')}</strong></span>
                     </div>
                     <div class="summary-item">
                         <svg class="summary-icon" viewBox="0 0 24 24" fill="currentColor">
