@@ -11,6 +11,7 @@ import {
     BumpResult,
     BumpType,
     ExecutionOptions,
+    GitWorkflowResult,
     ProjectVersions,
 } from '../types';
 
@@ -349,19 +350,19 @@ async function collectGitConfiguration(
         const tagBumpType = await vscode.window.showQuickPick(
             [
                 {
-                    label: `🔧 Patch (v${bumpSemanticVersion(currentTagVersion, BumpType.PATCH)})`,
+                    label: `Patch (v${bumpSemanticVersion(currentTagVersion, BumpType.PATCH)})`,
                     value: 'patch',
                 },
                 {
-                    label: `⬆️ Minor (v${bumpSemanticVersion(currentTagVersion, BumpType.MINOR)})`,
+                    label: `Minor (v${bumpSemanticVersion(currentTagVersion, BumpType.MINOR)})`,
                     value: 'minor',
                 },
                 {
-                    label: `🚀 Major (v${bumpSemanticVersion(currentTagVersion, BumpType.MAJOR)})`,
+                    label: `Major (v${bumpSemanticVersion(currentTagVersion, BumpType.MAJOR)})`,
                     value: 'major',
                 },
                 {
-                    label: '✏️ Custom Version',
+                    label: 'Custom Version',
                     value: 'custom',
                 },
             ],
@@ -491,7 +492,7 @@ export async function executeBatchOperations(
         packageJson?: string;
     },
     isSync: boolean = false
-): Promise<BumpResult[]> {
+): Promise<{ results: BumpResult[]; gitWorkflowResult?: GitWorkflowResult }> {
     const results: BumpResult[] = [];
     const versions = await getCurrentVersions();
 
@@ -614,8 +615,9 @@ export async function executeBatchOperations(
                     await new Promise((resolve) => setTimeout(resolve, 300));
                 }
 
+                let gitWorkflowResult: GitWorkflowResult | undefined;
                 try {
-                    await executeBatchGitWorkflow(rootPath, bumpType, results, plan.gitConfig);
+                    gitWorkflowResult = await executeBatchGitWorkflow(rootPath, bumpType, results, plan.gitConfig);
                 } catch (error) {
                     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                     results.push({
@@ -627,9 +629,10 @@ export async function executeBatchOperations(
                         error: errorMessage,
                     });
                 }
+                return { results, gitWorkflowResult };
             }
 
-            return results;
+            return { results };
         }
     );
 }
@@ -639,7 +642,7 @@ async function executeBatchGitWorkflow(
     bumpType: BumpType,
     results: BumpResult[],
     gitConfig: BatchGitConfig
-): Promise<void> {
+): Promise<GitWorkflowResult> {
     const execAsync = promisify(exec);
 
     try {
@@ -675,14 +678,14 @@ async function executeBatchGitWorkflow(
 
         let gitMessage = '';
         if (gitConfig.shouldCreateBranch && gitConfig.branchName) {
-            gitMessage += `Branch: ✅ Created and switched to branch "${gitConfig.branchName}"<br>`;
+            gitMessage += `Branch: Created and switched to branch "${gitConfig.branchName}"<br>`;
         }
-        gitMessage += `Commit: ✅ Changes committed with message: "${gitConfig.commitMessage}"`;
+        gitMessage += `Commit: Changes committed with message: "${gitConfig.commitMessage}"`;
         if (gitConfig.shouldTag && gitConfig.tagName) {
-            gitMessage += `<br>Tag: ✅ Tagged ${gitConfig.tagName}`;
+            gitMessage += `<br>Tag: Tagged ${gitConfig.tagName}`;
         }
         if (gitConfig.shouldPush) {
-            gitMessage += `<br>Push: ✅ Pushed ${gitConfig.shouldCreateBranch ? 'branch and tag' : 'changes and tag'} to remote`;
+            gitMessage += `<br>Push: Pushed ${gitConfig.shouldCreateBranch ? 'branch and tag' : 'changes and tag'} to remote`;
         }
 
         results.push({
@@ -692,6 +695,16 @@ async function executeBatchGitWorkflow(
             newVersion: '',
             message: gitMessage,
         });
+
+        return {
+            branchCreated: gitConfig.shouldCreateBranch,
+            branchName: gitConfig.branchName,
+            commitSuccess: true,
+            commitMessage: gitConfig.commitMessage,
+            tagSuccess: gitConfig.shouldTag,
+            tagName: gitConfig.tagName,
+            pushSuccess: gitConfig.shouldPush,
+        };
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         results.push({
@@ -702,10 +715,21 @@ async function executeBatchGitWorkflow(
             message: 'Git operations failed',
             error: errorMessage,
         });
-        throw error;
+
+        return {
+            branchCreated: gitConfig.shouldCreateBranch,
+            branchName: gitConfig.branchName,
+            commitSuccess: false,
+            commitMessage: gitConfig.commitMessage,
+            tagSuccess: false,
+            tagName: gitConfig.tagName,
+            pushSuccess: false,
+        };
     }
 }
-export async function executeVersionOperations(options: ExecutionOptions): Promise<BumpResult[]> {
+export async function executeVersionOperations(
+    options: ExecutionOptions
+): Promise<{ results: BumpResult[]; gitWorkflowResult?: GitWorkflowResult }> {
     const config = vscode.workspace.getConfiguration(EXTENSION_ID);
     const batchMode = config.get(CONFIG.BATCH_MODE, true);
 
@@ -716,7 +740,9 @@ export async function executeVersionOperations(options: ExecutionOptions): Promi
     }
 }
 
-async function executeBatchMode(options: ExecutionOptions): Promise<BumpResult[]> {
+async function executeBatchMode(
+    options: ExecutionOptions
+): Promise<{ results: BumpResult[]; gitWorkflowResult?: GitWorkflowResult }> {
     const plan = await createBatchExecutionPlan(
         options.rootPath,
         options.bumpType,
@@ -727,7 +753,7 @@ async function executeBatchMode(options: ExecutionOptions): Promise<BumpResult[]
 
     const confirmed = await showBatchPreview(plan);
     if (!confirmed) {
-        return [];
+        return { results: [] };
     }
 
     return await executeBatchOperations(
@@ -739,7 +765,9 @@ async function executeBatchMode(options: ExecutionOptions): Promise<BumpResult[]
     );
 }
 
-async function executeNormalMode(options: ExecutionOptions): Promise<BumpResult[]> {
+async function executeNormalMode(
+    options: ExecutionOptions
+): Promise<{ results: BumpResult[]; gitWorkflowResult?: GitWorkflowResult }> {
     const config = vscode.workspace.getConfiguration(EXTENSION_ID);
     const results: BumpResult[] = [];
     const versions = await getCurrentVersions();
@@ -790,9 +818,10 @@ async function executeNormalMode(options: ExecutionOptions): Promise<BumpResult[
                 ),
             });
 
+            let gitWorkflowResult: GitWorkflowResult | undefined;
             if (options.withGit && tasks.length > 0) {
                 try {
-                    await executeGitWorkflow(options.rootPath, options.bumpType, results);
+                    gitWorkflowResult = await executeGitWorkflow(options.rootPath, options.bumpType, results);
                     progress.report({ increment: PROGRESS_INCREMENTS.GIT_COMPLETED });
                 } catch (error) {
                     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -808,7 +837,7 @@ async function executeNormalMode(options: ExecutionOptions): Promise<BumpResult[
             }
 
             progress.report({ increment: PROGRESS_INCREMENTS.FINISHED });
-            return results;
+            return { results, gitWorkflowResult };
         }
     );
 }

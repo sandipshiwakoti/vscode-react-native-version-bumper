@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
-import { BumpResult, BumpType } from '../types';
+import { BumpResult, BumpType, GitWorkflowResult } from '../types';
 import { generateReleaseNotes } from '../utils/releaseUtils';
 
 const execAsync = promisify(exec);
@@ -273,7 +273,7 @@ export function generateResultsHTML(
 
             <div class="summary">
                 <strong>Summary:</strong> ${successCount}/${totalCount} operations completed successfully
-                ${hasErrors ? '<br><strong>⚠️ Some operations failed - check details below</strong>' : ''}
+                ${hasErrors ? '<br><strong>❌ Some operations failed - check details below</strong>' : ''}
             </div>
 
             <div class="results-container">
@@ -402,7 +402,12 @@ export function generateResultsHTML(
     return html;
 }
 
-export function showBumpResults(type: BumpType, results: BumpResult[], context?: vscode.ExtensionContext) {
+export function showBumpResults(
+    type: BumpType,
+    results: BumpResult[],
+    context?: vscode.ExtensionContext,
+    gitWorkflowResult?: GitWorkflowResult
+) {
     const panel = vscode.window.createWebviewPanel(
         'versionBumpResults',
         `Version Bump Results - ${type.charAt(0).toUpperCase() + type.slice(1)}`,
@@ -416,28 +421,33 @@ export function showBumpResults(type: BumpType, results: BumpResult[], context?:
         logoUri = panel.webview.asWebviewUri(onDiskPath);
     }
 
-    const gitResult = results.find((r) => r.platform === 'Git');
     let tagName = '';
     let branchName = '';
     let hasCommit = false;
     let pushSuccess = false;
 
-    if (gitResult && gitResult.success) {
-        const tagMatch = gitResult.message.match(/Tagged ([\w.-]+)/i);
-        if (tagMatch) {
-            tagName = tagMatch[1];
+    if (gitWorkflowResult) {
+        tagName = gitWorkflowResult.tagName || '';
+        branchName = gitWorkflowResult.branchName || '';
+        hasCommit = gitWorkflowResult.commitSuccess;
+        pushSuccess = gitWorkflowResult.pushSuccess;
+    } else {
+        const gitResult = results.find((r) => r.platform === 'Git');
+        if (gitResult && gitResult.success) {
+            const tagMatch = gitResult.message.match(/Tagged ([\w.-]+)/i);
+            if (tagMatch) {
+                tagName = tagMatch[1];
+            }
+
+            const branchMatch = gitResult.message.match(/branch "([^"]+)"/i);
+            if (branchMatch) {
+                branchName = branchMatch[1];
+            }
+
+            hasCommit = gitResult.message.includes('Commit: Changes committed');
+
+            pushSuccess = gitResult.message.includes('Pushed') && !gitResult.message.includes('❌ Failed to push');
         }
-
-        const branchMatch = gitResult.message.match(/branch "([^"]+)"/i);
-        if (branchMatch) {
-            branchName = branchMatch[1];
-        }
-
-        // Check if commit was created
-        hasCommit = gitResult.message.includes('Commit: ✅');
-
-        // Check if push was successful
-        pushSuccess = gitResult.message.includes('Push: ✅');
     }
 
     panel.webview.html = generateResultsHTML(type, results, tagName, branchName, hasCommit, pushSuccess, logoUri);

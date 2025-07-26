@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import { BUMP_TYPE_LABELS, CONFIG, DEFAULT_VALUES, EXTENSION_ID } from '../constants';
+import { CONFIG, DEFAULT_VALUES, EXTENSION_ID } from '../constants';
 import { BumpType } from '../types';
 import { showBumpResults } from '../ui/resultsView';
 import { executeVersionOperations } from '../utils/batchUtils';
@@ -65,19 +65,19 @@ export async function bumpAppVersion(withGit: boolean, context?: vscode.Extensio
     const bumpType = await vscode.window.showQuickPick(
         [
             {
-                label: `${BUMP_TYPE_LABELS.PATCH.ICON} ${BUMP_TYPE_LABELS.PATCH.LABEL} (${getPlatformLabel(BumpType.PATCH)})`,
+                label: `Patch (${getPlatformLabel(BumpType.PATCH)})`,
                 value: BumpType.PATCH,
             },
             {
-                label: `${BUMP_TYPE_LABELS.MINOR.ICON} ${BUMP_TYPE_LABELS.MINOR.LABEL} (${getPlatformLabel(BumpType.MINOR)})`,
+                label: `Minor (${getPlatformLabel(BumpType.MINOR)})`,
                 value: BumpType.MINOR,
             },
             {
-                label: `${BUMP_TYPE_LABELS.MAJOR.ICON} ${BUMP_TYPE_LABELS.MAJOR.LABEL} (${getPlatformLabel(BumpType.MAJOR)})`,
+                label: `Major (${getPlatformLabel(BumpType.MAJOR)})`,
                 value: BumpType.MAJOR,
             },
             {
-                label: `${BUMP_TYPE_LABELS.CUSTOM.ICON} ${BUMP_TYPE_LABELS.CUSTOM.LABEL}`,
+                label: 'Custom',
                 value: BumpType.CUSTOM,
                 description: 'Set specific version numbers for each platform',
             },
@@ -132,19 +132,19 @@ export async function bumpAppVersion(withGit: boolean, context?: vscode.Extensio
         const packageBumpTypeSelection = await vscode.window.showQuickPick(
             [
                 {
-                    label: `${BUMP_TYPE_LABELS.PATCH.ICON} ${BUMP_TYPE_LABELS.PATCH.LABEL} (v${bumpSemanticVersion(packageJsonVersion, BumpType.PATCH)})`,
+                    label: `Patch (v${bumpSemanticVersion(packageJsonVersion, BumpType.PATCH)})`,
                     value: BumpType.PATCH,
                 },
                 {
-                    label: `${BUMP_TYPE_LABELS.MINOR.ICON} ${BUMP_TYPE_LABELS.MINOR.LABEL} (v${bumpSemanticVersion(packageJsonVersion, BumpType.MINOR)})`,
+                    label: `Minor (v${bumpSemanticVersion(packageJsonVersion, BumpType.MINOR)})`,
                     value: BumpType.MINOR,
                 },
                 {
-                    label: `${BUMP_TYPE_LABELS.MAJOR.ICON} ${BUMP_TYPE_LABELS.MAJOR.LABEL} (v${bumpSemanticVersion(packageJsonVersion, BumpType.MAJOR)})`,
+                    label: `Major (v${bumpSemanticVersion(packageJsonVersion, BumpType.MAJOR)})`,
                     value: BumpType.MAJOR,
                 },
                 {
-                    label: `${BUMP_TYPE_LABELS.CUSTOM.ICON} ${BUMP_TYPE_LABELS.CUSTOM.LABEL}`,
+                    label: 'Custom',
                     value: BumpType.CUSTOM,
                     description: `Current: v${packageJsonVersion} → Set custom version`,
                 },
@@ -194,7 +194,7 @@ export async function bumpAppVersion(withGit: boolean, context?: vscode.Extensio
               }
             : undefined;
 
-    const results = await executeVersionOperations({
+    const { results, gitWorkflowResult } = await executeVersionOperations({
         rootPath,
         bumpType: type,
         withGit,
@@ -204,7 +204,7 @@ export async function bumpAppVersion(withGit: boolean, context?: vscode.Extensio
 
     const hasSuccessfulOperations = results.some((result) => result.success);
     if (hasSuccessfulOperations) {
-        showBumpResults(type, results, context);
+        showBumpResults(type, results, context, gitWorkflowResult);
         updateStatusBar();
     } else if (results.length > 0) {
         const errorMessages = results

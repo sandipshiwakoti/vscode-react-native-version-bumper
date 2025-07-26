@@ -1,5 +1,3 @@
-import { PlatformKey } from '../types';
-
 export const EXTENSION_ID = 'reactNativeVersionBumper';
 export const EXTENSION_FULL_ID = 'vscode-react-native-version-bumper';
 export const EXTENSION_PUBLISHER_ID = 'sandipshiwakoti.vscode-react-native-version-bumper';
@@ -56,13 +54,6 @@ export const CODELENS = {
     ENABLED_KEY: 'codeLensEnabled',
     CONTEXT_KEY: 'reactNativeVersionBumper.codeLensEnabled',
 } as const;
-
-export const PLATFORM_ICONS: { [key in PlatformKey]: string } = {
-    'Package.json': '📦',
-    Android: '🤖',
-    iOS: '🍎',
-    Git: '🔀',
-};
 
 export const FILE_EXTENSIONS = {
     PACKAGE_JSON: 'package.json',
@@ -145,29 +136,17 @@ export const VERSION_PART_INDICES = {
     PATCH: 2,
 } as const;
 
+export const BUMP_TYPE_LABELS = {
+    PATCH: 'Patch',
+    MINOR: 'Minor',
+    MAJOR: 'Major',
+    CUSTOM: 'Custom',
+} as const;
+
 export const TEMPLATES = {
     GIT_COMMIT_MESSAGE: 'chore: bump {platforms}',
     GIT_BRANCH_PREFIX: 'version-bump/',
     GIT_TAG_NAME: 'v{version}',
-} as const;
-
-export const BUMP_TYPE_LABELS = {
-    PATCH: {
-        ICON: '🔧',
-        LABEL: 'Patch',
-    },
-    MINOR: {
-        ICON: '⬆️',
-        LABEL: 'Minor',
-    },
-    MAJOR: {
-        ICON: '🚀',
-        LABEL: 'Major',
-    },
-    CUSTOM: {
-        ICON: '✏️',
-        LABEL: 'Custom',
-    },
 } as const;
 
 export const RELEASE_TEMPLATE_PATHS = [

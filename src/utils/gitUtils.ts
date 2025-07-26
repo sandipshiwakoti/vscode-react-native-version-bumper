@@ -4,14 +4,18 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 
 import { CONFIG, DEFAULT_VALUES, EXTENSION_ID, REGEX_PATTERNS, TEMPLATES } from '../constants';
-import { BumpResult, BumpType } from '../types';
+import { BumpResult, BumpType, GitWorkflowResult } from '../types';
 
 import { getPlaceholderValues, replacePlaceholders } from './helperUtils';
 import { bumpSemanticVersion, getLatestGitTagVersion } from './versionUtils';
 
 const execAsync = promisify(exec);
 
-export async function executeGitWorkflow(rootPath: string, type: BumpType, results: BumpResult[]): Promise<void> {
+export async function executeGitWorkflow(
+    rootPath: string,
+    type: BumpType,
+    results: BumpResult[]
+): Promise<GitWorkflowResult> {
     const config = vscode.workspace.getConfiguration(EXTENSION_ID);
 
     let branchCreated = false;
@@ -146,7 +150,12 @@ export async function executeGitWorkflow(rootPath: string, type: BumpType, resul
 
             if (!branchName) {
                 vscode.window.showErrorMessage('Branch name is required');
-                return;
+                return {
+                    branchCreated: false,
+                    commitSuccess: false,
+                    tagSuccess: false,
+                    pushSuccess: false,
+                };
             }
 
             try {
@@ -164,7 +173,12 @@ export async function executeGitWorkflow(rootPath: string, type: BumpType, resul
                     newVersion: '',
                     message: `Branch: ❌ Failed to create branch "${branchName}": ${errorMessage}`,
                 });
-                return;
+                return {
+                    branchCreated: false,
+                    commitSuccess: false,
+                    tagSuccess: false,
+                    pushSuccess: false,
+                };
             }
         }
 
@@ -194,7 +208,13 @@ export async function executeGitWorkflow(rootPath: string, type: BumpType, resul
 
         if (!customCommitMessage) {
             vscode.window.showErrorMessage('Commit message is required');
-            return;
+            return {
+                branchCreated,
+                branchName,
+                commitSuccess: false,
+                tagSuccess: false,
+                pushSuccess: false,
+            };
         }
 
         try {
@@ -210,9 +230,15 @@ export async function executeGitWorkflow(rootPath: string, type: BumpType, resul
                 success: false,
                 oldVersion: '',
                 newVersion: '',
-                message: `${branchCreated ? `Branch: ✅ Created and switched to branch "${branchName}"<br>` : ''}Commit: ❌ Failed to commit changes: ${errorMessage}`,
+                message: `${branchCreated ? `Branch: Created and switched to branch "${branchName}"<br>` : ''}Commit: ❌ Failed to commit changes: ${errorMessage}`,
             });
-            return;
+            return {
+                branchCreated,
+                branchName,
+                commitSuccess: false,
+                tagSuccess: false,
+                pushSuccess: false,
+            };
         }
 
         shouldTag = config.get(CONFIG.GIT_AUTO_CREATE_TAG, false);
@@ -237,19 +263,19 @@ export async function executeGitWorkflow(rootPath: string, type: BumpType, resul
             const tagBumpType = await vscode.window.showQuickPick(
                 [
                     {
-                        label: `🔧 Patch (v${bumpPatchTag(currentTagVersion)})`,
+                        label: `Patch (v${bumpPatchTag(currentTagVersion)})`,
                         value: 'patch',
                     },
                     {
-                        label: `⬆️ Minor (v${bumpMinorTag(currentTagVersion)})`,
+                        label: `Minor (v${bumpMinorTag(currentTagVersion)})`,
                         value: 'minor',
                     },
                     {
-                        label: `🚀 Major (v${bumpMajorTag(currentTagVersion)})`,
+                        label: `Major (v${bumpMajorTag(currentTagVersion)})`,
                         value: 'major',
                     },
                     {
-                        label: '✏️ Custom Version',
+                        label: 'Custom Version',
                         value: 'custom',
                     },
                 ],
@@ -257,7 +283,14 @@ export async function executeGitWorkflow(rootPath: string, type: BumpType, resul
             );
 
             if (!tagBumpType) {
-                return;
+                return {
+                    branchCreated,
+                    branchName,
+                    commitSuccess,
+                    commitMessage,
+                    tagSuccess: false,
+                    pushSuccess: false,
+                };
             }
 
             let newTagVersion: string;
@@ -278,7 +311,14 @@ export async function executeGitWorkflow(rootPath: string, type: BumpType, resul
                 });
 
                 if (!customVersion) {
-                    return;
+                    return {
+                        branchCreated,
+                        branchName,
+                        commitSuccess,
+                        commitMessage,
+                        tagSuccess: false,
+                        pushSuccess: false,
+                    };
                 }
                 newTagVersion = customVersion;
             } else {
@@ -320,7 +360,7 @@ export async function executeGitWorkflow(rootPath: string, type: BumpType, resul
                         success: false,
                         oldVersion: '',
                         newVersion: '',
-                        message: `${branchCreated ? `Branch: ✅ Created and switched to branch "${branchName}"<br>` : ''}Commit: ✅ Changes committed with message: "${commitMessage}"<br>Tag: ❌ Failed to create tag: ${tagError instanceof Error ? tagError.message : 'Unknown error'}`,
+                        message: `${branchCreated ? `Branch: Created and switched to branch "${branchName}"<br>` : ''}Commit: Changes committed with message: "${commitMessage}"<br>Tag: ❌ Failed to create tag: ${tagError instanceof Error ? tagError.message : 'Unknown error'}`,
                     });
                 }
             }
@@ -358,13 +398,13 @@ export async function executeGitWorkflow(rootPath: string, type: BumpType, resul
 
                 let gitMessage = '';
                 if (branchCreated && branchName) {
-                    gitMessage += `Branch: ✅ Created and switched to branch "${branchName}"<br>`;
+                    gitMessage += `Branch: Created and switched to branch "${branchName}"<br>`;
                 }
                 if (commitSuccess) {
-                    gitMessage += `Commit: ✅ Changes committed with message: "${commitMessage}"<br>`;
+                    gitMessage += `Commit: Changes committed with message: "${commitMessage}"<br>`;
                 }
                 if (shouldTag) {
-                    gitMessage += `Tag: ${tagSuccess ? '✅' : '❌'} ${tagSuccess ? `Tagged ${tagName}` : 'Failed to create tag'}<br>`;
+                    gitMessage += `Tag: ${tagSuccess ? `Tagged ${tagName}` : '❌ Failed to create tag'}<br>`;
                 }
                 gitMessage += `Push: ❌ Failed to push to remote: ${pushError}`;
 
@@ -377,22 +417,30 @@ export async function executeGitWorkflow(rootPath: string, type: BumpType, resul
                 });
 
                 vscode.window.showErrorMessage(`Push failed: ${pushError}`);
-                return;
+                return {
+                    branchCreated,
+                    branchName,
+                    commitSuccess,
+                    commitMessage,
+                    tagSuccess,
+                    tagName,
+                    pushSuccess: false,
+                };
             }
         }
 
         let gitMessage = '';
         if (branchCreated && branchName) {
-            gitMessage += `Branch: ✅ Created and switched to branch "${branchName}"<br>`;
+            gitMessage += `Branch: Created and switched to branch "${branchName}"<br>`;
         }
         if (commitSuccess) {
-            gitMessage += `Commit: ✅ Changes committed with message: "${commitMessage}"`;
+            gitMessage += `Commit: Changes committed with message: "${commitMessage}"`;
         }
         if (shouldTag && tagName) {
-            gitMessage += `<br>Tag: ${tagSuccess ? '✅' : '❌'} ${tagSuccess ? `Tagged ${tagName}` : 'Failed to create tag'}`;
+            gitMessage += `<br>Tag: ${tagSuccess ? `Tagged ${tagName}` : '❌ Failed to create tag'}`;
         }
         if (shouldPush) {
-            gitMessage += `<br>Push: ${pushSuccess ? '✅' : '❌'} ${pushSuccess ? `Pushed ${shouldCreateBranch ? 'branch and tag' : 'changes and tag'} to remote` : 'Failed to push to remote'}`;
+            gitMessage += `<br>Push: ${pushSuccess ? `Pushed ${shouldCreateBranch ? 'branch and tag' : 'changes and tag'} to remote` : '❌ Failed to push to remote'}`;
         }
 
         results.push({
@@ -402,18 +450,28 @@ export async function executeGitWorkflow(rootPath: string, type: BumpType, resul
             newVersion: '',
             message: gitMessage,
         });
+
+        return {
+            branchCreated,
+            branchName,
+            commitSuccess,
+            commitMessage,
+            tagSuccess,
+            tagName,
+            pushSuccess,
+        };
     } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
         let gitMessage = '';
         if (branchCreated && branchName) {
-            gitMessage += `Branch: ✅ Created and switched to branch "${branchName}"<br>`;
+            gitMessage += `Branch: Created and switched to branch "${branchName}"<br>`;
         }
         if (commitSuccess) {
-            gitMessage += `Commit: ✅ Changes committed with message: "${commitMessage}"<br>`;
+            gitMessage += `Commit: Changes committed with message: "${commitMessage}"<br>`;
         }
         if (shouldTag) {
-            gitMessage += `Tag: ${tagSuccess ? '✅' : '❌'} ${tagSuccess ? `Tagged ${tagName}` : 'Failed to create tag'}<br>`;
+            gitMessage += `Tag: ${tagSuccess ? `Tagged ${tagName}` : '❌ Failed to create tag'}<br>`;
         }
         gitMessage += `Operation failed: ${errorMessage}`;
 
@@ -425,5 +483,15 @@ export async function executeGitWorkflow(rootPath: string, type: BumpType, resul
             message: gitMessage,
             error: errorMessage,
         });
+
+        return {
+            branchCreated,
+            branchName,
+            commitSuccess,
+            commitMessage,
+            tagSuccess,
+            tagName,
+            pushSuccess: false,
+        };
     }
 }

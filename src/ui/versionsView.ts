@@ -294,8 +294,8 @@ export function generateVersionsHTML(
             <p class="sync-message">
                 ${
                     isSynced
-                        ? `🎉 All platforms are synced to version ${uniqueVersions[0] || 'N/A'}!`
-                        : `⚠️ Platforms have different versions. Consider using "Sync Versions" command.`
+                        ? `All platforms are synced to version ${uniqueVersions[0] || 'N/A'}!`
+                        : `Platforms have different versions. Consider using "Sync Versions" command.`
                 }
             </p>
         </div>

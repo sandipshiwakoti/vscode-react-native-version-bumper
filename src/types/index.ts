@@ -96,3 +96,13 @@ export interface ExecutionOptions {
     packageBumpType?: BumpType;
     isSync?: boolean;
 }
+
+export interface GitWorkflowResult {
+    branchCreated: boolean;
+    branchName?: string;
+    commitSuccess: boolean;
+    commitMessage?: string;
+    tagSuccess: boolean;
+    tagName?: string;
+    pushSuccess: boolean;
+}

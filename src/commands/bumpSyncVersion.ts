@@ -45,10 +45,10 @@ export async function bumpSyncVersion(withGit: boolean, context?: vscode.Extensi
         const uniqueVersions = [...new Set(availableVersions)];
         if (uniqueVersions.length === 1 && availableVersions.length > 1) {
             vscode.window.showInformationMessage(
-                `✅ All platforms are already synced to version ${uniqueVersions[0]}!\n\n` +
-                    `📦 Package.json: ${versions.packageJson || DEFAULT_VALUES.NOT_AVAILABLE}\n` +
-                    `🤖 Android: ${versions.android?.versionName || DEFAULT_VALUES.NOT_AVAILABLE}\n` +
-                    `🍎 iOS: ${versions.ios?.version || DEFAULT_VALUES.NOT_AVAILABLE}`
+                `All platforms are already synced to version ${uniqueVersions[0]}!\n\n` +
+                    `Package.json: ${versions.packageJson || DEFAULT_VALUES.NOT_AVAILABLE}\n` +
+                    `Android: ${versions.android?.versionName || DEFAULT_VALUES.NOT_AVAILABLE}\n` +
+                    `iOS: ${versions.ios?.version || DEFAULT_VALUES.NOT_AVAILABLE}`
             );
             return;
         }
@@ -57,7 +57,7 @@ export async function bumpSyncVersion(withGit: boolean, context?: vscode.Extensi
 
         if (versions.packageJson && !config.get(CONFIG.SKIP_PACKAGE_JSON)) {
             syncOptions.push({
-                label: `📦 Use package.json version: ${versions.packageJson}`,
+                label: `Use package.json version: ${versions.packageJson}`,
                 description: 'Sync all platforms to match package.json version',
                 version: versions.packageJson,
                 source: 'package.json',
@@ -66,7 +66,7 @@ export async function bumpSyncVersion(withGit: boolean, context?: vscode.Extensi
 
         if (versions.android && hasAndroid && !config.get(CONFIG.SKIP_ANDROID)) {
             syncOptions.push({
-                label: `🤖 Use Android version: ${versions.android.versionName}`,
+                label: `Use Android version: ${versions.android.versionName}`,
                 description: 'Sync all platforms to match Android versionName',
                 version: versions.android.versionName,
                 source: 'android',
@@ -75,7 +75,7 @@ export async function bumpSyncVersion(withGit: boolean, context?: vscode.Extensi
 
         if (versions.ios && hasIOS && !config.get(CONFIG.SKIP_IOS)) {
             syncOptions.push({
-                label: `🍎 Use iOS version: ${versions.ios.version}`,
+                label: `Use iOS version: ${versions.ios.version}`,
                 description: 'Sync all platforms to match iOS version',
                 version: versions.ios.version,
                 source: 'ios',
@@ -83,7 +83,7 @@ export async function bumpSyncVersion(withGit: boolean, context?: vscode.Extensi
         }
 
         syncOptions.push({
-            label: '✏️ Enter custom version',
+            label: 'Enter custom version',
             description: 'Specify a new version for all platforms',
             version: '',
             source: 'custom',
@@ -141,20 +141,20 @@ export async function bumpSyncVersion(withGit: boolean, context?: vscode.Extensi
 
         if (versions.packageJson && !config.get(CONFIG.SKIP_PACKAGE_JSON)) {
             if (versions.packageJson !== targetVersion) {
-                syncDetails.push(`📦 package.json: ${versions.packageJson} → ${targetVersion}`);
+                syncDetails.push(`package.json: ${versions.packageJson} → ${targetVersion}`);
             } else {
-                syncDetails.push(`📦 package.json: ${targetVersion} (no change)`);
+                syncDetails.push(`package.json: ${targetVersion} (no change)`);
             }
         }
 
         if (versions.android && hasAndroid && !config.get(CONFIG.SKIP_ANDROID)) {
             if (versions.android.versionName !== targetVersion) {
                 syncDetails.push(
-                    `🤖 Android: ${versions.android.versionName} → ${targetVersion} (build: ${versions.android.versionCode} → ${versions.android.versionCode + 1})`
+                    `Android: ${versions.android.versionName} → ${targetVersion} (build: ${versions.android.versionCode} → ${versions.android.versionCode + 1})`
                 );
             } else {
                 syncDetails.push(
-                    `🤖 Android: ${targetVersion} (build will increment: ${versions.android.versionCode} → ${versions.android.versionCode + 1})`
+                    `Android: ${targetVersion} (build will increment: ${versions.android.versionCode} → ${versions.android.versionCode + 1})`
                 );
             }
         }
@@ -162,11 +162,11 @@ export async function bumpSyncVersion(withGit: boolean, context?: vscode.Extensi
         if (versions.ios && hasIOS && !config.get(CONFIG.SKIP_IOS)) {
             if (versions.ios.version !== targetVersion) {
                 syncDetails.push(
-                    `🍎 iOS: ${versions.ios.version} → ${targetVersion} (build: ${versions.ios.buildNumber} → ${parseInt(versions.ios.buildNumber) + 1})`
+                    `iOS: ${versions.ios.version} → ${targetVersion} (build: ${versions.ios.buildNumber} → ${parseInt(versions.ios.buildNumber) + 1})`
                 );
             } else {
                 syncDetails.push(
-                    `🍎 iOS: ${targetVersion} (build will increment: ${versions.ios.buildNumber} → ${parseInt(versions.ios.buildNumber) + 1})`
+                    `iOS: ${targetVersion} (build will increment: ${versions.ios.buildNumber} → ${parseInt(versions.ios.buildNumber) + 1})`
                 );
             }
         }
@@ -191,7 +191,7 @@ export async function bumpSyncVersion(withGit: boolean, context?: vscode.Extensi
             }
         }
 
-        const results = await executeVersionOperations({
+        const { results, gitWorkflowResult } = await executeVersionOperations({
             rootPath,
             bumpType: BumpType.PATCH,
             withGit,
@@ -201,7 +201,7 @@ export async function bumpSyncVersion(withGit: boolean, context?: vscode.Extensi
 
         const hasSuccessfulOperations = results.some((result: BumpResult) => result.success);
         if (hasSuccessfulOperations) {
-            showBumpResults(BumpType.PATCH, results, context);
+            showBumpResults(BumpType.PATCH, results, context, gitWorkflowResult);
             updateStatusBar();
         } else if (results.length > 0) {
             const errorMessages = results
