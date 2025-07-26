@@ -3,7 +3,6 @@ import * as vscode from 'vscode';
 import { CONFIG, DEFAULT_VALUES, EXTENSION_ID, REGEX_PATTERNS } from '../constants';
 import { BumpResult, BumpType, ProjectVersions, SyncOption, VersionOperationOptions } from '../types';
 import { showBumpResults } from '../ui/resultsView';
-import { executeVersionOperations } from '../utils/batchUtils';
 import { hasAndroidProject, hasIOSProject } from '../utils/fileUtils';
 import { updateStatusBar } from '../utils/statusBarUtils';
 import {
@@ -13,6 +12,8 @@ import {
     getCustomVersionForPlatform,
     getHighestVersion,
 } from '../utils/versionUtils';
+
+import { executeVersionOperations } from './batchService';
 
 export async function executeVersionBump(options: VersionOperationOptions): Promise<void> {
     const { withGit, isSync = false, context } = options;
