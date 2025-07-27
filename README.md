@@ -14,9 +14,6 @@
   <a href="https://github.com/sandipshiwakoti/vscode-react-native-version-bumper/stargazers">
     <img src="https://img.shields.io/github/stars/sandipshiwakoti/vscode-react-native-version-bumper?style=flat-square" alt="GitHub Stars">
   </a>
-  <a href="https://github.com/sandipshiwakoti/vscode-react-native-version-bumper/releases">
-    <img src="https://img.shields.io/github/v/release/sandipshiwakoti.vscode-react-native-version-bumper?style=flat-square" alt="GitHub Release">
-  </a>
 </p>
 
 <p align="center">
@@ -55,6 +52,38 @@ code --install-extension sandipshiwakoti.vscode-react-native-version-bumper
 3. **Press** `Ctrl+Shift+P` (or `Cmd+Shift+P`)
 4. **Type** "Version Bumper" and choose your action
 5. **Done!** All platforms updated and synced
+
+## 🎥 See It In Action
+
+### ⚡ CodeLens: One-Click Version Updates
+
+_Click the ↑ arrows above version lines for instant bumps_
+
+https://github.com/user-attachments/assets/49d420db-2b8f-4996-9a17-9518b2812822
+
+### 🔄 Bump All Platforms
+
+_Update Android, iOS, and package.json simultaneously_
+
+https://github.com/user-attachments/assets/19a53e9c-5e5f-409f-b58b-d5dba3b0dca9
+
+### 🚀 Complete Git Workflow
+
+_Branch creation, commits, tags, and release automation_
+
+https://github.com/user-attachments/assets/971d3eaa-63bf-4e60-907b-ddd406ffd250
+
+### 🔀 Sync All Platforms
+
+_Synchronize versions across all platforms to match_
+
+https://github.com/user-attachments/assets/e16e9b6d-2e3a-4dfd-b3c7-41e140f026a2
+
+### 📊 Version Overview
+
+_Monitor all platform versions at a glance_
+
+https://github.com/user-attachments/assets/0ca1f9df-d559-4be1-8204-1226adeb9db8
 
 ## 📋 Usage
 
@@ -281,26 +310,6 @@ A: Great question! There are already excellent CLI solutions for CI/CD automatio
 - **Test**: `bun test`
 - **Package**: `bun package` (creates `.vsix`)
 - **Publish**: `bun publish` (for maintainers)
-
-### For Contributors
-
-```bash
-# Clone the repository
-git clone https://github.com/sandipshiwakoti/vscode-react-native-version-bumper.git
-cd vscode-react-native-version-bumper
-
-# Install dependencies (using Bun for speed)
-bun install
-
-# Compile TypeScript
-bun run compile
-
-# Run tests
-bun run test
-
-# Package extension
-bun run package
-```
 
 ---
 
