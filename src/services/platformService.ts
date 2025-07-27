@@ -783,7 +783,7 @@ async function updateIOSVersionInPbxproj(
 
         for (const pattern of patterns) {
             if (pattern.test(pbxprojContent)) {
-                pbxprojContent = pbxprojContent.replace(pattern, `${versionInfo.versionVarName} = ${newVersion};`);
+                pbxprojContent = pbxprojContent.replaceAll(pattern, `${versionInfo.versionVarName} = ${newVersion};`);
                 break;
             }
         }
@@ -797,7 +797,7 @@ async function updateIOSVersionInPbxproj(
 
         for (const pattern of patterns) {
             if (pattern.test(pbxprojContent)) {
-                pbxprojContent = pbxprojContent.replace(pattern, `${versionInfo.buildVarName} = ${newBuildNumber};`);
+                pbxprojContent = pbxprojContent.replaceAll(pattern, `${versionInfo.buildVarName} = ${newBuildNumber};`);
                 break;
             }
         }
