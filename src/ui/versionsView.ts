@@ -15,7 +15,7 @@ export async function generateVersionsHTML(
 ): Promise<string> {
     const headerHTML = generatePageHeaderHTML({
         title: 'React Native Version Bumper',
-        subtitle: `Current Versions - ${projectType.replace('-', ' ')}`,
+        subtitle: `Version Overview - ${projectType.replace('-', ' ')}`,
         logoUri: logoUri,
     });
 

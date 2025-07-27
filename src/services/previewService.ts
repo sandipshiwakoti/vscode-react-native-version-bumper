@@ -50,7 +50,17 @@ export async function showBatchPreview(plan: BatchExecutionPlan): Promise<boolea
             previewMessage += `   ${gitIndex++}. Tag: ${tagOp.newValue}\n`;
         }
         if (pushOp) {
-            previewMessage += `   ${gitIndex++}. Push: Yes\n`;
+            let pushDescription = 'Push: ';
+            if (branchOp && tagOp) {
+                pushDescription += 'branch and tag';
+            } else if (branchOp) {
+                pushDescription += 'branch';
+            } else if (tagOp) {
+                pushDescription += 'tag';
+            } else {
+                pushDescription += 'changes';
+            }
+            previewMessage += `   ${gitIndex++}. ${pushDescription}\n`;
         }
     }
 

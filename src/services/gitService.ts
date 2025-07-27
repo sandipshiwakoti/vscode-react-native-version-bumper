@@ -97,8 +97,27 @@ export async function collectGitConfiguration(
             const syncVersion = versionMap['Package.json'] || versionMap['Android'] || versionMap['iOS'] || mainVersion;
             defaultBranchName += `v${syncVersion}`;
         } else {
-            if (!skipAndroid && !skipIOS && versionMap['Android'] && versionMap['iOS']) {
-                defaultBranchName += `android-v${versionMap['Android']}-ios-v${versionMap['iOS']}`;
+            const availableVersions = [];
+            if (!skipPackageJson && versionMap['Package.json']) {
+                availableVersions.push({ platform: 'package', version: versionMap['Package.json'] });
+            }
+            if (!skipAndroid && versionMap['Android']) {
+                availableVersions.push({ platform: 'android', version: versionMap['Android'] });
+            }
+            if (!skipIOS && versionMap['iOS']) {
+                availableVersions.push({ platform: 'ios', version: versionMap['iOS'] });
+            }
+
+            const uniqueVersions = [...new Set(availableVersions.map((v) => v.version))];
+
+            if (uniqueVersions.length === 1 && availableVersions.length > 1) {
+                defaultBranchName += `v${uniqueVersions[0]}`;
+            } else if (!skipAndroid && !skipIOS && versionMap['Android'] && versionMap['iOS']) {
+                if (versionMap['Android'] === versionMap['iOS']) {
+                    defaultBranchName += `v${versionMap['Android']}`;
+                } else {
+                    defaultBranchName += `android-v${versionMap['Android']}-ios-v${versionMap['iOS']}`;
+                }
             } else if (!skipAndroid && versionMap['Android']) {
                 defaultBranchName += `android-v${versionMap['Android']}`;
             } else if (!skipIOS && versionMap['iOS']) {
@@ -116,7 +135,7 @@ export async function collectGitConfiguration(
             customBranchName = replacePlaceholders(branchNameTemplate, placeholderValues);
             const isValidBranchName =
                 customBranchName !== branchNameTemplate &&
-                customBranchName !== 'version-bump/' &&
+                customBranchName !== 'release/' &&
                 customBranchName !== '' &&
                 !customBranchName.includes('unknown') &&
                 (!versionMap['Android'] || skipAndroid || customBranchName.includes(versionMap['Android'])) &&
@@ -133,7 +152,7 @@ export async function collectGitConfiguration(
             branchName = customBranchName;
         } else {
             branchName = await vscode.window.showInputBox({
-                placeHolder: 'e.g., feature/version-bump-1.2.3',
+                placeHolder: 'e.g., release/1.2.3',
                 prompt: 'Enter branch name for version changes',
                 value: customBranchName,
             });
@@ -156,7 +175,9 @@ export async function collectGitConfiguration(
     }
 
     const fallbackCommitMessage =
-        platforms.length > 0 ? `chore: bump ${platforms.join(' and ')}` : `chore: bump version to v${mainVersion}`;
+        platforms.length > 0
+            ? `chore: bump version to ${platforms.join(', ')}`
+            : `chore: bump version to v${mainVersion}`;
 
     const commitMessageTemplate = config.get(CONFIG.GIT_COMMIT_MESSAGE_TEMPLATE, fallbackCommitMessage);
     const templateCommitMessage = replacePlaceholders(commitMessageTemplate, placeholderValues);
@@ -442,16 +463,16 @@ export async function executeGitOperationsWithProgress(
 
                 let gitMessage = '';
                 if (branchCreated && gitConfig.branchName) {
-                    gitMessage += `Branch: Created and switched to branch "${gitConfig.branchName}"<br>`;
+                    gitMessage += `<strong>Branch:</strong> Created and switched to branch "${gitConfig.branchName}"<br>`;
                 }
                 if (commitSuccess) {
-                    gitMessage += `Commit: Changes committed with message: "${gitConfig.commitMessage}"`;
+                    gitMessage += `<strong>Commit:</strong> Changes committed with message: "${gitConfig.commitMessage}"`;
                 }
                 if (gitConfig.shouldTag && gitConfig.tagName) {
-                    gitMessage += `<br>Tag: ${tagSuccess ? `Tagged ${gitConfig.tagName}` : '❌ Failed to create tag'}`;
+                    gitMessage += `<br><strong>Tag:</strong> ${tagSuccess ? `Tagged ${gitConfig.tagName}` : '❌ Failed to create tag'}`;
                 }
                 if (gitConfig.shouldPush) {
-                    gitMessage += `<br>Push: ${pushSuccess ? `Pushed ${gitConfig.shouldCreateBranch ? 'branch and tag' : 'changes and tag'} to remote` : '❌ Failed to push to remote'}`;
+                    gitMessage += `<br><strong>Push:</strong> ${pushSuccess ? `Pushed ${gitConfig.shouldCreateBranch ? 'branch and tag' : 'changes and tag'} to remote` : '❌ Failed to push to remote'}`;
                 }
 
                 results.push({
@@ -591,8 +612,27 @@ export async function executeGitWorkflow(
                     defaultBranchName += `v${mainVersion}`;
                 }
             } else {
-                if (!skipAndroid && !skipIOS && versionMap['Android'] && versionMap['iOS']) {
-                    defaultBranchName += `android-v${versionMap['Android']}-ios-v${versionMap['iOS']}`;
+                const availableVersions = [];
+                if (!skipPackageJson && versionMap['Package.json']) {
+                    availableVersions.push({ platform: 'package', version: versionMap['Package.json'] });
+                }
+                if (!skipAndroid && versionMap['Android']) {
+                    availableVersions.push({ platform: 'android', version: versionMap['Android'] });
+                }
+                if (!skipIOS && versionMap['iOS']) {
+                    availableVersions.push({ platform: 'ios', version: versionMap['iOS'] });
+                }
+
+                const uniqueVersions = [...new Set(availableVersions.map((v) => v.version))];
+
+                if (uniqueVersions.length === 1 && availableVersions.length > 1) {
+                    defaultBranchName += `v${uniqueVersions[0]}`;
+                } else if (!skipAndroid && !skipIOS && versionMap['Android'] && versionMap['iOS']) {
+                    if (versionMap['Android'] === versionMap['iOS']) {
+                        defaultBranchName += `v${versionMap['Android']}`;
+                    } else {
+                        defaultBranchName += `android-v${versionMap['Android']}-ios-v${versionMap['iOS']}`;
+                    }
                 } else if (!skipAndroid && versionMap['Android']) {
                     defaultBranchName += `android-v${versionMap['Android']}`;
                 } else if (!skipIOS && versionMap['iOS']) {
@@ -610,7 +650,7 @@ export async function executeGitWorkflow(
                 customBranchName = replacePlaceholders(branchNameTemplate, placeholderValues);
                 const isValidBranchName =
                     customBranchName !== branchNameTemplate &&
-                    customBranchName !== 'version-bump/' &&
+                    customBranchName !== 'release/' &&
                     customBranchName !== '' &&
                     !customBranchName.includes('unknown') &&
                     (!versionMap['Android'] || skipAndroid || customBranchName.includes(versionMap['Android'])) &&
@@ -627,7 +667,7 @@ export async function executeGitWorkflow(
                 branchName = customBranchName;
             } else {
                 branchName = await vscode.window.showInputBox({
-                    placeHolder: 'e.g., feature/version-bump-1.2.3',
+                    placeHolder: 'e.g., release/1.2.3',
                     prompt: 'Enter branch name for version changes',
                     value: customBranchName,
                 });
@@ -679,7 +719,9 @@ export async function executeGitWorkflow(
             platforms.push(`package.json to v${versionMap['Package.json']}`);
         }
         commitMessage =
-            platforms.length > 0 ? `chore: bump ${platforms.join(' and ')}` : `chore: bump version to v${mainVersion}`;
+            platforms.length > 0
+                ? `chore: bump version to ${platforms.join(', ')}`
+                : `chore: bump version to v${mainVersion}`;
 
         const commitMessageTemplate = config.get(CONFIG.GIT_COMMIT_MESSAGE_TEMPLATE, commitMessage);
         const defaultCommitMessage = replacePlaceholders(commitMessageTemplate, placeholderValues);
@@ -714,7 +756,7 @@ export async function executeGitWorkflow(
                 success: false,
                 oldVersion: '',
                 newVersion: '',
-                message: `${branchCreated ? `Branch: Created and switched to branch "${branchName}"<br>` : ''}Commit: ❌ Failed to commit changes: ${errorMessage}`,
+                message: `${branchCreated ? `<strong>Branch:</strong> Created and switched to branch "${branchName}"<br>` : ''}<strong>Commit:</strong> ❌ Failed to commit changes: ${errorMessage}`,
             });
             return {
                 branchCreated,
@@ -844,7 +886,7 @@ export async function executeGitWorkflow(
                         success: false,
                         oldVersion: '',
                         newVersion: '',
-                        message: `${branchCreated ? `Branch: Created and switched to branch "${branchName}"<br>` : ''}Commit: Changes committed with message: "${commitMessage}"<br>Tag: ❌ Failed to create tag: ${tagError instanceof Error ? tagError.message : 'Unknown error'}`,
+                        message: `${branchCreated ? `<strong>Branch:</strong> Created and switched to branch "${branchName}"<br>` : ''}<strong>Commit:</strong> Changes committed with message: "${commitMessage}"<br><strong>Tag:</strong> ❌ Failed to create tag: ${tagError instanceof Error ? tagError.message : 'Unknown error'}`,
                     });
                 }
             }
@@ -882,15 +924,15 @@ export async function executeGitWorkflow(
 
                 let gitMessage = '';
                 if (branchCreated && branchName) {
-                    gitMessage += `Branch: Created and switched to branch "${branchName}"<br>`;
+                    gitMessage += `<strong>Branch:</strong> Created and switched to branch "${branchName}"<br>`;
                 }
                 if (commitSuccess) {
-                    gitMessage += `Commit: Changes committed with message: "${commitMessage}"<br>`;
+                    gitMessage += `<strong>Commit:</strong> Changes committed with message: "${commitMessage}"<br>`;
                 }
                 if (shouldTag) {
-                    gitMessage += `Tag: ${tagSuccess ? `Tagged ${tagName}` : '❌ Failed to create tag'}<br>`;
+                    gitMessage += `<strong>Tag:</strong> ${tagSuccess ? `Tagged ${tagName}` : '❌ Failed to create tag'}<br>`;
                 }
-                gitMessage += `Push: ❌ Failed to push to remote: ${pushError}`;
+                gitMessage += `<strong>Push:</strong> ❌ Failed to push to remote: ${pushError}`;
 
                 results.push({
                     platform: Platform.GIT,
@@ -915,16 +957,16 @@ export async function executeGitWorkflow(
 
         let gitMessage = '';
         if (branchCreated && branchName) {
-            gitMessage += `Branch: Created and switched to branch "${branchName}"<br>`;
+            gitMessage += `<strong>Branch:</strong> Created and switched to branch "${branchName}"<br>`;
         }
         if (commitSuccess) {
-            gitMessage += `Commit: Changes committed with message: "${commitMessage}"`;
+            gitMessage += `<strong>Commit:</strong> Changes committed with message: "${commitMessage}"`;
         }
         if (shouldTag && tagName) {
-            gitMessage += `<br>Tag: ${tagSuccess ? `Tagged ${tagName}` : '❌ Failed to create tag'}`;
+            gitMessage += `<br><strong>Tag:</strong> ${tagSuccess ? `Tagged ${tagName}` : '❌ Failed to create tag'}`;
         }
         if (shouldPush) {
-            gitMessage += `<br>Push: ${pushSuccess ? `Pushed ${shouldCreateBranch ? 'branch and tag' : 'changes and tag'} to remote` : '❌ Failed to push to remote'}`;
+            gitMessage += `<br><strong>Push:</strong> ${pushSuccess ? `Pushed ${shouldCreateBranch ? 'branch and tag' : 'changes and tag'} to remote` : '❌ Failed to push to remote'}`;
         }
 
         results.push({
@@ -949,15 +991,15 @@ export async function executeGitWorkflow(
 
         let gitMessage = '';
         if (branchCreated && branchName) {
-            gitMessage += `Branch: Created and switched to branch "${branchName}"<br>`;
+            gitMessage += `<strong>Branch:</strong> Created and switched to branch "${branchName}"<br>`;
         }
         if (commitSuccess) {
-            gitMessage += `Commit: Changes committed with message: "${commitMessage}"<br>`;
+            gitMessage += `<strong>Commit:</strong> Changes committed with message: "${commitMessage}"<br>`;
         }
         if (shouldTag) {
-            gitMessage += `Tag: ${tagSuccess ? `Tagged ${tagName}` : '❌ Failed to create tag'}<br>`;
+            gitMessage += `<strong>Tag:</strong> ${tagSuccess ? `Tagged ${tagName}` : '❌ Failed to create tag'}<br>`;
         }
-        gitMessage += `Operation failed: ${errorMessage}`;
+        gitMessage += `<strong>Operation failed:</strong> ${errorMessage}`;
 
         results.push({
             platform: Platform.GIT,

@@ -119,7 +119,7 @@ Instead of running commands, just click the "Bump Patch" link that appears above
 Use template variables in your commit messages:
 
 ```json
-"reactNativeVersionBumper.git.commitMessageTemplate": "🚀 Release v{version}\n\nPlatforms updated:\n{platforms}"
+"reactNativeVersionBumper.git.commitMessageTemplate": "🚀 Release v{version}\n\nPlatforms updated:\n{platformUpdates}"
 ```
 
 ### 💡 **Tip 3: Branch-Based Workflow**

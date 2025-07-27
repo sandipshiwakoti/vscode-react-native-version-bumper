@@ -12,14 +12,24 @@ export function getPlaceholderValues(
     versionMap: { [platform: string]: string },
     buildNumberMap: { [platform: string]: string }
 ): Record<string, string> {
-    const platforms = results
+    const platformUpdates = results
         .filter((r) => r.success && r.newVersion && (r.platform === Platform.ANDROID || r.platform === Platform.IOS))
-        .map((r) => `${r.platform.toLowerCase()} to v${versionMap[r.platform]} (${buildNumberMap[r.platform]})`)
-        .join(' and ');
+        .map((r) => {
+            const platformName = r.platform === Platform.ANDROID ? 'Android' : 'iOS';
+            return `${platformName} v${versionMap[r.platform]} (build ${buildNumberMap[r.platform]})`;
+        });
+
+    const packageResult = results.find((r) => r.success && r.platform === Platform.PACKAGE_JSON);
+    if (packageResult && versionMap[Platform.PACKAGE_JSON]) {
+        platformUpdates.unshift(`package.json v${versionMap[Platform.PACKAGE_JSON]}`);
+    }
+
+    const platformUpdatesString = platformUpdates.join(', ');
     const date = new Date().toISOString().split('T')[0];
+
     return {
         type,
-        platforms,
+        platformUpdates: platformUpdatesString,
         version: mainVersion || 'manual',
         date,
         androidVersion: versionMap[Platform.ANDROID] || 'unknown',

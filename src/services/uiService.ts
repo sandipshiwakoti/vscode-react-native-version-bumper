@@ -92,13 +92,13 @@ export async function updateStatusBar(): Promise<void> {
         if (allVersions.length > 1) {
             tooltip += `Sync Status: ${isSynced ? 'Synced ✅' : 'Different versions ⚠️'}\n`;
         }
-        tooltip += `\nClick to view detailed version information`;
+        tooltip += `\nClick to view version overview`;
 
         statusBarItem.tooltip = tooltip;
         statusBarItem.show();
     } catch {
         statusBarItem.text = `⚛️ Version Bumper`;
-        statusBarItem.tooltip = 'React Native Version Bumper\n\nClick to view current versions';
+        statusBarItem.tooltip = 'React Native Version Bumper\n\nClick to view version overview';
         statusBarItem.show();
     }
 }

@@ -144,8 +144,8 @@ export const BUMP_TYPE_LABELS = {
 } as const;
 
 export const TEMPLATES = {
-    GIT_COMMIT_MESSAGE: 'chore: bump {platforms}',
-    GIT_BRANCH_PREFIX: 'version-bump/',
+    GIT_COMMIT_MESSAGE: 'chore: bump version to {platformUpdates}',
+    GIT_BRANCH_PREFIX: 'release/',
     GIT_TAG_NAME: 'v{version}',
 } as const;
 

@@ -16,8 +16,8 @@ export async function showCurrentVersions(context?: vscode.ExtensionContext) {
         const rootPath = workspaceFolders[0].uri.fsPath;
         const projectType = await detectProjectType(rootPath);
         const panel = vscode.window.createWebviewPanel(
-            'currentVersions',
-            'React Native Version Bumper - Current Versions',
+            'versionOverview',
+            'React Native Version Bumper - Version Overview',
             vscode.ViewColumn.One,
             {
                 enableScripts: true,

@@ -49,7 +49,7 @@
             },
             {
                 "command": "vscode-react-native-version-bumper.showVersions",
-                "title": "Show Versions",
+                "title": "Version Overview",
                 "category": "Version Bumper"
             },
             {
@@ -194,8 +194,8 @@
                 },
                 "reactNativeVersionBumper.git.commitMessageTemplate": {
                     "type": "string",
-                    "default": "chore: version bump {platforms}",
-                    "description": "Git commit message template. Variables: {type}, {platforms}, {version}, {date}, {androidVersion}, {iosVersion}, {androidBuildNumber}, {iosBuildNumber}. Note: {platforms} includes detailed version info. Example: 'chore: version bump' or 'chore: bump to v{version}' becomes 'chore: bump to v2.0.0'."
+                    "default": "chore: bump version to {platformUpdates}",
+                    "description": "Git commit message template. Available variables: {type}, {platformUpdates}, {version}, {date}, {androidVersion}, {iosVersion}, {androidBuildNumber}, {iosBuildNumber}. The {platformUpdates} variable includes detailed version info for all updated platforms. Example: 'chore: bump version to {platformUpdates}' becomes 'chore: bump version to package.json v1.0.1, Android v1.0.1 (build 2)'."
                 },
                 "reactNativeVersionBumper.git.skipBranch": {
                     "type": "boolean",
@@ -209,8 +209,8 @@
                 },
                 "reactNativeVersionBumper.git.branchNameTemplate": {
                     "type": "string",
-                    "default": "version-bump/{version}",
-                    "description": "Git branch name template. Variables: {type}, {version}, {date}, {androidVersion}, {iosVersion}, {androidBuildNumber}, {iosBuildNumber}. Example: 'version-bump/{version}' becomes 'version-bump/1.2.3'."
+                    "default": "release/{version}",
+                    "description": "Git branch name template. Variables: {type}, {version}, {date}, {androidVersion}, {iosVersion}, {androidBuildNumber}, {iosBuildNumber}. Example: 'release/{version}' becomes 'release/1.2.3'."
                 },
                 "reactNativeVersionBumper.git.skipTag": {
                     "type": "boolean",
