@@ -1,6 +1,6 @@
-# Contributing to React Native Package Checker
+# Contributing to React Native Version Bumper
 
-Thank you for your interest in contributing to React Native Package Checker!
+Thank you for your interest in contributing to React Native Version Bumper!
 
 ## Getting Started
 
