@@ -16,6 +16,8 @@ import {
 let statusBarItem: vscode.StatusBarItem;
 let onDidChangeCodeLensesEmitter: vscode.EventEmitter<void>;
 let textDocumentListener: vscode.Disposable;
+let fileWatchers: vscode.FileSystemWatcher[] = [];
+let documentSaveListener: vscode.Disposable;
 
 export function initializeStatusBar(): void {
     statusBarItem = vscode.window.createStatusBarItem(
@@ -27,6 +29,48 @@ export function initializeStatusBar(): void {
     statusBarItem.show();
 
     vscode.workspace.onDidChangeWorkspaceFolders(() => updateStatusBar());
+
+    setupFileWatchers();
+
+    documentSaveListener = vscode.workspace.onDidSaveTextDocument((document) => {
+        if (
+            document.fileName.endsWith(FILE_EXTENSIONS.PACKAGE_JSON) ||
+            document.fileName.endsWith(FILE_EXTENSIONS.BUILD_GRADLE) ||
+            document.fileName.endsWith(FILE_EXTENSIONS.INFO_PLIST) ||
+            document.fileName.endsWith(FILE_EXTENSIONS.PROJECT_PBXPROJ)
+        ) {
+            updateStatusBar();
+        }
+    });
+}
+
+function setupFileWatchers(): void {
+    fileWatchers.forEach((watcher) => watcher.dispose());
+    fileWatchers = [];
+
+    const packageJsonWatcher = vscode.workspace.createFileSystemWatcher('**/package.json');
+    packageJsonWatcher.onDidChange(() => updateStatusBar());
+    packageJsonWatcher.onDidCreate(() => updateStatusBar());
+    packageJsonWatcher.onDidDelete(() => updateStatusBar());
+    fileWatchers.push(packageJsonWatcher);
+
+    const buildGradleWatcher = vscode.workspace.createFileSystemWatcher('**/build.gradle');
+    buildGradleWatcher.onDidChange(() => updateStatusBar());
+    buildGradleWatcher.onDidCreate(() => updateStatusBar());
+    buildGradleWatcher.onDidDelete(() => updateStatusBar());
+    fileWatchers.push(buildGradleWatcher);
+
+    const infoPlistWatcher = vscode.workspace.createFileSystemWatcher('**/Info.plist');
+    infoPlistWatcher.onDidChange(() => updateStatusBar());
+    infoPlistWatcher.onDidCreate(() => updateStatusBar());
+    infoPlistWatcher.onDidDelete(() => updateStatusBar());
+    fileWatchers.push(infoPlistWatcher);
+
+    const pbxprojWatcher = vscode.workspace.createFileSystemWatcher('**/project.pbxproj');
+    pbxprojWatcher.onDidChange(() => updateStatusBar());
+    pbxprojWatcher.onDidCreate(() => updateStatusBar());
+    pbxprojWatcher.onDidDelete(() => updateStatusBar());
+    fileWatchers.push(pbxprojWatcher);
 }
 
 export async function updateStatusBar(): Promise<void> {
@@ -105,6 +149,13 @@ export async function updateStatusBar(): Promise<void> {
 export function disposeStatusBar(): void {
     if (statusBarItem) {
         statusBarItem.dispose();
+    }
+
+    fileWatchers.forEach((watcher) => watcher.dispose());
+    fileWatchers = [];
+
+    if (documentSaveListener) {
+        documentSaveListener.dispose();
     }
 }
 
