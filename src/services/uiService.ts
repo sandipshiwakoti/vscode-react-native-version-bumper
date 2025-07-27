@@ -75,9 +75,8 @@ export async function updateStatusBar(): Promise<void> {
         );
         const uniqueVersions = [...new Set(allVersions)];
         const isSynced = uniqueVersions.length <= 1 && allVersions.length > 1;
-        const syncIndicator = allVersions.length > 1 ? (isSynced ? '🟢' : '🟡') : '';
 
-        statusBarItem.text = `⚛️ ${projectName}: v${packageVersion} ${syncIndicator}`;
+        statusBarItem.text = `$(arrow-circle-up) Version Bumper: v${packageVersion}`;
 
         let tooltip = `React Native Version Bumper\n\n`;
         tooltip += `Project: ${projectName}\n`;
@@ -97,7 +96,7 @@ export async function updateStatusBar(): Promise<void> {
         statusBarItem.tooltip = tooltip;
         statusBarItem.show();
     } catch {
-        statusBarItem.text = `⚛️ Version Bumper`;
+        statusBarItem.text = `$(arrow-circle-up) Version Bumper`;
         statusBarItem.tooltip = 'React Native Version Bumper\n\nClick to view version overview';
         statusBarItem.show();
     }
