@@ -651,9 +651,9 @@ async function readIOSVersionInfoInternal(rootPath: string): Promise<IOSVersionI
 
                 if (versionVarName) {
                     const versionMatch =
-                        pbxprojContent.match(REGEX_PATTERNS.PBXPROJ_VERSION_PATTERNS.QUOTED(versionVarName)) ||
-                        pbxprojContent.match(REGEX_PATTERNS.PBXPROJ_VERSION_PATTERNS.SEMICOLON(versionVarName)) ||
-                        pbxprojContent.match(REGEX_PATTERNS.PBXPROJ_VERSION_PATTERNS.SIMPLE(versionVarName));
+                        REGEX_PATTERNS.PBXPROJ_VERSION_PATTERNS.QUOTED(versionVarName).exec(pbxprojContent) ||
+                        REGEX_PATTERNS.PBXPROJ_VERSION_PATTERNS.SEMICOLON(versionVarName).exec(pbxprojContent) ||
+                        REGEX_PATTERNS.PBXPROJ_VERSION_PATTERNS.SIMPLE(versionVarName).exec(pbxprojContent);
                     if (versionMatch) {
                         version = versionMatch[1];
                     }
@@ -661,8 +661,8 @@ async function readIOSVersionInfoInternal(rootPath: string): Promise<IOSVersionI
 
                 if (buildVarName) {
                     const buildMatch =
-                        pbxprojContent.match(REGEX_PATTERNS.PBXPROJ_VERSION_PATTERNS.BUILD_QUOTED(buildVarName)) ||
-                        pbxprojContent.match(REGEX_PATTERNS.PBXPROJ_VERSION_PATTERNS.BUILD_SIMPLE(buildVarName));
+                        REGEX_PATTERNS.PBXPROJ_VERSION_PATTERNS.BUILD_QUOTED(buildVarName).exec(pbxprojContent) ||
+                        REGEX_PATTERNS.PBXPROJ_VERSION_PATTERNS.BUILD_SIMPLE(buildVarName).exec(pbxprojContent);
                     if (buildMatch) {
                         buildNumber = buildMatch[1];
                     }
