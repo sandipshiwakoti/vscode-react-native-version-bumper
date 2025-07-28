@@ -133,6 +133,7 @@ export interface ExecutionOptions {
     };
     packageBumpType?: BumpType;
     isSync?: boolean;
+    skipPackageJson?: boolean;
 }
 
 export interface GitWorkflowResult {

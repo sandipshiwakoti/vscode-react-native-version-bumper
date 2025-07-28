@@ -98,13 +98,13 @@ Access commands via the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P` on macO
 - **Version Bumper: Bump All**  
   Bumps versions for selected platforms without Git operations.
     - Choose bump type (Major, Minor, Patch) for Android/iOS.
-    - Optionally include `package.json` with its own bump type.
+    - Choose package.json bump type or skip it entirely for this operation.
     - Updates version code (Android/iOS) and version name (all platforms).
     - View results in a webview (success/failure details).
 
 - **Version Bumper: Bump All + Git**  
   Bumps versions and performs Git operations.
-    - Same version bump process as above.
+    - Same version bump process as above (with option to skip package.json).
     - Additional steps:
         - Create a branch (optional, customizable name).
         - Commit changes (customizable message).
@@ -297,6 +297,9 @@ A: Customize file paths in the settings (e.g., `android.buildGradlePath`, `ios.i
 
 **Q: Can I use this with monorepos?**  
 A: Yes! You can skip package.json updates and focus on platform-specific files, or configure custom paths for monorepo structures.
+
+**Q: What's the difference between the "Skip" option and the `skipPackageJson` setting?**  
+A: The "Skip" option appears during the interactive bump process and lets you skip package.json for that specific operation. The `skipPackageJson` setting permanently disables package.json updates. Use "Skip" for occasional exclusions, use the setting for permanent workflow preferences.
 
 **Q: Why not a CLI tool instead of a VS Code extension?**  
 A: Great question! There are already excellent CLI solutions for CI/CD automation like [Fastlane](https://fastlane.tools/), [semantic-release](https://github.com/semantic-release/semantic-release), and [standard-version](https://github.com/conventional-changelog/standard-version). This extension focuses on a different use case: **developer experience during active development**. It provides visual feedback, interactive previews, CodeLens integration, and seamless IDE workflow - things that are perfect for when you're actively coding but not ideal for automated pipelines. Think of it as complementary to CLI tools rather than competing with them.

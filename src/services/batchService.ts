@@ -30,13 +30,14 @@ export async function createBatchExecutionPlan(
         ios?: { version: string; buildNumber?: number };
         packageJson?: string;
     },
-    isSync: boolean = false
+    isSync: boolean = false,
+    skipPackageJson: boolean = false
 ): Promise<BatchExecutionPlan> {
     const config = vscode.workspace.getConfiguration(EXTENSION_ID);
     const operations: BatchOperation[] = [];
     const versions = await getCurrentVersions();
 
-    if (!config.get(CONFIG.SKIP_PACKAGE_JSON) && versions.packageJson) {
+    if (!config.get(CONFIG.SKIP_PACKAGE_JSON) && !skipPackageJson && versions.packageJson) {
         const oldVersion = versions.packageJson;
         let newVersion: string;
 
@@ -134,7 +135,8 @@ export async function executeBatchOperations(
         ios?: { version: string; buildNumber?: number };
         packageJson?: string;
     },
-    isSync: boolean = false
+    isSync: boolean = false,
+    skipPackageJson: boolean = false
 ): Promise<{ results: BumpResult[]; gitWorkflowResult?: GitWorkflowResult }> {
     const results: BumpResult[] = [];
     const versions = await getCurrentVersions();
@@ -260,7 +262,8 @@ async function executeBatchMode(
         options.bumpType,
         options.withGit,
         options.customVersions,
-        options.isSync || false
+        options.isSync || false,
+        options.skipPackageJson || false
     );
 
     let gitConfig;
@@ -325,7 +328,8 @@ async function executeBatchMode(
         plan,
         options.bumpType,
         options.customVersions,
-        options.isSync || false
+        options.isSync || false,
+        options.skipPackageJson || false
     );
 
     if (gitConfig) {
@@ -430,7 +434,7 @@ async function executeVersionTasks(
     hasIOS: boolean,
     config: vscode.WorkspaceConfiguration
 ): Promise<void> {
-    if (!config.get(CONFIG.SKIP_PACKAGE_JSON) && versions.packageJson) {
+    if (!config.get(CONFIG.SKIP_PACKAGE_JSON) && !options.skipPackageJson && versions.packageJson) {
         try {
             const targetVersion =
                 options.customVersions?.packageJson || (options.isSync ? versions.packageJson : undefined);

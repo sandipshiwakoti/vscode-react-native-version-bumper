@@ -128,9 +128,11 @@ async function handleBumpOperation(
         return;
     }
 
-    if (config?.get(CONFIG.SKIP_PACKAGE_JSON) && config?.get(CONFIG.SKIP_ANDROID) && config?.get(CONFIG.SKIP_IOS)) {
+    // Check if all platforms are disabled (including user's choice to skip package.json)
+    const skipPackageJson = config?.get(CONFIG.SKIP_PACKAGE_JSON) || packageBumpType.skipPackageJson;
+    if (skipPackageJson && config?.get(CONFIG.SKIP_ANDROID) && config?.get(CONFIG.SKIP_IOS)) {
         vscode.window.showWarningMessage(
-            'All platforms are disabled in settings. Enable at least one platform:\n• reactNativeVersionBumper.skipPackageJson\n• reactNativeVersionBumper.skipAndroid\n• reactNativeVersionBumper.skipIOS'
+            'All platforms are disabled. Enable at least one platform or choose to update package.json.'
         );
         return;
     }
@@ -142,7 +144,9 @@ async function handleBumpOperation(
         customVersions,
         packageBumpType.bumpType,
         packageBumpType.customVersion,
-        context
+        context,
+        false,
+        packageBumpType.skipPackageJson
     );
 }
 
@@ -219,7 +223,17 @@ async function handleSyncOperation(
         packageJson: versions.packageJson ? targetVersion : undefined,
     };
 
-    await executeAndShowResults(rootPath, BumpType.PATCH, withGit, customVersions, undefined, undefined, context, true);
+    await executeAndShowResults(
+        rootPath,
+        BumpType.PATCH,
+        withGit,
+        customVersions,
+        undefined,
+        undefined,
+        context,
+        true,
+        false
+    );
 }
 
 async function getCustomVersions(
@@ -279,9 +293,9 @@ async function getPackageJsonBumpType(
     versions: ProjectVersions,
     packageJsonVersion: string,
     config?: vscode.WorkspaceConfiguration
-) {
+): Promise<{ bumpType: BumpType; customVersion?: string; skipPackageJson: boolean } | null> {
     if (config?.get(CONFIG.SKIP_PACKAGE_JSON) || !versions.packageJson) {
-        return { bumpType: BumpType.PATCH, customVersion: undefined };
+        return { bumpType: BumpType.PATCH, customVersion: undefined, skipPackageJson: true };
     }
 
     const packageBumpTypeSelection = await vscode.window.showQuickPick(
@@ -294,6 +308,11 @@ async function getPackageJsonBumpType(
                 value: BumpType.CUSTOM,
                 description: `Current: v${packageJsonVersion} → Set custom version`,
             },
+            {
+                label: 'Skip',
+                value: 'SKIP',
+                description: 'Do not update package.json',
+            },
         ],
         { placeHolder: 'Choose package.json version increment type' }
     );
@@ -302,15 +321,19 @@ async function getPackageJsonBumpType(
         return null;
     }
 
+    if (packageBumpTypeSelection.value === 'SKIP') {
+        return { bumpType: BumpType.PATCH, customVersion: undefined, skipPackageJson: true };
+    }
+
     if (packageBumpTypeSelection.value === BumpType.CUSTOM) {
         const customPackageJsonVersion = await getCustomVersionForPlatform('package.json', packageJsonVersion);
         if (customPackageJsonVersion === null) {
             return null;
         }
-        return { bumpType: BumpType.CUSTOM, customVersion: customPackageJsonVersion };
+        return { bumpType: BumpType.CUSTOM, customVersion: customPackageJsonVersion, skipPackageJson: false };
     }
 
-    return { bumpType: packageBumpTypeSelection.value as BumpType, customVersion: undefined };
+    return { bumpType: packageBumpTypeSelection.value as BumpType, customVersion: undefined, skipPackageJson: false };
 }
 
 function buildSyncOptions(
@@ -442,7 +465,8 @@ async function executeAndShowResults(
     packageBumpType?: BumpType,
     customPackageJsonVersion?: string,
     context?: vscode.ExtensionContext,
-    isSync: boolean = false
+    isSync: boolean = false,
+    skipPackageJson: boolean = false
 ) {
     const finalCustomVersions = customVersions
         ? {
@@ -458,6 +482,7 @@ async function executeAndShowResults(
         customVersions: finalCustomVersions,
         packageBumpType,
         isSync,
+        skipPackageJson,
     });
 
     const hasSuccessfulOperations = results.some((result: BumpResult) => result.success);
