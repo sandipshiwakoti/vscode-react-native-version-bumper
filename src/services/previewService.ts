@@ -14,23 +14,17 @@ export async function showBatchPreview(plan: BatchExecutionPlan): Promise<boolea
         return op.description;
     });
 
-    let previewMessage = `🚀 Ready to update ${versionOps.length} file${versionOps.length !== 1 ? 's' : ''}`;
-
-    if (gitOps.length > 0) {
-        previewMessage += ` + ${gitOps.length} Git operation${gitOps.length !== 1 ? 's' : ''}`;
-    }
-
-    previewMessage += `\n\n`;
+    let previewMessage = `🚀 Ready to execute ${versionOps.length + gitOps.length} operation${versionOps.length + gitOps.length !== 1 ? 's' : ''}\n\n`;
 
     if (versions.length > 0) {
-        previewMessage += `📦 Version Updates:\n`;
+        previewMessage += `📦 VERSION UPDATES (${versionOps.length})\n`;
         versions.forEach((version, index) => {
-            previewMessage += `   ${index + 1}. ${version}\n`;
+            previewMessage += `${index + 1}. ${version}\n`;
         });
     }
 
     if (gitOps.length > 0) {
-        previewMessage += `\n🔧 Git Operations:\n`;
+        previewMessage += `\n🔧 GIT OPERATIONS (${gitOps.length})\n`;
 
         const branchOp = gitOps.find((op) => op.action === GitAction.CREATE_BRANCH);
         const commitOp = gitOps.find((op) => op.action === GitAction.COMMIT_CHANGES);
@@ -39,28 +33,28 @@ export async function showBatchPreview(plan: BatchExecutionPlan): Promise<boolea
 
         let gitIndex = 1;
         if (branchOp) {
-            previewMessage += `   ${gitIndex++}. Branch: ${branchOp.newValue}\n`;
+            previewMessage += `${gitIndex++}. Branch: ${branchOp.newValue}\n`;
         }
         if (commitOp) {
             const commitMessage =
                 commitOp.newValue.length > 100 ? commitOp.newValue.substring(0, 97) + '...' : commitOp.newValue;
-            previewMessage += `   ${gitIndex++}. Commit: "${commitMessage}"\n`;
+            previewMessage += `${gitIndex++}. Commit: "${commitMessage}"\n`;
         }
         if (tagOp) {
-            previewMessage += `   ${gitIndex++}. Tag: ${tagOp.newValue}\n`;
+            previewMessage += `${gitIndex++}. Tag: ${tagOp.newValue}\n`;
         }
         if (pushOp) {
             let pushDescription = 'Push: ';
             if (branchOp && tagOp) {
-                pushDescription += 'branch and tag';
+                pushDescription += 'branch and tag to remote';
             } else if (branchOp) {
-                pushDescription += 'branch';
+                pushDescription += 'branch to remote';
             } else if (tagOp) {
-                pushDescription += 'tag';
+                pushDescription += 'tag to remote';
             } else {
-                pushDescription += 'changes';
+                pushDescription += 'changes to remote';
             }
-            previewMessage += `   ${gitIndex++}. ${pushDescription}\n`;
+            previewMessage += `${gitIndex++}. ${pushDescription}\n`;
         }
     }
 
