@@ -90,11 +90,11 @@ export const REGEX_PATTERNS = {
     PACKAGE_NAME_CLEAN: /[@\/\-_]/g,
     FIRST_CHAR_UPPER: /^\w/,
     PBXPROJ_VERSION_PATTERNS: {
-        QUOTED: (varName: string) => new RegExp(`${varName}\\s*=\\s*["']([^"']+)["']`, 'i'),
-        SEMICOLON: (varName: string) => new RegExp(`${varName}\\s*=\\s*([\\d\\.]+);`, 'i'),
-        SIMPLE: (varName: string) => new RegExp(`${varName}\\s*=\\s*([\\d\\.]+)`, 'i'),
-        BUILD_QUOTED: (varName: string) => new RegExp(`${varName}\\s*=\\s*["']?(\\d+)["']?;`, 'i'),
-        BUILD_SIMPLE: (varName: string) => new RegExp(`${varName}\\s*=\\s*(\\d+)`, 'i'),
+        QUOTED: (varName: string) => new RegExp(`${varName}\\s*=\\s*["']([^"']+)["']`, 'gi'),
+        SEMICOLON: (varName: string) => new RegExp(`${varName}\\s*=\\s*([\\d\\.]+);`, 'gi'),
+        SIMPLE: (varName: string) => new RegExp(`${varName}\\s*=\\s*([\\d\\.]+)`, 'gi'),
+        BUILD_QUOTED: (varName: string) => new RegExp(`${varName}\\s*=\\s*["']?(\\d+)["']?;`, 'gi'),
+        BUILD_SIMPLE: (varName: string) => new RegExp(`${varName}\\s*=\\s*(\\d+)`, 'gi'),
     },
 } as const;
 
