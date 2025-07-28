@@ -31,7 +31,8 @@ export async function createBatchExecutionPlan(
         packageJson?: string;
     },
     isSync: boolean = false,
-    skipPackageJson: boolean = false
+    skipPackageJson: boolean = false,
+    packageBumpType?: BumpType
 ): Promise<BatchExecutionPlan> {
     const config = vscode.workspace.getConfiguration(EXTENSION_ID);
     const operations: BatchOperation[] = [];
@@ -46,7 +47,7 @@ export async function createBatchExecutionPlan(
         } else if (isSync) {
             newVersion = customVersions?.packageJson || oldVersion;
         } else {
-            newVersion = bumpSemanticVersion(oldVersion, bumpType);
+            newVersion = bumpSemanticVersion(oldVersion, packageBumpType ?? bumpType);
         }
 
         if (oldVersion !== newVersion || !isSync) {
@@ -136,7 +137,7 @@ export async function executeBatchOperations(
         packageJson?: string;
     },
     isSync: boolean = false,
-    skipPackageJson: boolean = false
+    packageBumpType?: BumpType
 ): Promise<{ results: BumpResult[]; gitWorkflowResult?: GitWorkflowResult }> {
     const results: BumpResult[] = [];
     const versions = await getCurrentVersions();
@@ -167,7 +168,7 @@ export async function executeBatchOperations(
                                 type: PlatformType.PACKAGE,
                                 rootPath,
                                 targetVersion: customVersions?.packageJson,
-                                bumpType: customVersions?.packageJson ? undefined : bumpType,
+                                bumpType: customVersions?.packageJson ? undefined : (packageBumpType ?? bumpType),
                             });
                             break;
 
@@ -263,7 +264,8 @@ async function executeBatchMode(
         options.withGit,
         options.customVersions,
         options.isSync || false,
-        options.skipPackageJson || false
+        options.skipPackageJson || false,
+        options.packageBumpType
     );
 
     let gitConfig;
@@ -329,7 +331,7 @@ async function executeBatchMode(
         options.bumpType,
         options.customVersions,
         options.isSync || false,
-        options.skipPackageJson || false
+        options.packageBumpType
     );
 
     if (gitConfig) {
@@ -438,12 +440,13 @@ async function executeVersionTasks(
         try {
             const targetVersion =
                 options.customVersions?.packageJson || (options.isSync ? versions.packageJson : undefined);
+
             tasks.push(
                 updatePlatformVersion({
                     type: PlatformType.PACKAGE,
                     rootPath: options.rootPath,
                     targetVersion,
-                    bumpType: targetVersion ? undefined : options.packageBumpType || options.bumpType,
+                    bumpType: targetVersion ? undefined : (options.packageBumpType ?? options.bumpType),
                 })
             );
         } catch (error) {
