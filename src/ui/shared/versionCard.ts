@@ -53,6 +53,11 @@ export function generateVersionCardHTML(
                 <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
             </svg>`;
             break;
+        case Platform.EXPO:
+            iconSvg = `<svg class="icon-svg" viewBox="0 0 24 22">
+                <path d="M11.39 8.269c.19-.277.397-.312.565-.312.168 0 .447.035.637.312 1.49 2.03 3.95 6.075 5.765 9.06 1.184 1.945 2.093 3.44 2.28 3.63.7.714 1.66.269 2.218-.541.549-.797.701-1.357.701-1.954 0-.407-7.958-15.087-8.759-16.309C14.027.98 13.775.683 12.457.683h-.988c-1.315 0-1.505.297-2.276 1.472C8.392 3.377.433 18.057.433 18.463c0 .598.153 1.158.703 1.955.558.81 1.518 1.255 2.218.54.186-.19 1.095-1.684 2.279-3.63 1.815-2.984 4.267-7.029 5.758-9.06z"/>
+            </svg>`;
+            break;
         case Platform.GIT:
             iconSvg = `<svg class="icon-svg" viewBox="0 0 24 24">
                 <path d="M21.62 11.108l-8.731-8.729c-.78-.78-2.047-.78-2.827 0l-1.814 1.814 2.3 2.3c.83-.28 1.777-.095 2.435.563.664.664.848 1.614.564 2.435l2.218 2.218c.83-.28 1.777-.095 2.435.563.93.93.93 2.438 0 3.367-.93.93-2.438.93-3.367 0-.696-.696-.864-1.719-.503-2.58l-2.068-2.068v5.441c.227.112.437.262.618.442.93.93.93 2.438 0 3.367-.93.93-2.438.93-3.367 0-.93-.93-.93-2.438 0-3.367.23-.23.498-.403.786-.525v-5.493c-.288-.122-.556-.295-.786-.525-.697-.697-.864-1.722-.5-2.584l-2.27-2.27-5.993 5.993c-.78.78-.78 2.047 0 2.827l8.729 8.729c.78.78 2.047.78 2.827 0l8.729-8.729c.78-.78.78-2.047 0-2.827z"/>
@@ -108,6 +113,31 @@ export function generateVersionCardHTML(
                 } else {
                     messageContent =
                         '<span style="color: var(--vscode-errorForeground);">❌ Not found - android/app/build.gradle missing or invalid</span>';
+                }
+                break;
+
+            case Platform.EXPO:
+                if (data.newVersion && data.oldVersion) {
+                    const newVersionMatch = data.newVersion.match(/^(.+) \(iOS: (.+), Android: (.+)\)$/);
+                    const oldVersionMatch = data.oldVersion.match(/^(.+) \(iOS: (.+), Android: (.+)\)$/);
+                    if (newVersionMatch && oldVersionMatch) {
+                        messageContent = `<strong>Version:</strong> ${oldVersionMatch[1]} → ${newVersionMatch[1]}<br>
+                                       <strong>iOS Build Number:</strong> ${oldVersionMatch[2]} → ${newVersionMatch[2]}<br>
+                                       <strong>Android Version Code:</strong> ${oldVersionMatch[3]} → ${newVersionMatch[3]}`;
+                    } else {
+                        messageContent = `<strong>Version:</strong> ${data.oldVersion} → ${data.newVersion}`;
+                    }
+                } else if (data.version) {
+                    messageContent = `<strong>Version:</strong> ${data.version}`;
+                    if (data.versionCode) {
+                        messageContent += `<br><strong>Android Version Code:</strong> ${data.versionCode}`;
+                    }
+                    if (data.buildNumber) {
+                        messageContent += `<br><strong>iOS Build Number:</strong> ${data.buildNumber}`;
+                    }
+                } else {
+                    messageContent =
+                        '<span style="color: var(--vscode-errorForeground);">❌ Not found - app.json missing or invalid</span>';
                 }
                 break;
 

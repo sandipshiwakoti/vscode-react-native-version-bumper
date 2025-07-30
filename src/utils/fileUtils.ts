@@ -6,6 +6,10 @@ import { getPackageJsonName } from '../services/platformService';
 import { ProjectType } from '../types';
 
 export async function detectProjectType(rootPath: string): Promise<ProjectType> {
+    if (isExpoProject(rootPath)) {
+        return ProjectType.EXPO;
+    }
+
     const androidPath = path.join(rootPath, FILE_PATTERNS.ANDROID_FOLDER);
     const iosPath = path.join(rootPath, FILE_PATTERNS.IOS_FOLDER);
     const hasAndroid = fs.existsSync(androidPath);
@@ -17,6 +21,23 @@ export function isReactNativeProject(rootPath: string): boolean {
     const androidPath = path.join(rootPath, FILE_PATTERNS.ANDROID_FOLDER);
     const iosPath = path.join(rootPath, FILE_PATTERNS.IOS_FOLDER);
     return fs.existsSync(androidPath) || fs.existsSync(iosPath);
+}
+
+export function isExpoProject(rootPath: string): boolean {
+    const appJsonPath = path.join(rootPath, FILE_EXTENSIONS.APP_JSON);
+    const appConfigJsPath = path.join(rootPath, FILE_EXTENSIONS.APP_CONFIG_JS);
+    const appConfigTsPath = path.join(rootPath, FILE_EXTENSIONS.APP_CONFIG_TS);
+
+    if (fs.existsSync(appJsonPath)) {
+        try {
+            const appJson = JSON.parse(fs.readFileSync(appJsonPath, 'utf8'));
+            if (appJson.expo) {
+                return true;
+            }
+        } catch {}
+    }
+
+    return fs.existsSync(appConfigJsPath) || fs.existsSync(appConfigTsPath);
 }
 
 export function hasAndroidProject(rootPath: string): boolean {
@@ -42,8 +63,7 @@ export function getAppName(rootPath: string): string | null {
                 return appJson.expo.name;
             }
         }
-        // eslint-disable-next-line unused-imports/no-unused-vars
-    } catch (error) {}
+    } catch {}
 
     try {
         const packageName = getPackageJsonName(rootPath);
@@ -52,8 +72,7 @@ export function getAppName(rootPath: string): string | null {
                 .replace(REGEX_PATTERNS.PACKAGE_NAME_CLEAN, '')
                 .replace(REGEX_PATTERNS.FIRST_CHAR_UPPER, (c: string) => c.toUpperCase());
         }
-        // eslint-disable-next-line unused-imports/no-unused-vars
-    } catch (error) {}
+    } catch {}
 
     try {
         const iosPath = path.join(rootPath, FILE_PATTERNS.IOS_FOLDER);
@@ -64,8 +83,7 @@ export function getAppName(rootPath: string): string | null {
                 return xcodeprojDir.replace(FILE_EXTENSIONS.XCODEPROJ, '');
             }
         }
-        // eslint-disable-next-line unused-imports/no-unused-vars
-    } catch (error) {}
+    } catch {}
 
     return null;
 }
@@ -109,8 +127,7 @@ export async function findInfoPlistPath(iosPath: string): Promise<string | null>
                 possiblePlistPaths.push(plistPath);
             }
         });
-        // eslint-disable-next-line unused-imports/no-unused-vars
-    } catch (error) {}
+    } catch {}
 
     return possiblePlistPaths.find((checkPath) => fs.existsSync(checkPath)) || null;
 }

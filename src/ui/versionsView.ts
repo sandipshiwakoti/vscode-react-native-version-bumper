@@ -1,6 +1,9 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
 
-import { readIOSVersionInfo } from '../services/platformService';
+import { CONFIG, EXTENSION_ID } from '../constants';
+import { hasEASAutoIncrement, readIOSVersionInfo } from '../services/platformService';
 import { IOSVersionInfo, Platform, ProjectType, ProjectVersions } from '../types';
 import { getAppName } from '../utils/fileUtils';
 
@@ -13,9 +16,10 @@ export async function generateVersionsHTML(
     logoUri?: vscode.Uri,
     rootPath?: string
 ): Promise<string> {
+    const projectTypeLabel = projectType === ProjectType.EXPO ? 'Expo' : 'React Native';
     const headerHTML = generatePageHeaderHTML({
         title: 'React Native Version Bumper',
-        subtitle: `Version Overview - ${projectType.replace('-', ' ')}`,
+        subtitle: `Version Overview - ${projectTypeLabel}`,
         logoUri: logoUri,
     });
 
@@ -111,18 +115,21 @@ export async function generateVersionsHTML(
                         <svg class="summary-icon" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M12 2.5L2 7v10l10 5 10-5V7l-10-4.5zM12 4.5L19.5 8L12 11.5L4.5 8L12 4.5zM4 9.5l7 3.5v7l-7-3.5v-7zm16 0v7l-7 3.5v-7l7-3.5z"/>
                         </svg>
-                        <span>Project Type: <strong>${projectType === 'react-native' ? 'React Native' : projectType.replace('-', ' ')}</strong></span>
+                        <span>Project Type: <strong>${projectType === ProjectType.EXPO ? 'Expo' : projectType === 'react-native' ? 'React Native' : projectType.replace('-', ' ')}</strong></span>
                     </div>
                     <div class="summary-item">
                         <svg class="summary-icon" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                         </svg>
                         <span>Sync Status: <strong>${(() => {
-                            const allVersions = [
-                                versions.packageJson,
-                                versions.android?.versionName,
-                                versions.ios?.version,
-                            ].filter(Boolean);
+                            const allVersions =
+                                projectType === ProjectType.EXPO
+                                    ? [versions.packageJson, versions.expo?.version].filter(Boolean)
+                                    : [
+                                          versions.packageJson,
+                                          versions.android?.versionName,
+                                          versions.ios?.version,
+                                      ].filter(Boolean);
                             const uniqueVersions = [...new Set(allVersions)];
                             return uniqueVersions.length <= 1 && allVersions.length > 1
                                 ? 'Synced'
@@ -141,6 +148,52 @@ export async function generateVersionsHTML(
         version: versions.packageJson,
         location: 'package.json',
     });
+
+    if (projectType === ProjectType.EXPO && versions.expo) {
+        const config = vscode.workspace.getConfiguration(EXTENSION_ID);
+        const syncNativeFiles = config.get(CONFIG.EXPO_SYNC_NATIVE_FILES, false);
+
+        let message = '';
+        if (syncNativeFiles) {
+            message = 'Native files sync enabled';
+        }
+
+        if (rootPath) {
+            const { hasAutoIncrement, profiles } = hasEASAutoIncrement(rootPath);
+            if (hasAutoIncrement) {
+                const easMessage =
+                    profiles.length === 1
+                        ? `⚠️ EAS auto-increment enabled (${profiles[0]})`
+                        : `⚠️ EAS auto-increment enabled (${profiles.join(', ')})`;
+                message = message ? `${message} • ${easMessage}` : easMessage;
+            }
+        }
+
+        let configLocation = 'app.json';
+        if (rootPath) {
+            const appConfigTsPath = path.join(rootPath, 'app.config.ts');
+            const appConfigJsPath = path.join(rootPath, 'app.config.js');
+            const appJsonPath = path.join(rootPath, 'app.json');
+
+            if (fs.existsSync(appConfigTsPath)) {
+                configLocation = 'app.config.ts';
+            } else if (fs.existsSync(appConfigJsPath)) {
+                configLocation = 'app.config.js';
+            } else if (fs.existsSync(appJsonPath)) {
+                configLocation = 'app.json';
+            }
+        }
+
+        html += generateVersionCardHTML({
+            platform: Platform.EXPO,
+            available: !!versions.expo,
+            version: versions.expo.version,
+            buildNumber: versions.expo.iosBuildNumber,
+            versionCode: versions.expo.androidVersionCode,
+            location: configLocation,
+            message: message,
+        });
+    }
 
     html += generateVersionCardHTML({
         platform: Platform.ANDROID,

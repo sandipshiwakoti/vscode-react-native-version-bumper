@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
 
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -281,6 +283,27 @@ export async function generateResultsHTML(
                 break;
             case Platform.IOS:
                 location = iosPath;
+                break;
+            case Platform.EXPO:
+                const workspaceFolders = vscode.workspace.workspaceFolders;
+                if (workspaceFolders) {
+                    const rootPath = workspaceFolders[0].uri.fsPath;
+                    const appConfigTsPath = path.join(rootPath, 'app.config.ts');
+                    const appConfigJsPath = path.join(rootPath, 'app.config.js');
+                    const appJsonPath = path.join(rootPath, 'app.json');
+
+                    if (fs.existsSync(appConfigTsPath)) {
+                        location = 'app.config.ts';
+                    } else if (fs.existsSync(appConfigJsPath)) {
+                        location = 'app.config.js';
+                    } else if (fs.existsSync(appJsonPath)) {
+                        location = 'app.json';
+                    } else {
+                        location = 'app.json';
+                    }
+                } else {
+                    location = 'app.json';
+                }
                 break;
         }
 

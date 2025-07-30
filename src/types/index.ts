@@ -9,6 +9,7 @@ export enum BumpType {
 
 export enum ProjectType {
     REACT_NATIVE = 'react-native',
+    EXPO = 'expo',
     UNKNOWN = 'unknown',
 }
 
@@ -16,6 +17,7 @@ export enum Platform {
     PACKAGE_JSON = 'Package.json',
     ANDROID = 'Android',
     IOS = 'iOS',
+    EXPO = 'Expo',
     GIT = 'Git',
 }
 
@@ -23,12 +25,14 @@ export enum PlatformType {
     ANDROID = 'android',
     IOS = 'ios',
     PACKAGE = 'package',
+    EXPO = 'expo',
 }
 
 export enum SyncSource {
     PACKAGE_JSON = 'package.json',
     ANDROID = 'android',
     IOS = 'ios',
+    EXPO = 'expo',
     CUSTOM = 'custom',
 }
 
@@ -66,6 +70,11 @@ export interface ProjectVersions {
     packageJson?: string;
     android?: { versionCode: number; versionName: string };
     ios?: { buildNumber: string; version: string };
+    expo?: {
+        version: string;
+        iosBuildNumber?: string;
+        androidVersionCode?: number;
+    };
 }
 export interface AndroidVersionInfo {
     versionCode: number;
@@ -174,10 +183,43 @@ export interface PlatformConfig {
     targetVersion?: string;
     buildNumber?: number;
     bumpType?: BumpType;
+    runtimeSyncNative?: boolean;
 }
 
 export interface PackageJsonContent {
     version?: string;
     name?: string;
     [key: string]: unknown;
+}
+
+export interface ExpoConfig {
+    version?: string;
+    expo?: {
+        version?: string;
+        ios?: {
+            buildNumber?: string;
+            [key: string]: unknown;
+        };
+        android?: {
+            versionCode?: number;
+            [key: string]: unknown;
+        };
+        [key: string]: unknown;
+    };
+    [key: string]: unknown;
+}
+
+export interface EASConfig {
+    build?: {
+        [profileName: string]: {
+            autoIncrement?: boolean | 'version' | 'buildNumber';
+            [key: string]: unknown;
+        };
+    };
+    [key: string]: unknown;
+}
+
+export interface EASBuildProfile {
+    name: string;
+    autoIncrement?: boolean | 'version' | 'buildNumber';
 }

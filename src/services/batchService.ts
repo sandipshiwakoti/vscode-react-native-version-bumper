@@ -14,7 +14,7 @@ import {
     PlatformType,
     ProjectVersions,
 } from '../types';
-import { detectProjectType, hasAndroidProject, hasIOSProject } from '../utils/fileUtils';
+import { detectProjectType, hasAndroidProject, hasIOSProject, isExpoProject } from '../utils/fileUtils';
 import { bumpSemanticVersion, getCurrentVersions } from '../utils/versionUtils';
 
 import { collectGitConfiguration, executeGitOperationsWithProgress, executeGitWorkflow } from './gitService';
@@ -28,6 +28,7 @@ export async function createBatchExecutionPlan(
     customVersions?: {
         android?: { version: string; buildNumber?: number };
         ios?: { version: string; buildNumber?: number };
+        expo?: { version: string };
         packageJson?: string;
     },
     isSync: boolean = false,
@@ -62,9 +63,59 @@ export async function createBatchExecutionPlan(
         }
     }
 
-    if (!config.get(CONFIG.SKIP_ANDROID) && versions.android) {
-        const oldVersion = versions.android.versionName;
-        const oldBuildNumber = versions.android.versionCode;
+    const isExpo = isExpoProject(rootPath);
+    const syncNativeFiles = config.get(CONFIG.EXPO_SYNC_NATIVE_FILES, false);
+
+    if (isExpo && versions.expo) {
+        const oldVersion = versions.expo.version;
+        let newVersion: string;
+
+        if (customVersions?.expo) {
+            newVersion = customVersions.expo.version;
+        } else if (isSync) {
+            newVersion = customVersions?.expo?.version || oldVersion;
+        } else {
+            newVersion = bumpSemanticVersion(oldVersion, bumpType);
+        }
+
+        if (oldVersion !== newVersion || !isSync) {
+            let description = `Expo: ${oldVersion} → ${newVersion}`;
+
+            const expoBuildUpdates: string[] = [];
+
+            if (versions.expo.androidVersionCode !== undefined) {
+                const newAndroidVersionCode = versions.expo.androidVersionCode + 1;
+                expoBuildUpdates.push(
+                    `Android Version Code: ${versions.expo.androidVersionCode} → ${newAndroidVersionCode}`
+                );
+            }
+
+            if (versions.expo.iosBuildNumber !== undefined) {
+                const newIosBuildNumber = parseInt(versions.expo.iosBuildNumber) + 1;
+                expoBuildUpdates.push(`iOS Build Number: ${versions.expo.iosBuildNumber} → ${newIosBuildNumber}`);
+            }
+
+            if (expoBuildUpdates.length > 0) {
+                description += `\n${expoBuildUpdates.join('\n')}`;
+            }
+
+            operations.push({
+                type: OperationType.VERSION,
+                platform: Platform.EXPO,
+                action: isSync ? 'Sync version' : 'Update version',
+                oldValue: oldVersion,
+                newValue: newVersion,
+                description: description,
+            });
+        }
+    }
+
+    const shouldUpdateAndroid =
+        !config.get(CONFIG.SKIP_ANDROID) && versions.android && (!isExpo || syncNativeFiles || customVersions?.android);
+
+    if (shouldUpdateAndroid) {
+        const oldVersion = versions.android!.versionName;
+        const oldBuildNumber = versions.android!.versionCode;
         let newVersion: string;
         let newBuildNumber: number;
 
@@ -74,6 +125,11 @@ export async function createBatchExecutionPlan(
         } else if (isSync) {
             newVersion = customVersions?.android?.version || oldVersion;
             newBuildNumber = oldBuildNumber + 1;
+        } else if (isExpo && syncNativeFiles && versions.expo) {
+            newVersion = customVersions?.expo?.version || bumpSemanticVersion(versions.expo.version, bumpType);
+            newBuildNumber = versions.expo.androidVersionCode
+                ? versions.expo.androidVersionCode + 1
+                : oldBuildNumber + 1;
         } else {
             newVersion = bumpSemanticVersion(oldVersion, bumpType);
             newBuildNumber = oldBuildNumber + 1;
@@ -89,9 +145,12 @@ export async function createBatchExecutionPlan(
         });
     }
 
-    if (!config.get(CONFIG.SKIP_IOS) && versions.ios) {
-        const oldVersion = versions.ios.version;
-        const oldBuildNumber = versions.ios.buildNumber;
+    const shouldUpdateIOS =
+        !config.get(CONFIG.SKIP_IOS) && versions.ios && (!isExpo || syncNativeFiles || customVersions?.ios);
+
+    if (shouldUpdateIOS) {
+        const oldVersion = versions.ios!.version;
+        const oldBuildNumber = versions.ios!.buildNumber;
         let newVersion: string;
         let newBuildNumber: number;
 
@@ -103,6 +162,11 @@ export async function createBatchExecutionPlan(
         } else if (isSync) {
             newVersion = customVersions?.ios?.version || oldVersion;
             newBuildNumber = parseInt(oldBuildNumber) + 1;
+        } else if (isExpo && syncNativeFiles && versions.expo) {
+            newVersion = customVersions?.expo?.version || bumpSemanticVersion(versions.expo.version, bumpType);
+            newBuildNumber = versions.expo.iosBuildNumber
+                ? parseInt(versions.expo.iosBuildNumber) + 1
+                : parseInt(oldBuildNumber) + 1;
         } else {
             newVersion = bumpSemanticVersion(oldVersion, bumpType);
             newBuildNumber = parseInt(oldBuildNumber) + 1;
@@ -134,6 +198,7 @@ export async function executeBatchOperations(
     customVersions?: {
         android?: { version: string; buildNumber?: number };
         ios?: { version: string; buildNumber?: number };
+        expo?: { version: string };
         packageJson?: string;
     },
     isSync: boolean = false,
@@ -141,6 +206,9 @@ export async function executeBatchOperations(
 ): Promise<{ results: BumpResult[]; gitWorkflowResult?: GitWorkflowResult }> {
     const results: BumpResult[] = [];
     const versions = await getCurrentVersions();
+    const config = vscode.workspace.getConfiguration(EXTENSION_ID);
+    const isExpo = isExpoProject(rootPath);
+    const syncNativeFiles = config.get(CONFIG.EXPO_SYNC_NATIVE_FILES, false);
 
     return await vscode.window.withProgress(
         {
@@ -173,28 +241,61 @@ export async function executeBatchOperations(
                             break;
 
                         case Platform.ANDROID:
-                            result = await updatePlatformVersion({
-                                type: PlatformType.ANDROID,
-                                rootPath,
-                                targetVersion:
-                                    isSync || customVersions?.android
-                                        ? customVersions?.android?.version || versions.android!.versionName
-                                        : undefined,
-                                buildNumber: customVersions?.android?.buildNumber,
-                                bumpType: isSync || customVersions?.android ? undefined : bumpType,
-                            });
+                            if (isExpo && syncNativeFiles && !customVersions?.android) {
+                                result = {
+                                    platform: Platform.ANDROID,
+                                    success: true,
+                                    oldVersion: op.oldValue,
+                                    newVersion: op.newValue,
+                                    message: 'Updated by Expo sync',
+                                };
+                            } else {
+                                result = await updatePlatformVersion({
+                                    type: PlatformType.ANDROID,
+                                    rootPath,
+                                    targetVersion:
+                                        isSync || customVersions?.android
+                                            ? customVersions?.android?.version || versions.android!.versionName
+                                            : undefined,
+                                    buildNumber: customVersions?.android?.buildNumber,
+                                    bumpType: isSync || customVersions?.android ? undefined : bumpType,
+                                });
+                            }
                             break;
 
                         case Platform.IOS:
+                            if (isExpo && syncNativeFiles && !customVersions?.ios) {
+                                result = {
+                                    platform: Platform.IOS,
+                                    success: true,
+                                    oldVersion: op.oldValue,
+                                    newVersion: op.newValue,
+                                    message: 'Updated by Expo sync',
+                                };
+                            } else {
+                                result = await updatePlatformVersion({
+                                    type: PlatformType.IOS,
+                                    rootPath,
+                                    targetVersion:
+                                        isSync || customVersions?.ios
+                                            ? customVersions?.ios?.version || versions.ios!.version
+                                            : undefined,
+                                    buildNumber: customVersions?.ios?.buildNumber,
+                                    bumpType: isSync || customVersions?.ios ? undefined : bumpType,
+                                });
+                            }
+                            break;
+
+                        case Platform.EXPO:
                             result = await updatePlatformVersion({
-                                type: PlatformType.IOS,
+                                type: PlatformType.EXPO,
                                 rootPath,
                                 targetVersion:
-                                    isSync || customVersions?.ios
-                                        ? customVersions?.ios?.version || versions.ios!.version
+                                    isSync || customVersions?.expo
+                                        ? customVersions?.expo?.version || versions.expo!.version
                                         : undefined,
-                                buildNumber: customVersions?.ios?.buildNumber,
-                                bumpType: isSync || customVersions?.ios ? undefined : bumpType,
+                                bumpType: isSync || customVersions?.expo ? undefined : bumpType,
+                                runtimeSyncNative: !!(customVersions?.android || customVersions?.ios),
                             });
                             break;
 

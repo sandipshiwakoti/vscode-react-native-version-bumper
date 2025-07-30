@@ -4,7 +4,12 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 
 import { DEFAULT_VALUES, VERSION_PART_INDICES } from '../constants';
-import { getAndroidVersionInfo, getPackageJsonVersion, readIOSVersionInfo } from '../services/platformService';
+import {
+    getAndroidVersionInfo,
+    getExpoVersionDetails,
+    getPackageJsonVersion,
+    readIOSVersionInfo,
+} from '../services/platformService';
 import { BumpType, ProjectVersions } from '../types';
 
 const execAsync = promisify(exec);
@@ -26,12 +31,20 @@ export async function getCurrentVersions(): Promise<ProjectVersions> {
             versions.android = androidVersion;
         }
 
-        // Read iOS version using centralized utility
         const iosVersionInfo = await readIOSVersionInfo(rootPath);
         if (iosVersionInfo) {
             versions.ios = {
                 buildNumber: iosVersionInfo.buildNumber,
                 version: iosVersionInfo.version,
+            };
+        }
+
+        const expoVersionDetails = getExpoVersionDetails(rootPath);
+        if (expoVersionDetails) {
+            versions.expo = {
+                version: expoVersionDetails.version,
+                iosBuildNumber: expoVersionDetails.iosBuildNumber,
+                androidVersionCode: expoVersionDetails.androidVersionCode,
             };
         }
     } catch (error) {
@@ -76,8 +89,7 @@ export async function getLatestGitTagVersion(rootPath: string): Promise<string> 
                     return versionMatch[1];
                 }
             }
-            // eslint-disable-next-line unused-imports/no-unused-vars
-        } catch (describeError) {
+        } catch {
             console.log('getLatestGitTagVersion: git describe failed, trying git tag list approach');
         }
 
@@ -120,8 +132,7 @@ export async function getLatestGitTagVersion(rootPath: string): Promise<string> 
         }
 
         return DEFAULT_VALUES.SEMANTIC_VERSION;
-        // eslint-disable-next-line unused-imports/no-unused-vars
-    } catch (error) {
+    } catch {
         try {
             const versions = await getCurrentVersions();
             const fallbackVersion = versions.packageJson || DEFAULT_VALUES.SEMANTIC_VERSION;

@@ -1,13 +1,15 @@
 import * as vscode from 'vscode';
 
 import { isCodeLensEnabled } from '../commands/toggleCodeLens';
-import { COMMANDS, CONFIG, DEFAULT_VALUES, EXTENSION_ID, FILE_EXTENSIONS, FILE_PATTERNS } from '../constants';
+import { COMMANDS, CONFIG, DEFAULT_VALUES, EXTENSION_ID, FILE_EXTENSIONS } from '../constants';
 import { Platform } from '../types';
-import { isReactNativeProject } from '../utils/fileUtils';
+import { isExpoProject, isReactNativeProject } from '../utils/fileUtils';
 import { getCurrentVersions } from '../utils/versionUtils';
 
 import {
     getAndroidCodeLenses,
+    getAppConfigCodeLenses,
+    getExpoCodeLenses,
     getIOSCodeLenses,
     getPackageJsonCodeLenses,
     getPackageJsonName,
@@ -35,6 +37,7 @@ export function initializeStatusBar(): void {
     documentSaveListener = vscode.workspace.onDidSaveTextDocument((document) => {
         if (
             document.fileName.endsWith(FILE_EXTENSIONS.PACKAGE_JSON) ||
+            document.fileName.endsWith(FILE_EXTENSIONS.APP_JSON) ||
             document.fileName.endsWith(FILE_EXTENSIONS.BUILD_GRADLE) ||
             document.fileName.endsWith(FILE_EXTENSIONS.INFO_PLIST) ||
             document.fileName.endsWith(FILE_EXTENSIONS.PROJECT_PBXPROJ)
@@ -66,6 +69,24 @@ function setupFileWatchers(): void {
     infoPlistWatcher.onDidDelete(() => updateStatusBar());
     fileWatchers.push(infoPlistWatcher);
 
+    const appJsonWatcher = vscode.workspace.createFileSystemWatcher('**/app.json');
+    appJsonWatcher.onDidChange(() => updateStatusBar());
+    appJsonWatcher.onDidCreate(() => updateStatusBar());
+    appJsonWatcher.onDidDelete(() => updateStatusBar());
+    fileWatchers.push(appJsonWatcher);
+
+    const appConfigWatcher = vscode.workspace.createFileSystemWatcher('**/app.config.{js,ts}');
+    appConfigWatcher.onDidChange(() => updateStatusBar());
+    appConfigWatcher.onDidCreate(() => updateStatusBar());
+    appConfigWatcher.onDidDelete(() => updateStatusBar());
+    fileWatchers.push(appConfigWatcher);
+
+    const easJsonWatcher = vscode.workspace.createFileSystemWatcher('**/eas.json');
+    easJsonWatcher.onDidChange(() => updateStatusBar());
+    easJsonWatcher.onDidCreate(() => updateStatusBar());
+    easJsonWatcher.onDidDelete(() => updateStatusBar());
+    fileWatchers.push(easJsonWatcher);
+
     const pbxprojWatcher = vscode.workspace.createFileSystemWatcher('**/project.pbxproj');
     pbxprojWatcher.onDidChange(() => updateStatusBar());
     pbxprojWatcher.onDidCreate(() => updateStatusBar());
@@ -88,7 +109,10 @@ export async function updateStatusBar(): Promise<void> {
 
     const rootPath = workspaceFolders[0].uri.fsPath;
 
-    if (!isReactNativeProject(rootPath)) {
+    const isExpo = isExpoProject(rootPath);
+    const isReactNative = isReactNativeProject(rootPath);
+
+    if (!isExpo && !isReactNative) {
         statusBarItem.hide();
         return;
     }
@@ -107,31 +131,51 @@ export async function updateStatusBar(): Promise<void> {
         if (versions.packageJson) {
             platforms.push('Package.json');
         }
-        if (versions.android) {
-            platforms.push(Platform.ANDROID);
-        }
-        if (versions.ios) {
-            platforms.push(Platform.IOS);
+        if (isExpo && versions.expo) {
+            platforms.push(Platform.EXPO);
+        } else {
+            if (versions.android) {
+                platforms.push(Platform.ANDROID);
+            }
+            if (versions.ios) {
+                platforms.push(Platform.IOS);
+            }
         }
 
-        const allVersions = [versions.packageJson, versions.android?.versionName, versions.ios?.version].filter(
-            Boolean
-        );
+        const allVersions =
+            isExpo && versions.expo
+                ? [versions.packageJson, versions.expo.version].filter(Boolean)
+                : [versions.packageJson, versions.android?.versionName, versions.ios?.version].filter(Boolean);
         const uniqueVersions = [...new Set(allVersions)];
         const isSynced = uniqueVersions.length <= 1 && allVersions.length > 1;
 
-        statusBarItem.text = `$(arrow-circle-up) Version Bumper: v${packageVersion}`;
-
-        let tooltip = `React Native Version Bumper\n\n`;
-        tooltip += `Project: ${projectName}\n`;
+        const projectType = isExpo ? 'Expo' : 'React Native';
+        statusBarItem.text = `$(arrow-circle-up) Version Bumper: ${projectType}`;
+        let tooltip = `${projectType} Version Bumper\n\n`;
+        tooltip += `Project: ${projectName} (${projectType})\n`;
         tooltip += `Package.json: ${packageVersion}\n`;
-        if (versions.android) {
-            tooltip += `Android: ${versions.android.versionName} (${versions.android.versionCode})\n`;
+
+        if (isExpo && versions.expo) {
+            const buildInfo = [];
+            if (versions.expo.iosBuildNumber) {
+                buildInfo.push(`iOS: ${versions.expo.iosBuildNumber}`);
+            }
+            if (versions.expo.androidVersionCode) {
+                buildInfo.push(`Android: ${versions.expo.androidVersionCode}`);
+            }
+            const buildStr = buildInfo.length > 0 ? ` (${buildInfo.join(', ')})` : '';
+            tooltip += `Expo: ${versions.expo.version}${buildStr}\n`;
+        } else {
+            if (versions.android) {
+                tooltip += `Android: ${versions.android.versionName} (${versions.android.versionCode})\n`;
+            }
+            if (versions.ios) {
+                tooltip += `iOS: ${versions.ios.version} (${versions.ios.buildNumber})\n`;
+            }
         }
-        if (versions.ios) {
-            tooltip += `iOS: ${versions.ios.version} (${versions.ios.buildNumber})\n`;
-        }
-        tooltip += `\nPlatforms: ${platforms.join(', ')} (${platforms.length}/3)\n`;
+
+        const maxPlatforms = isExpo ? 2 : 3;
+        tooltip += `\nPlatforms: ${platforms.join(', ')} (${platforms.length}/${maxPlatforms})\n`;
         if (allVersions.length > 1) {
             tooltip += `Sync Status: ${isSynced ? 'Synced ✅' : 'Different versions ⚠️'}\n`;
         }
@@ -167,6 +211,7 @@ export function initializeCodeLensProvider(): vscode.CodeLensProvider {
             e.document.fileName.endsWith(FILE_EXTENSIONS.PACKAGE_JSON) ||
             e.document.fileName.endsWith(FILE_EXTENSIONS.BUILD_GRADLE) ||
             e.document.fileName.endsWith(FILE_EXTENSIONS.INFO_PLIST) ||
+            e.document.fileName.endsWith(FILE_EXTENSIONS.APP_JSON) ||
             e.document.fileName.endsWith(FILE_EXTENSIONS.PROJECT_PBXPROJ)
         ) {
             onDidChangeCodeLensesEmitter.fire();
@@ -176,10 +221,20 @@ export function initializeCodeLensProvider(): vscode.CodeLensProvider {
     return {
         onDidChangeCodeLenses: onDidChangeCodeLensesEmitter.event,
         provideCodeLenses: async (document: vscode.TextDocument): Promise<vscode.CodeLens[]> => {
-            if (!isCodeLensEnabled()) {
+            const fileName = document.fileName;
+            if (
+                !fileName.endsWith('.json') &&
+                !fileName.endsWith('.gradle') &&
+                !fileName.endsWith('.plist') &&
+                !fileName.endsWith('.js') &&
+                !fileName.endsWith('.ts')
+            ) {
                 return [];
             }
 
+            if (!isCodeLensEnabled()) {
+                return [];
+            }
             if (document.fileName.endsWith(FILE_EXTENSIONS.PACKAGE_JSON)) {
                 return getPackageJsonCodeLenses(document);
             }
@@ -190,6 +245,17 @@ export function initializeCodeLensProvider(): vscode.CodeLensProvider {
 
             if (document.fileName.endsWith(FILE_EXTENSIONS.INFO_PLIST)) {
                 return await getIOSCodeLenses(document);
+            }
+
+            if (document.fileName.endsWith(FILE_EXTENSIONS.APP_JSON)) {
+                return getExpoCodeLenses(document);
+            }
+
+            if (
+                document.fileName.endsWith(FILE_EXTENSIONS.APP_CONFIG_JS) ||
+                document.fileName.endsWith(FILE_EXTENSIONS.APP_CONFIG_TS)
+            ) {
+                return getAppConfigCodeLenses(document);
             }
 
             return [];
@@ -215,14 +281,7 @@ export function disposeCodeLensProvider(): void {
 export function registerCodeLensProvider(context: vscode.ExtensionContext): vscode.Disposable {
     const provider = initializeCodeLensProvider();
 
-    const disposable = vscode.languages.registerCodeLensProvider(
-        [
-            { language: 'json', pattern: FILE_PATTERNS.PACKAGE_JSON_PATTERN },
-            { pattern: FILE_PATTERNS.BUILD_GRADLE_PATTERN },
-            { pattern: FILE_PATTERNS.INFO_PLIST_PATTERN },
-        ],
-        provider
-    );
+    const disposable = vscode.languages.registerCodeLensProvider('*', provider);
 
     context.subscriptions.push(disposable);
     return disposable;

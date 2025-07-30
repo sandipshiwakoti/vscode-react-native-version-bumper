@@ -45,9 +45,10 @@ export const CONFIG = {
     GIT_SKIP_TAG: 'git.skipTag',
     GIT_SKIP_PUSH: 'git.skipPush',
     GIT_BRANCH_NAME_TEMPLATE: 'git.branchNameTemplate',
-    GIT_COMMIT_MESSAGE_TEMPLATE: 'git.commitMessageTemplate',
+    GIT_COMMIT_MESSAGE_PREFIX: 'git.commitMessagePrefix',
     GIT_TAG_NAME_TEMPLATE: 'git.tagNameTemplate',
     BATCH_MODE: 'batchMode',
+    EXPO_SYNC_NATIVE_FILES: 'expo.syncNativeFiles',
 } as const;
 
 export const CODELENS = {
@@ -62,6 +63,9 @@ export const FILE_EXTENSIONS = {
     XCODEPROJ: '.xcodeproj',
     XCWORKSPACE: '.xcworkspace',
     APP_JSON: 'app.json',
+    APP_CONFIG_JS: 'app.config.js',
+    APP_CONFIG_TS: 'app.config.ts',
+    EAS_JSON: 'eas.json',
     PROJECT_PBXPROJ: 'project.pbxproj',
 } as const;
 
@@ -69,6 +73,8 @@ export const FILE_PATTERNS = {
     PACKAGE_JSON_PATTERN: '**/package.json',
     BUILD_GRADLE_PATTERN: '**/build.gradle',
     INFO_PLIST_PATTERN: '**/Info.plist',
+    APP_JSON_PATTERN: '**/app.json',
+    APP_CONFIG_PATTERN: '**/app.config.{js,ts}',
     ANDROID_BUILD_GRADLE_DEFAULT: 'android/app/build.gradle',
     IOS_FOLDER: 'ios',
     ANDROID_FOLDER: 'android',
@@ -144,7 +150,7 @@ export const BUMP_TYPE_LABELS = {
 } as const;
 
 export const TEMPLATES = {
-    GIT_COMMIT_MESSAGE: 'chore: bump version to {platformUpdates}',
+    GIT_COMMIT_MESSAGE_PREFIX: 'chore: bump version to ',
     GIT_BRANCH_PREFIX: 'release/',
     GIT_TAG_NAME: 'v{version}',
 } as const;

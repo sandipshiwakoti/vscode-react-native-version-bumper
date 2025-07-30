@@ -11,7 +11,7 @@ export async function bumpVersionByType(type: BumpType): Promise<void> {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
         vscode.window.showInformationMessage(
-            'Please open a version file (package.json, build.gradle, or Info.plist) to bump its version'
+            'Please open a version file (package.json, build.gradle, Info.plist, app.json, or app.config.js/ts) to bump its version'
         );
         return;
     }
@@ -97,9 +97,16 @@ export async function bumpVersionByType(type: BumpType): Promise<void> {
                         }
                     }
                     result = await updatePlatformVersion({ type: PlatformType.IOS, rootPath, bumpType: type });
+                } else if (filePath.endsWith(FILE_EXTENSIONS.APP_JSON)) {
+                    result = await updatePlatformVersion({ type: PlatformType.EXPO, rootPath, bumpType: type });
+                } else if (
+                    filePath.endsWith(FILE_EXTENSIONS.APP_CONFIG_JS) ||
+                    filePath.endsWith(FILE_EXTENSIONS.APP_CONFIG_TS)
+                ) {
+                    result = await updatePlatformVersion({ type: PlatformType.EXPO, rootPath, bumpType: type });
                 } else {
                     vscode.window.showInformationMessage(
-                        `Please open a version file (${FILE_EXTENSIONS.PACKAGE_JSON}, ${FILE_EXTENSIONS.BUILD_GRADLE}, or iOS ${FILE_EXTENSIONS.INFO_PLIST}) to bump its version`
+                        `Please open a version file (${FILE_EXTENSIONS.PACKAGE_JSON}, ${FILE_EXTENSIONS.BUILD_GRADLE}, iOS ${FILE_EXTENSIONS.INFO_PLIST}, ${FILE_EXTENSIONS.APP_JSON}, or app.config.js/ts) to bump its version`
                     );
                     return;
                 }
@@ -110,7 +117,6 @@ export async function bumpVersionByType(type: BumpType): Promise<void> {
                     vscode.window.showInformationMessage(
                         `${result.platform} version bumped successfully: ${result.message}`
                     );
-                    // Refresh CodeLens to show updated version information
                     refreshCodeLenses();
                 } else {
                     vscode.window.showErrorMessage(`Failed to bump version: ${result?.error || 'Unknown error'}`);

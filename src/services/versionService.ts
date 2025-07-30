@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import { CONFIG, DEFAULT_VALUES, EXTENSION_ID, REGEX_PATTERNS } from '../constants';
 import { BumpResult, BumpType, ProjectVersions, SyncOption, SyncSource, VersionOperationOptions } from '../types';
 import { showBumpResults } from '../ui/resultsView';
-import { hasAndroidProject, hasIOSProject } from '../utils/fileUtils';
+import { hasAndroidProject, hasIOSProject, isExpoProject } from '../utils/fileUtils';
 import {
     bumpSemanticVersion,
     getCurrentVersions,
@@ -26,13 +26,14 @@ export async function executeVersionBump(options: VersionOperationOptions): Prom
     }
 
     const rootPath = workspaceFolders[0].uri.fsPath;
+    const isExpo = isExpoProject(rootPath);
     const hasAndroid = hasAndroidProject(rootPath);
     const hasIOS = hasIOSProject(rootPath);
 
-    if (!hasAndroid && !hasIOS) {
+    if (!isExpo && !hasAndroid && !hasIOS) {
         const errorMessage = isSync
-            ? 'No React Native projects found. This extension requires at least one React Native platform (android/ or ios/ folder) to be present.'
-            : 'No React Native platforms detected. Please ensure you have:\n• Android: android/app/build.gradle file\n• iOS: ios/ folder with Info.plist file\n\nAt least one platform is required for version bumping.';
+            ? 'No React Native or Expo projects found. This extension requires at least one platform to be present.'
+            : 'No React Native or Expo platforms detected. Please ensure you have:\n• Expo: app.json with expo config\n• Android: android/app/build.gradle file\n• iOS: ios/ folder with Info.plist file\n\nAt least one platform is required for version bumping.';
 
         vscode.window.showErrorMessage(errorMessage);
         return;
@@ -42,9 +43,9 @@ export async function executeVersionBump(options: VersionOperationOptions): Prom
         const versions = await getCurrentVersions();
 
         if (isSync) {
-            await handleSyncOperation(rootPath, versions, hasAndroid, hasIOS, withGit, context, config);
+            await handleSyncOperation(rootPath, versions, isExpo, hasAndroid, hasIOS, withGit, context, config);
         } else {
-            await handleBumpOperation(rootPath, versions, hasAndroid, hasIOS, withGit, context, config);
+            await handleBumpOperation(rootPath, versions, isExpo, hasAndroid, hasIOS, withGit, context, config);
         }
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -56,6 +57,7 @@ export async function executeVersionBump(options: VersionOperationOptions): Prom
 async function handleBumpOperation(
     rootPath: string,
     versions: ProjectVersions,
+    isExpo: boolean,
     hasAndroid: boolean,
     hasIOS: boolean,
     withGit: boolean,
@@ -64,26 +66,56 @@ async function handleBumpOperation(
 ) {
     const androidVersion = versions?.android ? versions.android.versionName : DEFAULT_VALUES.SEMANTIC_VERSION;
     const iosVersion = versions.ios ? versions.ios.version : DEFAULT_VALUES.SEMANTIC_VERSION;
+    const expoVersion = versions.expo ? versions.expo.version : DEFAULT_VALUES.SEMANTIC_VERSION;
     const packageJsonVersion = versions.packageJson || DEFAULT_VALUES.SEMANTIC_VERSION;
 
     const getPlatformLabel = (bumpType: BumpType) => {
         const platforms: string[] = [];
-        if (!config?.get(CONFIG.SKIP_ANDROID) && hasAndroid && versions?.android) {
-            platforms.push(`Android: v${bumpSemanticVersion(androidVersion, bumpType)}`);
+
+        if (isExpo && versions.expo) {
+            const syncNativeFiles = config?.get(CONFIG.EXPO_SYNC_NATIVE_FILES, false);
+            const expoLabel = `Expo: v${bumpSemanticVersion(expoVersion, bumpType)}`;
+
+            if (syncNativeFiles) {
+                const syncPlatforms: string[] = [];
+                if (hasAndroid && !config?.get(CONFIG.SKIP_ANDROID)) {
+                    syncPlatforms.push('Android');
+                }
+                if (hasIOS && !config?.get(CONFIG.SKIP_IOS)) {
+                    syncPlatforms.push('iOS');
+                }
+
+                if (syncPlatforms.length > 0) {
+                    platforms.push(`${expoLabel} (syncs to ${syncPlatforms.join(' & ')})`);
+                } else {
+                    platforms.push(expoLabel);
+                }
+            } else {
+                platforms.push(expoLabel);
+            }
+        } else {
+            if (!config?.get(CONFIG.SKIP_ANDROID) && hasAndroid && versions?.android) {
+                platforms.push(`Android: v${bumpSemanticVersion(androidVersion, bumpType)}`);
+            }
+            if (!config?.get(CONFIG.SKIP_IOS) && hasIOS && versions.ios) {
+                platforms.push(`iOS: v${bumpSemanticVersion(iosVersion, bumpType)}`);
+            }
         }
-        if (!config?.get(CONFIG.SKIP_IOS) && hasIOS && versions.ios) {
-            platforms.push(`iOS: v${bumpSemanticVersion(iosVersion, bumpType)}`);
-        }
+
         return platforms.length > 0 ? platforms.join(', ') : 'No platforms available';
     };
 
     if (getPlatformLabel(BumpType.PATCH) === 'No platforms available') {
         const missingPlatforms: string[] = [];
-        if (!hasAndroid) {
-            missingPlatforms.push('Android (android/app/build.gradle not found)');
-        }
-        if (!hasIOS) {
-            missingPlatforms.push('iOS (ios/ folder not found)');
+        if (isExpo) {
+            missingPlatforms.push('Expo (app.json with expo config not found)');
+        } else {
+            if (!hasAndroid) {
+                missingPlatforms.push('Android (android/app/build.gradle not found)');
+            }
+            if (!hasIOS) {
+                missingPlatforms.push('iOS (ios/ folder not found)');
+            }
         }
 
         vscode.window.showErrorMessage(`Cannot bump version. Missing platform files: ${missingPlatforms.join(', ')}`);
@@ -95,11 +127,19 @@ async function handleBumpOperation(
             { label: `Patch (${getPlatformLabel(BumpType.PATCH)})`, value: BumpType.PATCH },
             { label: `Minor (${getPlatformLabel(BumpType.MINOR)})`, value: BumpType.MINOR },
             { label: `Major (${getPlatformLabel(BumpType.MAJOR)})`, value: BumpType.MAJOR },
-            { label: 'Custom', value: BumpType.CUSTOM, description: 'Set specific version numbers for each platform' },
+            {
+                label: 'Custom',
+                value: BumpType.CUSTOM,
+                description: isExpo
+                    ? 'Set specific Expo version (will sync to native files if enabled)'
+                    : 'Set specific version numbers for each platform',
+            },
         ],
         {
             placeHolder:
-                'Choose how to increment versions (Patch: bug fixes, Minor: new features, Major: breaking changes)',
+                isExpo && config?.get(CONFIG.EXPO_SYNC_NATIVE_FILES, false)
+                    ? 'Choose how to increment Expo version (will sync to Android/iOS native files)'
+                    : 'Choose how to increment versions (Patch: bug fixes, Minor: new features, Major: breaking changes)',
         }
     );
 
@@ -111,16 +151,88 @@ async function handleBumpOperation(
         | {
               android?: { version: string; buildNumber?: number };
               ios?: { version: string; buildNumber?: number };
+              expo?: { version: string };
               packageJson?: string;
           }
         | undefined;
 
     if (bumpType.value === BumpType.CUSTOM) {
-        const result = await getCustomVersions(versions, hasAndroid, hasIOS, androidVersion, iosVersion, config);
+        const result = await getCustomVersions(
+            versions,
+            isExpo,
+            hasAndroid,
+            hasIOS,
+            androidVersion,
+            iosVersion,
+            expoVersion,
+            config
+        );
         if (result === null) {
             return;
         }
         customVersions = result;
+    } else if (isExpo && versions.expo) {
+        const syncNativeFiles = config?.get(CONFIG.EXPO_SYNC_NATIVE_FILES, false);
+
+        if (!syncNativeFiles && (hasAndroid || hasIOS)) {
+            const nativePlatforms: string[] = [];
+            if (hasAndroid && !config?.get(CONFIG.SKIP_ANDROID)) {
+                nativePlatforms.push('Android');
+            }
+            if (hasIOS && !config?.get(CONFIG.SKIP_IOS)) {
+                nativePlatforms.push('iOS');
+            }
+
+            if (nativePlatforms.length > 0) {
+                const syncChoice = await vscode.window.showQuickPick(
+                    [
+                        {
+                            label: 'Yes, sync to native files',
+                            value: true,
+                            description: `Update ${nativePlatforms.join(' and ')} native files with Expo version`,
+                        },
+                        {
+                            label: 'No, Expo only',
+                            value: false,
+                            description: 'Only update app.json, skip native files',
+                        },
+                    ],
+                    {
+                        placeHolder: `Sync Expo version to ${nativePlatforms.join(' and ')} native files?`,
+                    }
+                );
+
+                if (syncChoice === undefined) {
+                    return;
+                }
+
+                if (syncChoice.value) {
+                    const newExpoVersion = bumpSemanticVersion(expoVersion, bumpType.value);
+
+                    customVersions = {
+                        expo: { version: newExpoVersion },
+                        android:
+                            hasAndroid && !config?.get(CONFIG.SKIP_ANDROID) && versions.android
+                                ? {
+                                      version: newExpoVersion,
+                                      buildNumber: versions.expo.androidVersionCode
+                                          ? versions.expo.androidVersionCode + 1
+                                          : versions.android.versionCode + 1,
+                                  }
+                                : undefined,
+                        ios:
+                            hasIOS && !config?.get(CONFIG.SKIP_IOS) && versions.ios
+                                ? {
+                                      version: newExpoVersion,
+                                      buildNumber: versions.expo.iosBuildNumber
+                                          ? parseInt(versions.expo.iosBuildNumber) + 1
+                                          : parseInt(versions.ios.buildNumber) + 1,
+                                  }
+                                : undefined,
+                    };
+                }
+            }
+        }
     }
 
     const packageBumpType = await getPackageJsonBumpType(versions, packageJsonVersion, config);
@@ -128,7 +240,6 @@ async function handleBumpOperation(
         return;
     }
 
-    // Check if all platforms are disabled (including user's choice to skip package.json)
     const skipPackageJson = config?.get(CONFIG.SKIP_PACKAGE_JSON) || packageBumpType.skipPackageJson;
     if (skipPackageJson && config?.get(CONFIG.SKIP_ANDROID) && config?.get(CONFIG.SKIP_IOS)) {
         vscode.window.showWarningMessage(
@@ -153,6 +264,7 @@ async function handleBumpOperation(
 async function handleSyncOperation(
     rootPath: string,
     versions: ProjectVersions,
+    isExpo: boolean,
     hasAndroid: boolean,
     hasIOS: boolean,
     withGit: boolean,
@@ -163,11 +275,26 @@ async function handleSyncOperation(
     if (versions.packageJson && !config?.get(CONFIG.SKIP_PACKAGE_JSON)) {
         availableVersions.push(versions.packageJson);
     }
-    if (versions.android && hasAndroid && !config?.get(CONFIG.SKIP_ANDROID)) {
-        availableVersions.push(versions.android.versionName);
-    }
-    if (versions.ios && hasIOS && !config?.get(CONFIG.SKIP_IOS)) {
-        availableVersions.push(versions.ios.version);
+    const syncNativeFiles = config?.get(CONFIG.EXPO_SYNC_NATIVE_FILES, false);
+
+    if (isExpo && versions.expo) {
+        availableVersions.push(versions.expo.version);
+
+        if (syncNativeFiles) {
+            if (versions.android && hasAndroid && !config?.get(CONFIG.SKIP_ANDROID)) {
+                availableVersions.push(versions.android.versionName);
+            }
+            if (versions.ios && hasIOS && !config?.get(CONFIG.SKIP_IOS)) {
+                availableVersions.push(versions.ios.version);
+            }
+        }
+    } else {
+        if (versions.android && hasAndroid && !config?.get(CONFIG.SKIP_ANDROID)) {
+            availableVersions.push(versions.android.versionName);
+        }
+        if (versions.ios && hasIOS && !config?.get(CONFIG.SKIP_IOS)) {
+            availableVersions.push(versions.ios.version);
+        }
     }
 
     const uniqueVersions = [...new Set(availableVersions)];
@@ -181,7 +308,7 @@ async function handleSyncOperation(
         return;
     }
 
-    const syncOptions = buildSyncOptions(versions, hasAndroid, hasIOS, config);
+    const syncOptions = buildSyncOptions(versions, isExpo, hasAndroid, hasIOS, config);
     if (syncOptions.length === 1) {
         vscode.window.showWarningMessage(
             'Only custom version option available. All platforms seem to have the same version or are disabled.'
@@ -204,7 +331,7 @@ async function handleSyncOperation(
 
     const batchMode = config?.get(CONFIG.BATCH_MODE, true);
     if (!batchMode) {
-        const syncDetails = buildSyncDetails(versions, targetVersion, hasAndroid, hasIOS, config);
+        const syncDetails = buildSyncDetails(versions, targetVersion, isExpo, hasAndroid, hasIOS, config);
         const confirmMessage = `Sync all platforms to version ${targetVersion}?\n\n${syncDetails.join('\n')}`;
         const confirmed = await vscode.window.showInformationMessage(
             confirmMessage,
@@ -218,8 +345,9 @@ async function handleSyncOperation(
     }
 
     const customVersions = {
-        android: versions.android ? { version: targetVersion } : undefined,
-        ios: versions.ios ? { version: targetVersion } : undefined,
+        android: (!isExpo || syncNativeFiles) && versions.android ? { version: targetVersion } : undefined,
+        ios: (!isExpo || syncNativeFiles) && versions.ios ? { version: targetVersion } : undefined,
+        expo: isExpo && versions.expo ? { version: targetVersion } : undefined,
         packageJson: versions.packageJson ? targetVersion : undefined,
     };
 
@@ -238,52 +366,127 @@ async function handleSyncOperation(
 
 async function getCustomVersions(
     versions: ProjectVersions,
+    isExpo: boolean,
     hasAndroid: boolean,
     hasIOS: boolean,
     androidVersion: string,
     iosVersion: string,
+    expoVersion: string,
     config?: vscode.WorkspaceConfiguration
 ): Promise<{
     android?: { version: string; buildNumber?: number };
     ios?: { version: string; buildNumber?: number };
+    expo?: { version: string };
 } | null> {
     const customVersions: {
         android?: { version: string; buildNumber?: number };
         ios?: { version: string; buildNumber?: number };
+        expo?: { version: string };
     } = {};
 
-    if (!config?.get(CONFIG.SKIP_ANDROID) && hasAndroid && versions?.android) {
-        const customAndroidVersion = await getCustomVersionForPlatform('Android', androidVersion);
-        if (customAndroidVersion === null) {
+    const syncNativeFiles = config?.get(CONFIG.EXPO_SYNC_NATIVE_FILES, false);
+
+    if (isExpo && versions.expo) {
+        const customExpoVersion = await getCustomVersionForPlatform('Expo', expoVersion);
+        if (customExpoVersion === null) {
             return null;
         }
 
-        const customAndroidBuildNumber = await getCustomBuildNumber('Android', versions.android.versionCode);
-        if (customAndroidBuildNumber === null) {
-            return null;
-        }
-
-        customVersions.android = {
-            version: customAndroidVersion,
-            buildNumber: customAndroidBuildNumber,
+        customVersions.expo = {
+            version: customExpoVersion,
         };
-    }
 
-    if (!config?.get(CONFIG.SKIP_IOS) && hasIOS && versions.ios) {
-        const customIOSVersion = await getCustomVersionForPlatform('iOS', iosVersion);
-        if (customIOSVersion === null) {
-            return null;
+        let shouldSyncNative = syncNativeFiles;
+
+        if (!syncNativeFiles && (hasAndroid || hasIOS)) {
+            const nativePlatforms: string[] = [];
+            if (hasAndroid && !config?.get(CONFIG.SKIP_ANDROID)) {
+                nativePlatforms.push('Android');
+            }
+            if (hasIOS && !config?.get(CONFIG.SKIP_IOS)) {
+                nativePlatforms.push('iOS');
+            }
+
+            if (nativePlatforms.length > 0) {
+                const syncChoice = await vscode.window.showQuickPick(
+                    [
+                        {
+                            label: 'Yes, sync to native files',
+                            value: true,
+                            description: `Update ${nativePlatforms.join(' and ')} native files with Expo version`,
+                        },
+                        {
+                            label: 'No, Expo only',
+                            value: false,
+                            description: 'Only update app.json, skip native files',
+                        },
+                    ],
+                    {
+                        placeHolder: `Sync Expo version to ${nativePlatforms.join(' and ')} native files?`,
+                    }
+                );
+
+                if (syncChoice === undefined) {
+                    return null;
+                }
+
+                shouldSyncNative = syncChoice.value;
+            }
         }
 
-        const customIOSBuildNumber = await getCustomBuildNumber('iOS', versions.ios.buildNumber);
-        if (customIOSBuildNumber === null) {
-            return null;
+        if (shouldSyncNative) {
+            if (!config?.get(CONFIG.SKIP_ANDROID) && hasAndroid && versions?.android) {
+                customVersions.android = {
+                    version: customExpoVersion,
+                    buildNumber: versions.expo.androidVersionCode
+                        ? versions.expo.androidVersionCode + 1
+                        : versions.android.versionCode + 1,
+                };
+            }
+
+            if (!config?.get(CONFIG.SKIP_IOS) && hasIOS && versions.ios) {
+                customVersions.ios = {
+                    version: customExpoVersion,
+                    buildNumber: versions.expo.iosBuildNumber
+                        ? parseInt(versions.expo.iosBuildNumber) + 1
+                        : parseInt(versions.ios.buildNumber) + 1,
+                };
+            }
+        }
+    } else {
+        if (!config?.get(CONFIG.SKIP_ANDROID) && hasAndroid && versions?.android) {
+            const customAndroidVersion = await getCustomVersionForPlatform('Android', androidVersion);
+            if (customAndroidVersion === null) {
+                return null;
+            }
+
+            const customAndroidBuildNumber = await getCustomBuildNumber('Android', versions.android.versionCode);
+            if (customAndroidBuildNumber === null) {
+                return null;
+            }
+
+            customVersions.android = {
+                version: customAndroidVersion,
+                buildNumber: customAndroidBuildNumber,
+            };
         }
 
-        customVersions.ios = {
-            version: customIOSVersion,
-            buildNumber: customIOSBuildNumber,
-        };
+        if (!config?.get(CONFIG.SKIP_IOS) && hasIOS && versions.ios) {
+            const customIOSVersion = await getCustomVersionForPlatform('iOS', iosVersion);
+            if (customIOSVersion === null) {
+                return null;
+            }
+
+            const customIOSBuildNumber = await getCustomBuildNumber('iOS', versions.ios.buildNumber);
+            if (customIOSBuildNumber === null) {
+                return null;
+            }
+
+            customVersions.ios = {
+                version: customIOSVersion,
+                buildNumber: customIOSBuildNumber,
+            };
+        }
     }
 
     return customVersions;
@@ -338,6 +541,7 @@ async function getPackageJsonBumpType(
 
 function buildSyncOptions(
     versions: ProjectVersions,
+    isExpo: boolean,
     hasAndroid: boolean,
     hasIOS: boolean,
     config?: vscode.WorkspaceConfiguration
@@ -353,22 +557,34 @@ function buildSyncOptions(
         });
     }
 
-    if (versions.android && hasAndroid && !config?.get(CONFIG.SKIP_ANDROID)) {
+    if (isExpo && versions.expo) {
+        const syncNativeFiles = config?.get(CONFIG.EXPO_SYNC_NATIVE_FILES, false);
         syncOptions.push({
-            label: `Use Android version: ${versions.android.versionName}`,
-            description: 'Sync all platforms to match Android versionName',
-            version: versions.android.versionName,
-            source: SyncSource.ANDROID,
+            label: `Use Expo version: ${versions.expo.version}`,
+            description: syncNativeFiles
+                ? 'Sync all platforms to match Expo version (will sync Android/iOS native files)'
+                : 'Sync all platforms to match Expo version',
+            version: versions.expo.version,
+            source: SyncSource.EXPO,
         });
-    }
+    } else {
+        if (versions.android && hasAndroid && !config?.get(CONFIG.SKIP_ANDROID)) {
+            syncOptions.push({
+                label: `Use Android version: ${versions.android.versionName}`,
+                description: 'Sync all platforms to match Android versionName',
+                version: versions.android.versionName,
+                source: SyncSource.ANDROID,
+            });
+        }
 
-    if (versions.ios && hasIOS && !config?.get(CONFIG.SKIP_IOS)) {
-        syncOptions.push({
-            label: `Use iOS version: ${versions.ios.version}`,
-            description: 'Sync all platforms to match iOS version',
-            version: versions.ios.version,
-            source: SyncSource.IOS,
-        });
+        if (versions.ios && hasIOS && !config?.get(CONFIG.SKIP_IOS)) {
+            syncOptions.push({
+                label: `Use iOS version: ${versions.ios.version}`,
+                description: 'Sync all platforms to match iOS version',
+                version: versions.ios.version,
+                source: SyncSource.IOS,
+            });
+        }
     }
 
     syncOptions.push({
@@ -412,6 +628,7 @@ async function getTargetVersion(selectedOption: SyncOption, versions: ProjectVer
 function buildSyncDetails(
     versions: ProjectVersions,
     targetVersion: string,
+    isExpo: boolean,
     hasAndroid: boolean,
     hasIOS: boolean,
     config?: vscode.WorkspaceConfiguration
@@ -426,27 +643,57 @@ function buildSyncDetails(
         }
     }
 
-    if (versions.android && hasAndroid && !config?.get(CONFIG.SKIP_ANDROID)) {
-        if (versions.android.versionName !== targetVersion) {
-            syncDetails.push(
-                `Android: ${versions.android.versionName} → ${targetVersion} (build: ${versions.android.versionCode} → ${versions.android.versionCode + 1})`
-            );
-        } else {
-            syncDetails.push(
-                `Android: ${targetVersion} (build will increment: ${versions.android.versionCode} → ${versions.android.versionCode + 1})`
-            );
-        }
-    }
+    const syncNativeFiles = config?.get(CONFIG.EXPO_SYNC_NATIVE_FILES, false);
 
-    if (versions.ios && hasIOS && !config?.get(CONFIG.SKIP_IOS)) {
-        if (versions.ios.version !== targetVersion) {
-            syncDetails.push(
-                `iOS: ${versions.ios.version} → ${targetVersion} (build: ${versions.ios.buildNumber} → ${parseInt(versions.ios.buildNumber) + 1})`
-            );
+    if (isExpo && versions.expo) {
+        if (versions.expo.version !== targetVersion) {
+            syncDetails.push(`Expo: ${versions.expo.version} → ${targetVersion}`);
         } else {
-            syncDetails.push(
-                `iOS: ${targetVersion} (build will increment: ${versions.ios.buildNumber} → ${parseInt(versions.ios.buildNumber) + 1})`
-            );
+            syncDetails.push(`Expo: ${targetVersion} (no change)`);
+        }
+
+        if (syncNativeFiles) {
+            if (versions.android && hasAndroid && !config?.get(CONFIG.SKIP_ANDROID)) {
+                const newBuildNumber = versions.expo.androidVersionCode
+                    ? versions.expo.androidVersionCode + 1
+                    : versions.android.versionCode + 1;
+                syncDetails.push(
+                    `Android: ${versions.android.versionName} → ${targetVersion} (synced from Expo, build: ${versions.android.versionCode} → ${newBuildNumber})`
+                );
+            }
+
+            if (versions.ios && hasIOS && !config?.get(CONFIG.SKIP_IOS)) {
+                const newBuildNumber = versions.expo.iosBuildNumber
+                    ? parseInt(versions.expo.iosBuildNumber) + 1
+                    : parseInt(versions.ios.buildNumber) + 1;
+                syncDetails.push(
+                    `iOS: ${versions.ios.version} → ${targetVersion} (synced from Expo, build: ${versions.ios.buildNumber} → ${newBuildNumber})`
+                );
+            }
+        }
+    } else {
+        if (versions.android && hasAndroid && !config?.get(CONFIG.SKIP_ANDROID)) {
+            if (versions.android.versionName !== targetVersion) {
+                syncDetails.push(
+                    `Android: ${versions.android.versionName} → ${targetVersion} (build: ${versions.android.versionCode} → ${versions.android.versionCode + 1})`
+                );
+            } else {
+                syncDetails.push(
+                    `Android: ${targetVersion} (build will increment: ${versions.android.versionCode} → ${versions.android.versionCode + 1})`
+                );
+            }
+        }
+
+        if (versions.ios && hasIOS && !config?.get(CONFIG.SKIP_IOS)) {
+            if (versions.ios.version !== targetVersion) {
+                syncDetails.push(
+                    `iOS: ${versions.ios.version} → ${targetVersion} (build: ${versions.ios.buildNumber} → ${parseInt(versions.ios.buildNumber) + 1})`
+                );
+            } else {
+                syncDetails.push(
+                    `iOS: ${targetVersion} (build will increment: ${versions.ios.buildNumber} → ${parseInt(versions.ios.buildNumber) + 1})`
+                );
+            }
         }
     }
 
@@ -460,6 +707,7 @@ async function executeAndShowResults(
     customVersions?: {
         android?: { version: string; buildNumber?: number };
         ios?: { version: string; buildNumber?: number };
+        expo?: { version: string };
         packageJson?: string;
     },
     packageBumpType?: BumpType,

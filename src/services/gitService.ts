@@ -16,6 +16,7 @@ import {
     OperationType,
     Platform,
 } from '../types';
+import { isExpoProject } from '../utils/fileUtils';
 import { getPlaceholderValues, replacePlaceholders } from '../utils/helperUtils';
 import { bumpSemanticVersion, getLatestGitTagVersion } from '../utils/versionUtils';
 
@@ -57,12 +58,18 @@ export async function collectGitConfiguration(
         });
 
     const mainVersion = await getLatestGitTagVersion(rootPath);
+    const isExpo = isExpoProject(rootPath);
 
     const mockResults: BumpResult[] = [];
     operations
         .filter((op) => op.type === OperationType.VERSION)
         .forEach((op) => {
-            if (op.platform === 'Android' || op.platform === 'iOS') {
+            if (
+                op.platform === 'Android' ||
+                op.platform === 'iOS' ||
+                op.platform === 'Expo' ||
+                op.platform === 'Package.json'
+            ) {
                 mockResults.push({
                     platform: op.platform,
                     success: true,
@@ -73,7 +80,7 @@ export async function collectGitConfiguration(
             }
         });
 
-    const placeholderValues = getPlaceholderValues(bumpType, mockResults, mainVersion, versionMap, buildNumberMap);
+    const placeholderValues = getPlaceholderValues(bumpType, mockResults, mainVersion, versionMap);
 
     let shouldCreateBranch = config.get(CONFIG.GIT_AUTO_CREATE_BRANCH, false);
     if (!config.get(CONFIG.GIT_SKIP_BRANCH) && !shouldCreateBranch) {
@@ -94,38 +101,35 @@ export async function collectGitConfiguration(
         const isSyncOperation = operations.some((op) => op.action.includes('Sync'));
 
         if (isSyncOperation) {
-            const syncVersion = versionMap['Package.json'] || versionMap['Android'] || versionMap['iOS'] || mainVersion;
+            let syncVersion;
+            if (isExpo && versionMap['Expo']) {
+                syncVersion = versionMap['Expo'];
+            } else {
+                syncVersion = versionMap['Package.json'] || versionMap['Android'] || versionMap['iOS'] || mainVersion;
+            }
             defaultBranchName += `v${syncVersion}`;
         } else {
-            const availableVersions = [];
-            if (!skipPackageJson && versionMap['Package.json']) {
-                availableVersions.push({ platform: 'package', version: versionMap['Package.json'] });
-            }
-            if (!skipAndroid && versionMap['Android']) {
-                availableVersions.push({ platform: 'android', version: versionMap['Android'] });
-            }
-            if (!skipIOS && versionMap['iOS']) {
-                availableVersions.push({ platform: 'ios', version: versionMap['iOS'] });
-            }
-
-            const uniqueVersions = [...new Set(availableVersions.map((v) => v.version))];
-
-            if (uniqueVersions.length === 1 && availableVersions.length > 1) {
-                defaultBranchName += `v${uniqueVersions[0]}`;
-            } else if (!skipAndroid && !skipIOS && versionMap['Android'] && versionMap['iOS']) {
-                if (versionMap['Android'] === versionMap['iOS']) {
-                    defaultBranchName += `v${versionMap['Android']}`;
-                } else {
-                    defaultBranchName += `android-v${versionMap['Android']}-ios-v${versionMap['iOS']}`;
-                }
-            } else if (!skipAndroid && versionMap['Android']) {
-                defaultBranchName += `android-v${versionMap['Android']}`;
-            } else if (!skipIOS && versionMap['iOS']) {
-                defaultBranchName += `ios-v${versionMap['iOS']}`;
-            } else if (!skipPackageJson && versionMap['Package.json']) {
-                defaultBranchName += `v${versionMap['Package.json']}`;
+            if (isExpo && versionMap['Expo']) {
+                defaultBranchName += `v${versionMap['Expo']}`;
             } else {
-                defaultBranchName += `v${mainVersion}`;
+                const hasAndroid = !skipAndroid && versionMap['Android'];
+                const hasIOS = !skipIOS && versionMap['iOS'];
+
+                if (hasAndroid && hasIOS) {
+                    if (versionMap['Android'] === versionMap['iOS']) {
+                        defaultBranchName += `v${versionMap['Android']}`;
+                    } else {
+                        defaultBranchName += `android-v${versionMap['Android']}-ios-v${versionMap['iOS']}`;
+                    }
+                } else if (hasAndroid) {
+                    defaultBranchName += `android-v${versionMap['Android']}`;
+                } else if (hasIOS) {
+                    defaultBranchName += `ios-v${versionMap['iOS']}`;
+                } else if (!skipPackageJson && versionMap['Package.json']) {
+                    defaultBranchName += `v${versionMap['Package.json']}`;
+                } else {
+                    defaultBranchName += `v${mainVersion}`;
+                }
             }
         }
 
@@ -138,6 +142,7 @@ export async function collectGitConfiguration(
                 customBranchName !== 'release/' &&
                 customBranchName !== '' &&
                 !customBranchName.includes('unknown') &&
+                (!versionMap['Expo'] || customBranchName.includes(versionMap['Expo'])) &&
                 (!versionMap['Android'] || skipAndroid || customBranchName.includes(versionMap['Android'])) &&
                 (!versionMap['iOS'] || skipIOS || customBranchName.includes(versionMap['iOS'])) &&
                 (!versionMap['Package.json'] ||
@@ -163,24 +168,14 @@ export async function collectGitConfiguration(
         }
     }
 
-    const platforms: string[] = [];
-    if (!skipAndroid && versionMap['Android']) {
-        platforms.push(`android to v${versionMap['Android']} (${buildNumberMap['Android']})`);
-    }
-    if (!skipIOS && versionMap['iOS']) {
-        platforms.push(`ios to v${versionMap['iOS']} (${buildNumberMap['iOS']})`);
-    }
-    if (!skipPackageJson && versionMap['Package.json']) {
-        platforms.push(`package.json to v${versionMap['Package.json']}`);
-    }
+    const isSyncOperation = operations.some((op) => op.action.includes('Sync'));
+    const commitPrefix = config.get(
+        CONFIG.GIT_COMMIT_MESSAGE_PREFIX,
+        isSyncOperation ? 'chore: sync version to ' : TEMPLATES.GIT_COMMIT_MESSAGE_PREFIX
+    );
 
-    const fallbackCommitMessage =
-        platforms.length > 0
-            ? `chore: bump version to ${platforms.join(', ')}`
-            : `chore: bump version to v${mainVersion}`;
-
-    const commitMessageTemplate = config.get(CONFIG.GIT_COMMIT_MESSAGE_TEMPLATE, fallbackCommitMessage);
-    const templateCommitMessage = replacePlaceholders(commitMessageTemplate, placeholderValues);
+    const commitMessageTemplate = commitPrefix + placeholderValues.platformUpdates;
+    const templateCommitMessage = commitMessageTemplate;
 
     const commitMessage = await vscode.window.showInputBox({
         placeHolder: 'e.g., chore: bump version to 1.2.3',
@@ -538,6 +533,7 @@ export async function executeGitWorkflow(
         const skipAndroid = config.get(CONFIG.SKIP_ANDROID, false);
         const skipIOS = config.get(CONFIG.SKIP_IOS, false);
         const skipPackageJson = config.get(CONFIG.SKIP_PACKAGE_JSON, false);
+        const isExpo = isExpoProject(rootPath);
 
         const versionMap: { [platform: string]: string } = {};
         const buildNumberMap: { [platform: string]: string } = {};
@@ -549,7 +545,8 @@ export async function executeGitWorkflow(
                     r.newVersion &&
                     ((r.platform === 'Android' && !skipAndroid) ||
                         (r.platform === 'iOS' && !skipIOS) ||
-                        (r.platform === 'Package.json' && !skipPackageJson))
+                        (r.platform === 'Package.json' && !skipPackageJson) ||
+                        r.platform === 'Expo')
             )
             .map((r) => ({ platform: r.platform, newVersion: r.newVersion }));
 
@@ -585,7 +582,7 @@ export async function executeGitWorkflow(
 
         const mainVersion = await getLatestGitTagVersion(rootPath);
 
-        const placeholderValues = getPlaceholderValues(type, results, mainVersion, versionMap, buildNumberMap);
+        const placeholderValues = getPlaceholderValues(type, results, mainVersion, versionMap);
 
         let shouldCreateBranch = config.get(CONFIG.GIT_AUTO_CREATE_BRANCH, false);
         if (!config.get(CONFIG.GIT_SKIP_BRANCH) && !shouldCreateBranch) {
@@ -616,6 +613,9 @@ export async function executeGitWorkflow(
                 if (!skipPackageJson && versionMap['Package.json']) {
                     availableVersions.push({ platform: 'package', version: versionMap['Package.json'] });
                 }
+                if (versionMap['Expo']) {
+                    availableVersions.push({ platform: 'expo', version: versionMap['Expo'] });
+                }
                 if (!skipAndroid && versionMap['Android']) {
                     availableVersions.push({ platform: 'android', version: versionMap['Android'] });
                 }
@@ -623,24 +623,27 @@ export async function executeGitWorkflow(
                     availableVersions.push({ platform: 'ios', version: versionMap['iOS'] });
                 }
 
-                const uniqueVersions = [...new Set(availableVersions.map((v) => v.version))];
-
-                if (uniqueVersions.length === 1 && availableVersions.length > 1) {
-                    defaultBranchName += `v${uniqueVersions[0]}`;
-                } else if (!skipAndroid && !skipIOS && versionMap['Android'] && versionMap['iOS']) {
-                    if (versionMap['Android'] === versionMap['iOS']) {
-                        defaultBranchName += `v${versionMap['Android']}`;
-                    } else {
-                        defaultBranchName += `android-v${versionMap['Android']}-ios-v${versionMap['iOS']}`;
-                    }
-                } else if (!skipAndroid && versionMap['Android']) {
-                    defaultBranchName += `android-v${versionMap['Android']}`;
-                } else if (!skipIOS && versionMap['iOS']) {
-                    defaultBranchName += `ios-v${versionMap['iOS']}`;
-                } else if (!skipPackageJson && versionMap['Package.json']) {
-                    defaultBranchName += `v${versionMap['Package.json']}`;
+                if (isExpo && versionMap['Expo']) {
+                    defaultBranchName += `v${versionMap['Expo']}`;
                 } else {
-                    defaultBranchName += `v${mainVersion}`;
+                    const hasAndroid = !skipAndroid && versionMap['Android'];
+                    const hasIOS = !skipIOS && versionMap['iOS'];
+
+                    if (hasAndroid && hasIOS) {
+                        if (versionMap['Android'] === versionMap['iOS']) {
+                            defaultBranchName += `v${versionMap['Android']}`;
+                        } else {
+                            defaultBranchName += `android-v${versionMap['Android']}-ios-v${versionMap['iOS']}`;
+                        }
+                    } else if (hasAndroid) {
+                        defaultBranchName += `android-v${versionMap['Android']}`;
+                    } else if (hasIOS) {
+                        defaultBranchName += `ios-v${versionMap['iOS']}`;
+                    } else if (!skipPackageJson && versionMap['Package.json']) {
+                        defaultBranchName += `v${versionMap['Package.json']}`;
+                    } else {
+                        defaultBranchName += `v${mainVersion}`;
+                    }
                 }
             }
 
@@ -653,6 +656,7 @@ export async function executeGitWorkflow(
                     customBranchName !== 'release/' &&
                     customBranchName !== '' &&
                     !customBranchName.includes('unknown') &&
+                    (!versionMap['Expo'] || customBranchName.includes(versionMap['Expo'])) &&
                     (!versionMap['Android'] || skipAndroid || customBranchName.includes(versionMap['Android'])) &&
                     (!versionMap['iOS'] || skipIOS || customBranchName.includes(versionMap['iOS'])) &&
                     (!versionMap['Package.json'] ||
@@ -708,23 +712,17 @@ export async function executeGitWorkflow(
         }
 
         await execAsync('git add .', { cwd: rootPath });
-        const platforms: string[] = [];
-        if (!skipAndroid && versionMap['Android']) {
-            platforms.push(`android to v${versionMap['Android']} (${buildNumberMap['Android']})`);
-        }
-        if (!skipIOS && versionMap['iOS']) {
-            platforms.push(`ios to v${versionMap['iOS']} (${buildNumberMap['iOS']})`);
-        }
-        if (!skipPackageJson && versionMap['Package.json']) {
-            platforms.push(`package.json to v${versionMap['Package.json']}`);
-        }
-        commitMessage =
-            platforms.length > 0
-                ? `chore: bump version to ${platforms.join(', ')}`
-                : `chore: bump version to v${mainVersion}`;
 
-        const commitMessageTemplate = config.get(CONFIG.GIT_COMMIT_MESSAGE_TEMPLATE, commitMessage);
-        const defaultCommitMessage = replacePlaceholders(commitMessageTemplate, placeholderValues);
+        const isSyncOperation = results.some((result) => result.platform === 'SyncOperation');
+        const commitPrefix = config.get(
+            CONFIG.GIT_COMMIT_MESSAGE_PREFIX,
+            isSyncOperation ? 'chore: sync version to ' : TEMPLATES.GIT_COMMIT_MESSAGE_PREFIX
+        );
+
+        commitMessage = commitPrefix + placeholderValues.platformUpdates;
+
+        const commitMessageTemplate = commitMessage;
+        const defaultCommitMessage = commitMessageTemplate;
 
         const customCommitMessage = await vscode.window.showInputBox({
             placeHolder: 'e.g., chore: bump version to 1.2.3',
