@@ -600,6 +600,24 @@ async function executeVersionTasks(
             }
             break;
 
+        case 'expo':
+            if (versions.expo) {
+                const targetVersion = options.isSync
+                    ? options.customVersions?.packageJson || versions.expo.version
+                    : options.customVersions?.packageJson;
+
+                tasks.push(
+                    updatePlatformVersion({
+                        type: PlatformType.EXPO,
+                        rootPath: options.rootPath,
+                        targetVersion,
+                        bumpType: targetVersion ? undefined : options.bumpType,
+                        runtimeSyncNative: config.get(CONFIG.EXPO_SYNC_NATIVE_FILES, false),
+                    })
+                );
+            }
+            break;
+
         case 'unknown':
             tasks.push(
                 Promise.resolve({
