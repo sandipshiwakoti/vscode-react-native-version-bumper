@@ -99,6 +99,7 @@ suite('React Native Version Bumper Extension Tests', function () {
             CONFIG.IOS_INFO_PLIST_PATH,
             CONFIG.IOS_PROJECT_PB_XPROJ_PATH,
             CONFIG.BATCH_MODE,
+            CONFIG.EXPO_SYNC_NATIVE_FILES,
         ];
 
         for (const setting of settingsToReset) {
@@ -123,14 +124,21 @@ suite('React Native Version Bumper Extension Tests', function () {
     test('Bump all platforms together', async function () {
         // Configure extension to update all platforms
         await setExtensionSettings(EXTENSION_ID, {
-            skipAndroid: false,
-            skipIOS: false,
-            skipPackageJson: false,
-            batchMode: false,
+            [CONFIG.SKIP_ANDROID]: false,
+            [CONFIG.SKIP_IOS]: false,
+            [CONFIG.SKIP_PACKAGE_JSON]: false,
+            [CONFIG.BATCH_MODE]: false,
         });
 
         // Mock user responses: patch version bump, patch for package.json
         const originalShowQuickPick = createQuickPickMock(['Patch', 'Patch']);
+        const originalShowInformationMessage = vscode.window.showInformationMessage;
+        vscode.window.showInformationMessage = async (message: string, options?: any, ...items: string[]) => {
+            if (items.includes('Execute Changes')) {
+                return 'Execute Changes';
+            }
+            return originalShowInformationMessage(message, options, ...items);
+        };
 
         try {
             // Execute the version bump command
@@ -164,6 +172,7 @@ suite('React Native Version Bumper Extension Tests', function () {
 
             // Verify iOS Info.plist was updated
             const infoPlistContent = await fs.readFile(infoPlistPath, 'utf8');
+
             assert.match(
                 infoPlistContent,
                 /<string>1.0.1<\/string>/,
@@ -175,8 +184,8 @@ suite('React Native Version Bumper Extension Tests', function () {
                 'Expected CFBundleVersion to be incremented to 2 in iOS Info.plist'
             );
         } finally {
-            // Always restore the original QuickPick function
             vscode.window.showQuickPick = originalShowQuickPick;
+            vscode.window.showInformationMessage = originalShowInformationMessage;
         }
     });
 
@@ -303,6 +312,239 @@ suite('React Native Version Bumper Extension Tests', function () {
             );
         } finally {
             vscode.window.showQuickPick = originalShowQuickPick;
+        }
+    });
+
+    // Test 4: Expo with sync enabled and app.json
+    test('Expo with sync enabled and app.json', async function () {
+        const appJsonPath = path.join(workspacePath, 'app.json');
+        const appJsonContent = {
+            expo: {
+                name: 'TestApp',
+                slug: 'test-app',
+                version: '1.0.0',
+                android: {
+                    versionCode: 1,
+                },
+                ios: {
+                    buildNumber: '1',
+                },
+            },
+        };
+        await fs.writeFile(appJsonPath, JSON.stringify(appJsonContent, null, 2));
+
+        try {
+            await setExtensionSettings(EXTENSION_ID, {
+                [CONFIG.SKIP_ANDROID]: false,
+                [CONFIG.SKIP_IOS]: false,
+                [CONFIG.SKIP_PACKAGE_JSON]: false,
+                [CONFIG.EXPO_SYNC_NATIVE_FILES]: true,
+                [CONFIG.BATCH_MODE]: true,
+            });
+
+            const originalShowQuickPick = createQuickPickMock(['Patch', 'Patch']);
+            const originalShowInformationMessage = vscode.window.showInformationMessage;
+            vscode.window.showInformationMessage = async (message: string, options?: any, ...items: string[]) => {
+                if (items.includes('Execute Changes')) {
+                    return 'Execute Changes';
+                }
+                return originalShowInformationMessage(message, options, ...items);
+            };
+
+            try {
+                await vscode.commands.executeCommand(COMMANDS.BUMP_APP_VERSION);
+
+                if (vscode.env.uiKind === vscode.UIKind.Desktop) {
+                    await new Promise((resolve) => setTimeout(resolve, 10000));
+                }
+
+                // Verify package.json was updated
+                const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf8'));
+                assert.strictEqual(
+                    packageJson.version,
+                    '1.0.1',
+                    `Expected package.json version to be 1.0.1, but got ${packageJson.version}`
+                );
+
+                // Verify app.json was updated
+                const updatedAppJson = JSON.parse(await fs.readFile(appJsonPath, 'utf8'));
+                assert.strictEqual(
+                    updatedAppJson.expo.version,
+                    '1.0.1',
+                    `Expected app.json expo.version to be 1.0.1, but got ${updatedAppJson.expo.version}`
+                );
+                assert.strictEqual(
+                    updatedAppJson.expo.android.versionCode,
+                    2,
+                    `Expected app.json expo.android.versionCode to be 2, but got ${updatedAppJson.expo.android.versionCode}`
+                );
+                assert.strictEqual(
+                    updatedAppJson.expo.ios.buildNumber,
+                    '2',
+                    `Expected app.json expo.ios.buildNumber to be '2', but got ${updatedAppJson.expo.ios.buildNumber}`
+                );
+
+                // Verify Android build.gradle was updated
+                const buildGradleContent = await fs.readFile(buildGradlePath, 'utf8');
+                assert.match(
+                    buildGradleContent,
+                    /versionCode 2/,
+                    'Expected versionCode to be incremented to 2 in Android build.gradle'
+                );
+                assert.match(
+                    buildGradleContent,
+                    /versionName "1.0.1"/,
+                    'Expected versionName to be updated to 1.0.1 in Android build.gradle'
+                );
+
+                // Verify iOS Info.plist was updated
+                const infoPlistContent = await fs.readFile(infoPlistPath, 'utf8');
+                assert.match(
+                    infoPlistContent,
+                    /<string>1.0.1<\/string>/,
+                    'Expected CFBundleShortVersionString to be 1.0.1 in iOS Info.plist'
+                );
+                assert.match(
+                    infoPlistContent,
+                    /<string>2<\/string>/,
+                    'Expected CFBundleVersion to be incremented to 2 in iOS Info.plist'
+                );
+            } finally {
+                vscode.window.showQuickPick = originalShowQuickPick;
+                vscode.window.showInformationMessage = originalShowInformationMessage;
+            }
+        } finally {
+            try {
+                await fs.unlink(appJsonPath);
+            } catch {
+                // Ignore cleanup errors
+            }
+        }
+    });
+
+    // Test 5: Expo with sync disabled and app.config.js with EAS
+    test('Expo with sync disabled and app.config.js with EAS', async function () {
+        const appConfigJsPath = path.join(workspacePath, 'app.config.js');
+        const easJsonPath = path.join(workspacePath, 'eas.json');
+
+        const appConfigJsContent = `module.exports = {
+      expo: {
+        name: 'TestApp',
+        slug: 'test-app',
+        version: '1.0.0',
+        android: {
+          versionCode: 1,
+        },
+        ios: {
+          buildNumber: '1',
+        },
+      },
+    };`;
+        await fs.writeFile(appConfigJsPath, appConfigJsContent);
+
+        const easJsonContent = {
+            build: {
+                preview: {
+                    autoIncrement: true,
+                },
+                production: {
+                    autoIncrement: 'version',
+                },
+            },
+        };
+        await fs.writeFile(easJsonPath, JSON.stringify(easJsonContent, null, 2));
+
+        try {
+            await setExtensionSettings(EXTENSION_ID, {
+                [CONFIG.SKIP_ANDROID]: true,
+                [CONFIG.SKIP_IOS]: true,
+                [CONFIG.SKIP_PACKAGE_JSON]: false,
+                [CONFIG.EXPO_SYNC_NATIVE_FILES]: false,
+                [CONFIG.BATCH_MODE]: false,
+            });
+
+            const originalShowQuickPick = createQuickPickMock(['Patch', 'Patch']);
+            const originalShowWarningMessage = vscode.window.showWarningMessage;
+            vscode.window.showWarningMessage = async (message: string, options?: any, ...items: string[]) => {
+                if (items.includes('Yes, proceed anyway')) {
+                    return 'Yes, proceed anyway';
+                }
+                return originalShowWarningMessage(message, options, ...items);
+            };
+
+            try {
+                await vscode.commands.executeCommand(COMMANDS.BUMP_APP_VERSION);
+
+                if (vscode.env.uiKind === vscode.UIKind.Desktop) {
+                    await new Promise((resolve) => setTimeout(resolve, 10000));
+                }
+
+                // Verify package.json was updated
+                const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf8'));
+                assert.strictEqual(
+                    packageJson.version,
+                    '1.0.1',
+                    `Expected package.json version to be 1.0.1, but got ${packageJson.version}`
+                );
+
+                // Verify app.config.js was updated
+                const updatedAppConfigJs = await fs.readFile(appConfigJsPath, 'utf8');
+                assert.match(
+                    updatedAppConfigJs,
+                    /version:\s*['"`]1\.0\.1['"`]/,
+                    'Expected app.config.js version to be updated to 1.0.1'
+                );
+                assert.match(
+                    updatedAppConfigJs,
+                    /versionCode:\s*2/,
+                    'Expected app.config.js android.versionCode to be updated to 2'
+                );
+                assert.match(
+                    updatedAppConfigJs,
+                    /buildNumber:\s*['"`]2['"`]/,
+                    'Expected app.config.js ios.buildNumber to be updated to 2'
+                );
+
+                // Verify Android build.gradle was NOT updated
+                const buildGradleContent = await fs.readFile(buildGradlePath, 'utf8');
+                assert.match(
+                    buildGradleContent,
+                    /versionCode 1/,
+                    'Expected versionCode to remain unchanged at 1 in Android build.gradle'
+                );
+                assert.match(
+                    buildGradleContent,
+                    /versionName "1.0.0"/,
+                    'Expected versionName to remain unchanged at 1.0.0 in Android build.gradle'
+                );
+
+                // Verify iOS Info.plist was NOT updated
+                const infoPlistContent = await fs.readFile(infoPlistPath, 'utf8');
+                assert.match(
+                    infoPlistContent,
+                    /<string>1.0.0<\/string>/,
+                    'Expected CFBundleShortVersionString to remain unchanged at 1.0.0 in iOS Info.plist'
+                );
+                assert.match(
+                    infoPlistContent,
+                    /<string>1<\/string>/,
+                    'Expected CFBundleVersion to remain unchanged at 1 in iOS Info.plist'
+                );
+            } finally {
+                vscode.window.showQuickPick = originalShowQuickPick;
+                vscode.window.showWarningMessage = originalShowWarningMessage;
+            }
+        } finally {
+            try {
+                await fs.unlink(appConfigJsPath);
+            } catch {
+                // Ignore cleanup errors
+            }
+            try {
+                await fs.unlink(easJsonPath);
+            } catch {
+                // Ignore cleanup errors
+            }
         }
     });
 });
