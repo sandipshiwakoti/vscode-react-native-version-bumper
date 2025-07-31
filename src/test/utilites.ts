@@ -1,3 +1,5 @@
+import { TEST_TIMEOUTS } from '../constants';
+
 const vscode = require('vscode');
 const fs = require('fs/promises');
 
@@ -53,3 +55,10 @@ export const checkFileExists = async (filePath: string) => {
         return false;
     }
 };
+
+export async function waitForFileOperations(isComplex: boolean = false): Promise<void> {
+    if (vscode.env.uiKind === vscode.UIKind.Desktop) {
+        const delay = isComplex ? TEST_TIMEOUTS.COMPLEX_OPERATION_DELAY : TEST_TIMEOUTS.FILE_OPERATION_DELAY;
+        await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+}

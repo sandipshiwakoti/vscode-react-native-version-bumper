@@ -166,3 +166,9 @@ export const RELEASE_TEMPLATE_PATHS = [
     'RELEASE_TEMPLATE.md',
     'release_template.md',
 ];
+
+export const TEST_TIMEOUTS = {
+    SUITE_TIMEOUT: 30000,
+    FILE_OPERATION_DELAY: 5000,
+    COMPLEX_OPERATION_DELAY: 10000,
+} as const;

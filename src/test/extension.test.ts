@@ -1,6 +1,6 @@
-import { COMMANDS, CONFIG, EXTENSION_ID, EXTENSION_PUBLISHER_ID } from '../constants';
+import { COMMANDS, CONFIG, EXTENSION_ID, EXTENSION_PUBLISHER_ID, TEST_TIMEOUTS } from '../constants';
 
-import { checkFileExists, createQuickPickMock, setExtensionSettings } from './utilites';
+import { checkFileExists, createQuickPickMock, setExtensionSettings, waitForFileOperations } from './utilites';
 
 const assert = require('assert');
 const vscode = require('vscode');
@@ -12,7 +12,7 @@ const { runTests } = require('@vscode/test-electron');
 // Test suite for React Native Version Bumper Extension
 suite('React Native Version Bumper Extension Tests', function () {
     // Extended timeout for VS Code extension tests which can be slow
-    this.timeout(30000);
+    this.timeout(TEST_TIMEOUTS.SUITE_TIMEOUT);
 
     // Define all file paths used in tests
     const workspacePath = path.resolve(__dirname, '../../testWorkspace');
@@ -145,9 +145,7 @@ suite('React Native Version Bumper Extension Tests', function () {
             await vscode.commands.executeCommand(COMMANDS.BUMP_APP_VERSION);
 
             // Wait for file system operations to complete (only needed for desktop VS Code)
-            if (vscode.env.uiKind === vscode.UIKind.Desktop) {
-                await new Promise((resolve) => setTimeout(resolve, 10000));
-            }
+            await waitForFileOperations(true);
 
             // Verify package.json was updated
             const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf8'));
@@ -211,7 +209,7 @@ suite('React Native Version Bumper Extension Tests', function () {
 
             // Wait for file system operations to complete
             if (vscode.env.uiKind === vscode.UIKind.Desktop) {
-                await new Promise((resolve) => setTimeout(resolve, 5000));
+                await new Promise((resolve) => setTimeout(resolve, TEST_TIMEOUTS.FILE_OPERATION_DELAY));
             }
 
             // Verify package.json was NOT updated (should remain 1.0.0)
@@ -258,11 +256,11 @@ suite('React Native Version Bumper Extension Tests', function () {
         await setExtensionSettings(EXTENSION_ID, {
             [CONFIG.ANDROID_BUILD_GRADLE_PATH]: 'custom/build.gradle',
             [CONFIG.IOS_INFO_PLIST_PATH]: 'custom/Info.plist',
-            'ios.projectPbxprojPath': 'custom/project.pbxproj',
-            skipAndroid: true,
-            skipIOS: false,
-            skipPackageJson: true,
-            batchMode: false,
+            [CONFIG.IOS_PROJECT_PB_XPROJ_PATH]: 'custom/project.pbxproj',
+            [CONFIG.SKIP_ANDROID]: true,
+            [CONFIG.SKIP_IOS]: false,
+            [CONFIG.SKIP_PACKAGE_JSON]: true,
+            [CONFIG.BATCH_MODE]: false,
         });
 
         // Mock user responses
@@ -274,7 +272,7 @@ suite('React Native Version Bumper Extension Tests', function () {
 
             // Wait for file system operations to complete
             if (vscode.env.uiKind === vscode.UIKind.Desktop) {
-                await new Promise((resolve) => setTimeout(resolve, 5000));
+                await new Promise((resolve) => setTimeout(resolve, TEST_TIMEOUTS.FILE_OPERATION_DELAY));
             }
 
             // Verify package.json was NOT updated (should remain 1.0.0)
@@ -355,7 +353,7 @@ suite('React Native Version Bumper Extension Tests', function () {
                 await vscode.commands.executeCommand(COMMANDS.BUMP_APP_VERSION);
 
                 if (vscode.env.uiKind === vscode.UIKind.Desktop) {
-                    await new Promise((resolve) => setTimeout(resolve, 10000));
+                    await new Promise((resolve) => setTimeout(resolve, TEST_TIMEOUTS.COMPLEX_OPERATION_DELAY));
                 }
 
                 // Verify package.json was updated
@@ -476,7 +474,7 @@ suite('React Native Version Bumper Extension Tests', function () {
                 await vscode.commands.executeCommand(COMMANDS.BUMP_APP_VERSION);
 
                 if (vscode.env.uiKind === vscode.UIKind.Desktop) {
-                    await new Promise((resolve) => setTimeout(resolve, 10000));
+                    await new Promise((resolve) => setTimeout(resolve, TEST_TIMEOUTS.COMPLEX_OPERATION_DELAY));
                 }
 
                 // Verify package.json was updated
