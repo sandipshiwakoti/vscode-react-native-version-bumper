@@ -164,6 +164,11 @@
                     "default": true,
                     "description": "Show clickable version bump actions directly in your code files. When enabled, you'll see 'Bump Version' buttons above version lines in package.json, build.gradle, Info.plist, app.json, and app.config.js/ts files."
                 },
+                "reactNativeVersionBumper.showInStatusBar": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Show version information in the status bar. When enabled, displays current project type and version sync status in the VS Code status bar."
+                },
                 "reactNativeVersionBumper.skipPackageJson": {
                     "type": "boolean",
                     "default": false,
@@ -203,6 +208,11 @@
                     "type": "string",
                     "default": "chore: bump version to ",
                     "description": "Git commit message prefix. The system automatically adds the appropriate version suffix based on your project type. For Expo projects: 'v5.1.0'. For React Native: 'v2.0.0' (same versions) or 'Android v2.0.0, iOS v2.0.1' (different versions). Example: 'chore: bump version to ' becomes 'chore: bump version to v5.1.0'."
+                },
+                "reactNativeVersionBumper.git.syncCommitMessagePrefix": {
+                    "type": "string",
+                    "default": "chore: sync version to ",
+                    "description": "Git commit message prefix for sync operations. The system automatically adds the appropriate version suffix. Example: 'chore: sync version to ' becomes 'chore: sync version to v1.2.0'."
                 },
                 "reactNativeVersionBumper.git.skipBranch": {
                     "type": "boolean",
@@ -248,15 +258,15 @@
         }
     },
     "scripts": {
-        "vscode:prepublish": "bun compile",
+        "vscode:prepublish": "bun run compile",
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
-        "pretest": "bun compile && bun lint",
+        "pretest": "bun run compile && bun run lint",
         "lint": "eslint src --ext ts,js",
         "lint:fix": "eslint src --ext ts,js --fix",
         "format": "prettier --write \"src/**/*.{ts,json}\" \"*.{json,md,yml}\"",
         "format:check": "prettier --check \"src/**/*.{ts,json}\" \"*.{json,md,yml}\"",
-        "fix": "bun lint:fix && bun format",
+        "fix": "bun run lint:fix && bun run format",
         "test": "vscode-test",
         "package": "vsce package",
         "publish": "vsce publish",

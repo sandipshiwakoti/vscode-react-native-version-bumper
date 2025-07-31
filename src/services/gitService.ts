@@ -170,8 +170,8 @@ export async function collectGitConfiguration(
 
     const isSyncOperation = operations.some((op) => op.action.includes('Sync'));
     const commitPrefix = config.get(
-        CONFIG.GIT_COMMIT_MESSAGE_PREFIX,
-        isSyncOperation ? 'chore: sync version to ' : TEMPLATES.GIT_COMMIT_MESSAGE_PREFIX
+        isSyncOperation ? CONFIG.GIT_SYNC_COMMIT_MESSAGE_PREFIX : CONFIG.GIT_COMMIT_MESSAGE_PREFIX,
+        isSyncOperation ? TEMPLATES.GIT_SYNC_COMMIT_MESSAGE_PREFIX : TEMPLATES.GIT_COMMIT_MESSAGE_PREFIX
     );
 
     const commitMessageTemplate = commitPrefix + placeholderValues.platformUpdates;
@@ -467,7 +467,15 @@ export async function executeGitOperationsWithProgress(
                     gitMessage += `<br><strong>Tag:</strong> ${tagSuccess ? `Tagged ${gitConfig.tagName}` : '❌ Failed to create tag'}`;
                 }
                 if (gitConfig.shouldPush) {
-                    gitMessage += `<br><strong>Push:</strong> ${pushSuccess ? `Pushed ${gitConfig.shouldCreateBranch ? 'branch and tag' : 'changes and tag'} to remote` : '❌ Failed to push to remote'}`;
+                    let pushDescription = 'changes';
+                    if (gitConfig.shouldCreateBranch && tagSuccess) {
+                        pushDescription = 'branch and tag';
+                    } else if (gitConfig.shouldCreateBranch) {
+                        pushDescription = 'branch';
+                    } else if (tagSuccess) {
+                        pushDescription = 'tag';
+                    }
+                    gitMessage += `<br><strong>Push:</strong> ${pushSuccess ? `Pushed ${pushDescription} to remote` : '❌ Failed to push to remote'}`;
                 }
 
                 results.push({
@@ -715,8 +723,8 @@ export async function executeGitWorkflow(
 
         const isSyncOperation = results.some((result) => result.platform === 'SyncOperation');
         const commitPrefix = config.get(
-            CONFIG.GIT_COMMIT_MESSAGE_PREFIX,
-            isSyncOperation ? 'chore: sync version to ' : TEMPLATES.GIT_COMMIT_MESSAGE_PREFIX
+            isSyncOperation ? CONFIG.GIT_SYNC_COMMIT_MESSAGE_PREFIX : CONFIG.GIT_COMMIT_MESSAGE_PREFIX,
+            isSyncOperation ? TEMPLATES.GIT_SYNC_COMMIT_MESSAGE_PREFIX : TEMPLATES.GIT_COMMIT_MESSAGE_PREFIX
         );
 
         commitMessage = commitPrefix + placeholderValues.platformUpdates;
@@ -964,7 +972,15 @@ export async function executeGitWorkflow(
             gitMessage += `<br><strong>Tag:</strong> ${tagSuccess ? `Tagged ${tagName}` : '❌ Failed to create tag'}`;
         }
         if (shouldPush) {
-            gitMessage += `<br><strong>Push:</strong> ${pushSuccess ? `Pushed ${shouldCreateBranch ? 'branch and tag' : 'changes and tag'} to remote` : '❌ Failed to push to remote'}`;
+            let pushDescription = 'changes';
+            if (shouldCreateBranch && tagSuccess) {
+                pushDescription = 'branch and tag';
+            } else if (shouldCreateBranch) {
+                pushDescription = 'branch';
+            } else if (tagSuccess) {
+                pushDescription = 'tag';
+            }
+            gitMessage += `<br><strong>Push:</strong> ${pushSuccess ? `Pushed ${pushDescription} to remote` : '❌ Failed to push to remote'}`;
         }
 
         results.push({

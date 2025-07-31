@@ -28,11 +28,11 @@
 - 📱 **Version Bumping**: Increment versions across Android (`build.gradle`), iOS (`Info.plist`), and package.json with semantic versioning (major, minor, patch)
 - 🔍 **Smart CodeLens**: Click ↑ links above version lines for instant updates with intelligent auto-detection of project files
 - 🔄 **Git Workflow Integration**: Create branches, commit changes, tag releases, and push to remote with smart commit messages
-- � **\*Interactive Batch Mode**: Preview all file changes and Git operations before execution, then apply everything atomically
-- � **\*Version Overview Dashboard**: View current versions across all platforms in a unified interface
+- 📋 **Interactive Batch Mode**: Preview all file changes and Git operations before execution, then apply everything atomically
+- 📊 **Version Overview Dashboard**: View current versions across all platforms in a unified interface
 - ⚙️ **Intelligent Auto-Detection**: Automatically finds Android, iOS, and package.json files with support for custom paths and platform skipping
 - 🚀 **Expo Support**: Also works with Expo projects (`app.json`, `app.config.js`, `app.config.ts`) with optional native file synchronization
-- � **\*Release Automation**: Generate release notes and provide links to create GitHub/GitLab releases and pull requests
+- 🔗 **Release Automation**: Generate release notes and provide links to create GitHub/GitLab releases and pull requests
 
 ## 🚀 Installation
 
@@ -226,25 +226,27 @@ Click the status bar item to quickly see the current `package.json` version or t
 
 Adjust settings in `settings.json` to fit your workflow:
 
-| Setting                                            | Description                                                                                                                                                     | Default                      |
-| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| `reactNativeVersionBumper.skipPackageJson`         | Skip `package.json` version bump                                                                                                                                | `false`                      |
-| `reactNativeVersionBumper.skipAndroid`             | Skip Android version bump                                                                                                                                       | `false`                      |
-| `reactNativeVersionBumper.android.buildGradlePath` | Path to `build.gradle`                                                                                                                                          | `"android/app/build.gradle"` |
-| `reactNativeVersionBumper.skipIOS`                 | Skip iOS version bump                                                                                                                                           | `false`                      |
-| `reactNativeVersionBumper.ios.infoPlistPath`       | Custom path to `Info.plist` (auto-detected if null)                                                                                                             | `null`                       |
-| `reactNativeVersionBumper.ios.projectPbxprojPath`  | Custom path to `project.pbxproj` (auto-detected if null)                                                                                                        | `null`                       |
-| `reactNativeVersionBumper.git.commitMessagePrefix` | Commit message prefix (system adds smart version suffix)                                                                                                        | `"chore: bump version to "`  |
-| `reactNativeVersionBumper.expo.syncNativeFiles`    | Sync Expo version changes to native Android and iOS files                                                                                                       | `false`                      |
-| `reactNativeVersionBumper.git.skipBranch`          | Skip branch creation                                                                                                                                            | `false`                      |
-| `reactNativeVersionBumper.git.autoCreateBranch`    | Auto-create branch                                                                                                                                              | `false`                      |
-| `reactNativeVersionBumper.git.branchNameTemplate`  | Branch name template                                                                                                                                            | `"release/{version}"`        |
-| `reactNativeVersionBumper.git.skipTag`             | Skip tag creation                                                                                                                                               | `false`                      |
-| `reactNativeVersionBumper.git.autoCreateTag`       | Auto-create tag                                                                                                                                                 | `false`                      |
-| `reactNativeVersionBumper.git.tagNameTemplate`     | Tag name template                                                                                                                                               | `"v{version}"`               |
-| `reactNativeVersionBumper.git.skipPush`            | Skip pushing to remote                                                                                                                                          | `false`                      |
-| `reactNativeVersionBumper.enableCodeLens`          | Enable or disable CodeLens for version bumping                                                                                                                  | `true`                       |
-| `reactNativeVersionBumper.batchMode`               | Preview all operations before execution - shows file modifications, version changes, and Git operations in an interactive preview before applying (recommended) | `true`                       |
+| Setting                                                | Description                                                                                                                                                     | Default                      |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| `reactNativeVersionBumper.skipPackageJson`             | Skip `package.json` version bump                                                                                                                                | `false`                      |
+| `reactNativeVersionBumper.skipAndroid`                 | Skip Android version bump                                                                                                                                       | `false`                      |
+| `reactNativeVersionBumper.android.buildGradlePath`     | Path to `build.gradle`                                                                                                                                          | `"android/app/build.gradle"` |
+| `reactNativeVersionBumper.skipIOS`                     | Skip iOS version bump                                                                                                                                           | `false`                      |
+| `reactNativeVersionBumper.ios.infoPlistPath`           | Custom path to `Info.plist` (auto-detected if null)                                                                                                             | `null`                       |
+| `reactNativeVersionBumper.ios.projectPbxprojPath`      | Custom path to `project.pbxproj` (auto-detected if null)                                                                                                        | `null`                       |
+| `reactNativeVersionBumper.git.commitMessagePrefix`     | Commit message prefix (system adds smart version suffix)                                                                                                        | `"chore: bump version to "`  |
+| `reactNativeVersionBumper.git.syncCommitMessagePrefix` | Commit message prefix for sync operations (system adds smart version suffix)                                                                                    | `"chore: sync version to "`  |
+| `reactNativeVersionBumper.expo.syncNativeFiles`        | Sync Expo version changes to native Android and iOS files                                                                                                       | `false`                      |
+| `reactNativeVersionBumper.git.skipBranch`              | Skip branch creation                                                                                                                                            | `false`                      |
+| `reactNativeVersionBumper.git.autoCreateBranch`        | Auto-create branch                                                                                                                                              | `false`                      |
+| `reactNativeVersionBumper.git.branchNameTemplate`      | Branch name template                                                                                                                                            | `"release/{version}"`        |
+| `reactNativeVersionBumper.git.skipTag`                 | Skip tag creation                                                                                                                                               | `false`                      |
+| `reactNativeVersionBumper.git.autoCreateTag`           | Auto-create tag                                                                                                                                                 | `false`                      |
+| `reactNativeVersionBumper.git.tagNameTemplate`         | Tag name template                                                                                                                                               | `"v{version}"`               |
+| `reactNativeVersionBumper.git.skipPush`                | Skip pushing to remote                                                                                                                                          | `false`                      |
+| `reactNativeVersionBumper.enableCodeLens`              | Enable or disable CodeLens for version bumping                                                                                                                  | `true`                       |
+| `reactNativeVersionBumper.showInStatusBar`             | Show version information in the status bar                                                                                                                      | `true`                       |
+| `reactNativeVersionBumper.batchMode`                   | Preview all operations before execution - shows file modifications, version changes, and Git operations in an interactive preview before applying (recommended) | `true`                       |
 
 ### Smart Commit Messages
 
@@ -268,10 +270,10 @@ The extension uses a **commit message prefix** approach for cleaner, more predic
 
 #### **Sync Operations**
 
-Sync operations automatically get appropriate prefixes:
+Sync operations use a separate configurable prefix:
 
-- **Regular**: `chore: bump version to v1.2.0`
-- **Sync**: `chore: sync version to v1.2.0`
+- **Regular**: `chore: bump version to v1.2.0` (uses `git.commitMessagePrefix`)
+- **Sync**: `chore: sync version to v1.2.0` (uses `git.syncCommitMessagePrefix`)
 
 #### **Template Placeholders**
 
@@ -359,10 +361,10 @@ A: Great question! There are already excellent CLI solutions for CI/CD automatio
 ## 🛠️ Development Setup
 
 - **Tools**: Bun, VS Code, TypeScript.
-- **Build**: `bun compile`
-- **Test**: `bun test`
-- **Package**: `bun package` (creates `.vsix`)
-- **Publish**: `bun publish` (for maintainers)
+- **Build**: `bun run compile`
+- **Test**: `bun run test`
+- **Package**: `bun run package` (creates `.vsix`)
+- **Publish**: `bun run publish` (for maintainers)
 
 ---
 

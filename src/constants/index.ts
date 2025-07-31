@@ -46,6 +46,7 @@ export const CONFIG = {
     GIT_SKIP_PUSH: 'git.skipPush',
     GIT_BRANCH_NAME_TEMPLATE: 'git.branchNameTemplate',
     GIT_COMMIT_MESSAGE_PREFIX: 'git.commitMessagePrefix',
+    GIT_SYNC_COMMIT_MESSAGE_PREFIX: 'git.syncCommitMessagePrefix',
     GIT_TAG_NAME_TEMPLATE: 'git.tagNameTemplate',
     BATCH_MODE: 'batchMode',
     EXPO_SYNC_NATIVE_FILES: 'expo.syncNativeFiles',
@@ -151,6 +152,7 @@ export const BUMP_TYPE_LABELS = {
 
 export const TEMPLATES = {
     GIT_COMMIT_MESSAGE_PREFIX: 'chore: bump version to ',
+    GIT_SYNC_COMMIT_MESSAGE_PREFIX: 'chore: sync version to ',
     GIT_BRANCH_PREFIX: 'release/',
     GIT_TAG_NAME: 'v{version}',
 } as const;
