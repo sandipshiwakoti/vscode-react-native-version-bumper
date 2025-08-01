@@ -9,6 +9,11 @@
         "type": "git",
         "url": "https://github.com/sandipshiwakoti/vscode-react-native-version-bumper"
     },
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/sandipshiwakoti/vscode-react-native-version-bumper/issues"
+    },
+    "homepage": "https://github.com/sandipshiwakoti/vscode-react-native-version-bumper#readme",
     "engines": {
         "vscode": "^1.101.2"
     },
