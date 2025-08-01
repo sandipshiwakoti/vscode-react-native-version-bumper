@@ -1,9 +1,9 @@
 {
     "name": "vscode-react-native-version-bumper",
     "displayName": "React Native Version Bumper",
-    "description": "One-click version bumping for React Native projects. Sync package.json, Android, and iOS versions with CodeLens, semantic versioning, and Git automation. Expo support included.",
+    "description": "One-click version bumping for React Native and Expo projects. Sync package.json, Android, and iOS versions with CodeLens, semantic versioning, and Git automation. Expo support included.",
     "icon": "assets/logo.png",
-    "version": "0.0.1",
+    "version": "1.0.0",
     "publisher": "sandipshiwakoti",
     "repository": {
         "type": "git",
@@ -282,7 +282,7 @@
         "@typescript-eslint/parser": "^8.31.1",
         "@vscode/test-cli": "^0.0.11",
         "@vscode/test-electron": "^2.5.2",
-        "@vscode/vsce": "^2.22.0",
+        "@vscode/vsce": "^3.6.0",
         "eslint": "^9.25.1",
         "eslint-plugin-prettier": "^5.5.1",
         "eslint-plugin-simple-import-sort": "^12.1.1",
