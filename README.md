@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <strong>⚡ One-click version bumping for React Native projects</strong><br>
+  <strong>⚡ One-click version bumping for React Native and Expo projects</strong><br>
   <em>CodeLens integration • Git automation • Cross-platform sync • Batch preview</em>
 </p>
 
@@ -60,31 +60,37 @@ code --install-extension sandipshiwakoti.vscode-react-native-version-bumper
 
 _Click the ↑ arrows above version lines for instant bumps_
 
-https://github.com/user-attachments/assets/49d420db-2b8f-4996-9a17-9518b2812822
+![CodeLens Demo](https://github.com/sandipshiwakoti/vscode-react-native-version-bumper/blob/main/assets/demo/CodeLens.gif?raw=true)
 
 ### 🔄 Bump All Platforms
 
 _Update Android, iOS, and package.json simultaneously_
 
-https://github.com/user-attachments/assets/19a53e9c-5e5f-409f-b58b-d5dba3b0dca9
+![Bump All Demo](https://github.com/sandipshiwakoti/vscode-react-native-version-bumper/blob/main/assets/demo/BumpAll.gif?raw=true)
 
-### 🚀 Complete Git Workflow
+### ⚒️ Complete Git Workflow
 
 _Branch creation, commits, tags, and release automation_
 
-https://github.com/user-attachments/assets/971d3eaa-63bf-4e60-907b-ddd406ffd250
+![Bump All Git Demo](https://github.com/sandipshiwakoti/vscode-react-native-version-bumper/blob/main/assets/demo/BumpAllGit.gif?raw=true)
 
 ### 🔀 Sync All Platforms
 
 _Synchronize versions across all platforms to match_
 
-https://github.com/user-attachments/assets/e16e9b6d-2e3a-4dfd-b3c7-41e140f026a2
+![Sync All Demo](https://github.com/sandipshiwakoti/vscode-react-native-version-bumper/blob/main/assets/demo/SyncAll.gif?raw=true)
 
 ### 📊 Version Overview
 
 _Monitor all platform versions at a glance_
 
-https://github.com/user-attachments/assets/0ca1f9df-d559-4be1-8204-1226adeb9db8
+![Version Overview Demo](https://github.com/sandipshiwakoti/vscode-react-native-version-bumper/blob/main/assets/demo/VersionOverview.gif?raw=true)
+
+### 🚀 Expo Support
+
+_Supports Expo projects: configure via `app.json`, `app.config.js/ts` with option to sync native Android/iOS files_
+
+![Expo Demo](https://github.com/sandipshiwakoti/vscode-react-native-version-bumper/blob/main/assets/demo/Expo.gif?raw=true)
 
 ## 📋 Usage
 
@@ -354,7 +360,7 @@ A: Yes! You can skip package.json updates and focus on platform-specific files, 
 A: The "Skip" option appears during the interactive bump process and lets you skip package.json for that specific operation. The `skipPackageJson` setting permanently disables package.json updates. Use "Skip" for occasional exclusions, use the setting for permanent workflow preferences.
 
 **Q: Why not a CLI tool instead of a VS Code extension?**  
-A: Great question! There are already excellent CLI solutions for CI/CD automation like [Fastlane](https://fastlane.tools/), [semantic-release](https://github.com/semantic-release/semantic-release), and [standard-version](https://github.com/conventional-changelog/standard-version). This extension focuses on a different use case: **developer experience during active development**. It provides visual feedback, interactive previews, CodeLens integration, and seamless IDE workflow - things that are perfect for when you're actively coding but not ideal for automated pipelines. Think of it as complementary to CLI tools rather than competing with them.
+A: There are already excellent CLI solutions for CI/CD automation like [Fastlane](https://fastlane.tools/), [semantic-release](https://github.com/semantic-release/semantic-release), and [standard-version](https://github.com/conventional-changelog/standard-version). This extension focuses on a different use case: **developer experience during active development**. It provides visual feedback, interactive previews, CodeLens integration, and seamless IDE workflow - things that are perfect for when you're actively coding but not ideal for automated pipelines. Think of it as complementary to CLI tools rather than competing with them.
 
 ---
 

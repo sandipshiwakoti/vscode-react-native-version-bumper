@@ -17,3 +17,4 @@ commitlint.config.*
 lint-staged.config.*
 .husky/
 .github/
+assets/demo/**/*.gif
