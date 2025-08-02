@@ -3,7 +3,7 @@
     "displayName": "React Native Version Bumper",
     "description": "One-click version bumping for React Native and Expo projects.",
     "icon": "assets/logo.png",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "publisher": "sandipshiwakoti",
     "repository": {
         "type": "git",
@@ -15,7 +15,7 @@
     },
     "homepage": "https://github.com/sandipshiwakoti/vscode-react-native-version-bumper#readme",
     "engines": {
-        "vscode": "^1.101.2"
+        "vscode": "^1.74.0"
     },
     "categories": [
         "Other"
@@ -282,7 +282,7 @@
         "@commitlint/config-conventional": "^19.8.1",
         "@types/mocha": "^10.0.10",
         "@types/node": "20.x",
-        "@types/vscode": "^1.101.2",
+        "@types/vscode": "^1.74.0",
         "@typescript-eslint/eslint-plugin": "^8.31.1",
         "@typescript-eslint/parser": "^8.31.1",
         "@vscode/test-cli": "^0.0.11",
