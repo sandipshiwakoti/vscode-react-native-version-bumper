@@ -4,6 +4,12 @@ All notable changes to the "vscode-react-native-version-bumper" extension will b
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [1.0.2] - 2025-08-10
+
+### Fixed
+
+- Hide Android/iOS version cards in the versions overview for Expo projects without native files
+
 ## [1.0.1] - 2025-08-02
 
 ### Fixed
