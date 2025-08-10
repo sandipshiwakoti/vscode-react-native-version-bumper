@@ -51,6 +51,18 @@ export function hasIOSProject(rootPath: string): boolean {
     return fs.existsSync(iosPath);
 }
 
+export function isExpoWithoutNativeFiles(rootPath: string): boolean {
+    const isExpo = isExpoProject(rootPath);
+    if (!isExpo) {
+        return false;
+    }
+
+    const hasAndroid = hasAndroidProject(rootPath);
+    const hasIOS = hasIOSProject(rootPath);
+
+    return !hasAndroid || !hasIOS;
+}
+
 export function getAppName(rootPath: string): string | null {
     try {
         const appJsonPath = path.join(rootPath, FILE_EXTENSIONS.APP_JSON);

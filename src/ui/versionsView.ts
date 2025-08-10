@@ -5,7 +5,7 @@ import * as path from 'path';
 import { CONFIG, EXTENSION_ID } from '../constants';
 import { hasEASAutoIncrement, readIOSVersionInfo } from '../services/platformService';
 import { IOSVersionInfo, Platform, ProjectType, ProjectVersions } from '../types';
-import { getAppName } from '../utils/fileUtils';
+import { getAppName, isExpoWithoutNativeFiles } from '../utils/fileUtils';
 
 import { generatePageHeaderHTML, PAGE_HEADER_CSS, SHARED_BASE_CSS } from './shared/pageHeader';
 import { generateVersionCardHTML, VERSION_CARD_CSS } from './shared/versionCard';
@@ -25,15 +25,20 @@ export async function generateVersionsHTML(
 
     let iosPath = 'ios/[AppName]/Info.plist';
     let iosVersionInfo: IOSVersionInfo | null = null;
+    let isExpoWithoutNative = false;
 
-    if (rootPath && versions.ios) {
-        try {
-            const appName = getAppName(rootPath);
-            if (appName) {
-                iosPath = `ios/${appName}/Info.plist`;
-            }
-            iosVersionInfo = await readIOSVersionInfo(rootPath);
-        } catch {}
+    if (rootPath) {
+        isExpoWithoutNative = isExpoWithoutNativeFiles(rootPath);
+
+        if (versions.ios) {
+            try {
+                const appName = getAppName(rootPath);
+                if (appName) {
+                    iosPath = `ios/${appName}/Info.plist`;
+                }
+                iosVersionInfo = await readIOSVersionInfo(rootPath);
+            } catch {}
+        }
     }
 
     let html = `
@@ -195,22 +200,24 @@ export async function generateVersionsHTML(
         });
     }
 
-    html += generateVersionCardHTML({
-        platform: Platform.ANDROID,
-        available: !!versions.android,
-        versionName: versions.android?.versionName,
-        versionCode: versions.android?.versionCode,
-        location: 'android/app/build.gradle',
-    });
+    if (!isExpoWithoutNative) {
+        html += generateVersionCardHTML({
+            platform: Platform.ANDROID,
+            available: !!versions.android,
+            versionName: versions.android?.versionName,
+            versionCode: versions.android?.versionCode,
+            location: 'android/app/build.gradle',
+        });
 
-    html += generateVersionCardHTML({
-        platform: Platform.IOS,
-        available: !!versions.ios,
-        version: versions.ios?.version,
-        buildNumber: versions.ios?.buildNumber,
-        location: iosPath,
-        iosVersionInfo: iosVersionInfo,
-    });
+        html += generateVersionCardHTML({
+            platform: Platform.IOS,
+            available: !!versions.ios,
+            version: versions.ios?.version,
+            buildNumber: versions.ios?.buildNumber,
+            location: iosPath,
+            iosVersionInfo: iosVersionInfo,
+        });
+    }
 
     html += `</div>`;
 
