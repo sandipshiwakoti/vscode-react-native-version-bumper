@@ -4,6 +4,15 @@ All notable changes to the "vscode-react-native-version-bumper" extension will b
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [1.0.3] - 2025-08-12
+
+### Changed
+
+- Webview panels now reuse existing tabs instead of creating multiple tabs
+- Versions panel automatically refreshes when switching to the tab, ensuring data is always current
+- Webview panel titles now display custom logo icons for better identification
+- Extension naming now consistent across all UI elements for better user experience
+
 ## [1.0.2] - 2025-08-10
 
 ### Fixed

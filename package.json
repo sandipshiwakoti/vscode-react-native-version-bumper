@@ -3,7 +3,7 @@
     "displayName": "React Native Version Bumper",
     "description": "One-click version bumping for React Native and Expo projects.",
     "icon": "assets/logo.png",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "publisher": "sandipshiwakoti",
     "repository": {
         "type": "git",
