@@ -6,13 +6,16 @@
 
 <p align="center">
   <a href="https://marketplace.visualstudio.com/items?itemName=sandipshiwakoti.vscode-react-native-version-bumper">
-    <img src="https://img.shields.io/visual-studio-marketplace/v/sandipshiwakoti.vscode-react-native-version-bumper?style=flat-square" alt="Marketplace Version">
+    <img src="https://img.shields.io/visual-studio-marketplace/v/sandipshiwakoti.vscode-react-native-version-bumper?style=flat-square&label=version" alt="Version">
   </a>
   <a href="https://marketplace.visualstudio.com/items?itemName=sandipshiwakoti.vscode-react-native-version-bumper">
-    <img src="https://img.shields.io/visual-studio-marketplace/d/sandipshiwakoti.vscode-react-native-version-bumper?style=flat-square&color=success" alt="Downloads">
+    <img src="https://img.shields.io/visual-studio-marketplace/d/sandipshiwakoti.vscode-react-native-version-bumper?style=flat-square&color=success&label=vscode%20downloads" alt="VS Code Downloads">
   </a>
-  <a href="https://github.com/sandipshiwakoti/vscode-react-native-version-bumper/stargazers">
-    <img src="https://img.shields.io/github/stars/sandipshiwakoti/vscode-react-native-version-bumper?style=flat-square" alt="GitHub Stars">
+  <a href="https://open-vsx.org/extension/sandipshiwakoti/vscode-react-native-version-bumper">
+    <img src="https://img.shields.io/open-vsx/dt/sandipshiwakoti/vscode-react-native-version-bumper?style=flat-square&color=success&label=openvsx%20downloads" alt="Open VSX Downloads">
+  </a>
+  <a href="https://github.com/sandipshiwakoti/vscode-react-native-version-bumper/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/sandipshiwakoti/vscode-react-native-version-bumper?style=flat-square&color=blue&label=license" alt="MIT License">
   </a>
 </p>
 
@@ -36,7 +39,12 @@
 
 ## 🚀 Installation
 
-Get it from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=sandipshiwakoti.vscode-react-native-version-bumper) or install it manually:
+**Install from:**
+
+- [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=sandipshiwakoti.vscode-react-native-version-bumper)
+- [Open VSX Registry](https://open-vsx.org/extension/sandipshiwakoti/vscode-react-native-version-bumper)
+
+**Or install manually:**
 
 ```bash
 code --install-extension sandipshiwakoti.vscode-react-native-version-bumper
@@ -52,7 +60,7 @@ code --install-extension sandipshiwakoti.vscode-react-native-version-bumper
 
 ## ⚡ Quick Start
 
-1. **Install** from [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=sandipshiwakoti.vscode-react-native-version-bumper)
+1. **Install** from [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=sandipshiwakoti.vscode-react-native-version-bumper) or [Open VSX](https://open-vsx.org/extension/sandipshiwakoti/vscode-react-native-version-bumper)
 2. **Open** your React Native or Expo project
 3. **Press** `Ctrl+Shift+P` (or `Cmd+Shift+P`)
 4. **Type** "Version Bumper" and choose your action
