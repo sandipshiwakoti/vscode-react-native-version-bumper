@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 
-import { ProjectType } from '../types';
 import { generateVersionsHTML } from '../ui/versionsView';
 import { detectProjectType } from '../utils/fileUtils';
 import { getCurrentVersions } from '../utils/versionUtils';
@@ -16,10 +15,9 @@ export async function showCurrentVersions(context?: vscode.ExtensionContext) {
 
         const rootPath = workspaceFolders[0].uri.fsPath;
         const projectType = await detectProjectType(rootPath);
-        const projectTypeLabel = projectType === ProjectType.EXPO ? 'Expo' : 'React Native';
         const panel = vscode.window.createWebviewPanel(
             'versionOverview',
-            `${projectTypeLabel} Version Bumper - Version Overview`,
+            `React Native Version Bumper - Version Overview`,
             vscode.ViewColumn.One,
             {
                 enableScripts: true,

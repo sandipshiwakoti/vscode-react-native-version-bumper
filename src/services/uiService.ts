@@ -151,7 +151,7 @@ export async function updateStatusBar(): Promise<void> {
 
         const projectType = isExpo ? 'Expo' : 'React Native';
         statusBarItem.text = `$(arrow-circle-up) Version Bumper: ${projectType}`;
-        let tooltip = `${projectType} Version Bumper\n\n`;
+        let tooltip = `React Native Version Bumper\n\n`;
         tooltip += `Project: ${projectName} (${projectType})\n`;
         tooltip += `Package.json: ${packageVersion}\n`;
 
