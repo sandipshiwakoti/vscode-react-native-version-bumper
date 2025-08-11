@@ -66,6 +66,11 @@ export async function showCurrentVersions(context?: vscode.ExtensionContext) {
             }
         );
 
+        if (context) {
+            const iconPath = vscode.Uri.joinPath(context.extensionUri, 'assets', 'logo.svg');
+            versionsPanel.iconPath = iconPath;
+        }
+
         // Clear reference when panel is closed
         versionsPanel.onDidDispose(() => {
             versionsPanel = undefined;

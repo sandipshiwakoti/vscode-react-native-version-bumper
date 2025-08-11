@@ -480,6 +480,9 @@ export async function showBumpResults(
     });
 
     if (context) {
+        const iconPath = vscode.Uri.joinPath(context.extensionUri, 'assets', 'logo.svg');
+        resultsPanel.iconPath = iconPath;
+
         const onDiskPath = vscode.Uri.joinPath(context.extensionUri, 'assets', 'logo.svg');
         logoUri = resultsPanel.webview.asWebviewUri(onDiskPath);
     }
