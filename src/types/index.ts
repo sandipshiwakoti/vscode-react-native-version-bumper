@@ -48,6 +48,15 @@ export enum GitAction {
     PUSH_TO_REMOTE = 'Push to remote',
 }
 
+export enum WebviewCommand {
+    CREATE_RELEASE = 'createRelease',
+    CREATE_PR = 'createPR',
+}
+
+export interface WebviewMessage {
+    command: WebviewCommand;
+}
+
 export enum VersionAction {
     SYNC_VERSION = 'Sync version',
     UPDATE_VERSION = 'Update version',

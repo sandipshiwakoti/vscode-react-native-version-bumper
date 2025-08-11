@@ -8,13 +8,23 @@ import { promisify } from 'util';
 import { generateReleaseNotes } from '../services/gitService';
 import { readIOSVersionInfo } from '../services/platformService';
 import { refreshCodeLenses } from '../services/uiService';
-import { BumpResult, BumpType, GitWorkflowResult, IOSVersionInfo, Platform } from '../types';
+import {
+    BumpResult,
+    BumpType,
+    GitWorkflowResult,
+    IOSVersionInfo,
+    Platform,
+    WebviewCommand,
+    WebviewMessage,
+} from '../types';
 import { getAppName } from '../utils/fileUtils';
 
 import { generatePageHeaderHTML, PAGE_HEADER_CSS, SHARED_BASE_CSS } from './shared/pageHeader';
 import { generateVersionCardHTML, VERSION_CARD_CSS } from './shared/versionCard';
 
 const execAsync = promisify(exec);
+
+let resultsPanel: vscode.WebviewPanel | undefined;
 
 export async function generateResultsHTML(
     type: BumpType,
@@ -379,14 +389,14 @@ export async function generateResultsHTML(
                     const createReleaseBtn = document.getElementById('createReleaseBtn');
                     if (createReleaseBtn) {
                         createReleaseBtn.addEventListener('click', () => {
-                            vscode.postMessage({ command: 'createRelease' });
+                            vscode.postMessage({ command: '${WebviewCommand.CREATE_RELEASE}' });
                         });
                     }
                     
                     const createPRBtn = document.getElementById('createPRBtn');
                     if (createPRBtn) {
                         createPRBtn.addEventListener('click', () => {
-                            vscode.postMessage({ command: 'createPR' });
+                            vscode.postMessage({ command: '${WebviewCommand.CREATE_PR}' });
                         });
                     }
                 });
@@ -404,19 +414,6 @@ export async function showBumpResults(
     context?: vscode.ExtensionContext,
     gitWorkflowResult?: GitWorkflowResult
 ) {
-    const panel = vscode.window.createWebviewPanel(
-        'versionBumpResults',
-        `React Native Version Bumper - Results`,
-        vscode.ViewColumn.One,
-        { enableScripts: true, retainContextWhenHidden: true }
-    );
-
-    let logoUri: vscode.Uri | undefined;
-    if (context) {
-        const onDiskPath = vscode.Uri.joinPath(context.extensionUri, 'assets', 'logo.svg');
-        logoUri = panel.webview.asWebviewUri(onDiskPath);
-    }
-
     let tagName = '';
     let branchName = '';
     let hasCommit = false;
@@ -441,15 +438,53 @@ export async function showBumpResults(
             }
 
             hasCommit = gitResult.message.includes('Commit: Changes committed');
-
             pushSuccess = gitResult.message.includes('Pushed') && !gitResult.message.includes('❌ Failed to push');
         }
     }
 
+    let logoUri: vscode.Uri | undefined;
     const workspaceFolders = vscode.workspace.workspaceFolders;
     const rootPath = workspaceFolders?.[0]?.uri.fsPath;
 
-    panel.webview.html = await generateResultsHTML(
+    if (resultsPanel) {
+        if (context) {
+            const onDiskPath = vscode.Uri.joinPath(context.extensionUri, 'assets', 'logo.svg');
+            logoUri = resultsPanel.webview.asWebviewUri(onDiskPath);
+        }
+
+        resultsPanel.webview.html = await generateResultsHTML(
+            type,
+            results,
+            tagName,
+            branchName,
+            hasCommit,
+            pushSuccess,
+            logoUri,
+            rootPath
+        );
+        resultsPanel.reveal();
+        refreshCodeLenses();
+        return;
+    }
+
+    resultsPanel = vscode.window.createWebviewPanel(
+        'versionBumpResults',
+        `React Native Version Bumper - Results`,
+        vscode.ViewColumn.One,
+        { enableScripts: true, retainContextWhenHidden: true }
+    );
+
+    // Clear reference when panel is closed
+    resultsPanel.onDidDispose(() => {
+        resultsPanel = undefined;
+    });
+
+    if (context) {
+        const onDiskPath = vscode.Uri.joinPath(context.extensionUri, 'assets', 'logo.svg');
+        logoUri = resultsPanel.webview.asWebviewUri(onDiskPath);
+    }
+
+    resultsPanel.webview.html = await generateResultsHTML(
         type,
         results,
         tagName,
@@ -464,8 +499,8 @@ export async function showBumpResults(
     refreshCodeLenses();
 
     // Handle messages from the webview
-    panel.webview.onDidReceiveMessage(
-        async (message) => {
+    resultsPanel.webview.onDidReceiveMessage(
+        async (message: WebviewMessage) => {
             const workspaceFolders = vscode.workspace.workspaceFolders;
             if (!workspaceFolders) {
                 vscode.window.showErrorMessage('No workspace folder found');
@@ -503,7 +538,7 @@ export async function showBumpResults(
             }
 
             switch (message.command) {
-                case 'createRelease':
+                case WebviewCommand.CREATE_RELEASE:
                     if (tagName) {
                         const releaseNotes = await generateReleaseNotes(type, results, tagName, repoUrl);
                         const encodedNotes = encodeURIComponent(releaseNotes);
@@ -512,7 +547,7 @@ export async function showBumpResults(
                     }
                     break;
 
-                case 'createPR':
+                case WebviewCommand.CREATE_PR:
                     if (branchName && hasCommit) {
                         // For GitHub, the URL format is typically:
                         // https://github.com/owner/repo/compare/branchName?expand=1
