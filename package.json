@@ -89,18 +89,15 @@
                 "title": "Enable CodeLens",
                 "category": "Version Bumper",
                 "icon": {
-                    "light": "assets/light/codelens-enabled.svg",
-                    "dark": "assets/dark/codelens-enabled.svg"
+                    "light": "assets/codelens-disabled-light.svg",
+                    "dark": "assets/codelens-disabled-dark.svg"
                 }
             },
             {
                 "command": "vscode-react-native-version-bumper.hideCodeLens",
                 "title": "Disable CodeLens",
                 "category": "Version Bumper",
-                "icon": {
-                    "light": "assets/light/codelens-disabled.svg",
-                    "dark": "assets/dark/codelens-disabled.svg"
-                }
+                "icon": "assets/codelens-enabled.svg"
             }
         ],
         "menus": {
