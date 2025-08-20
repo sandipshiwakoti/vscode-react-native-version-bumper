@@ -4,6 +4,12 @@ All notable changes to the "vscode-react-native-version-bumper" extension will b
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [1.0.4] - 2025-08-21
+
+### Changed
+
+- Improve toggle codelens icon in title bar
+
 ## [1.0.3] - 2025-08-12
 
 ### Changed
