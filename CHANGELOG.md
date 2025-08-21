@@ -4,6 +4,12 @@ All notable changes to the "vscode-react-native-version-bumper" extension will b
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [1.0.5] - 2025-08-22
+
+### Fixed
+
+- Fix push failure when no branch selected
+
 ## [1.0.4] - 2025-08-21
 
 ### Changed
