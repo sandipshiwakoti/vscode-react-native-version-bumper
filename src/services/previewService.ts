@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 
 import { BatchExecutionPlan, GitAction, OperationType } from '../types';
+import { getCurrentGitBranch } from '../utils/versionUtils';
 
 export async function showBatchPreview(plan: BatchExecutionPlan): Promise<boolean> {
     const versionOps = plan.operations.filter((op) => op.type === OperationType.VERSION);
@@ -13,6 +14,12 @@ export async function showBatchPreview(plan: BatchExecutionPlan): Promise<boolea
         }
         return op.description;
     });
+
+    let currentBranch = '';
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (workspaceFolders) {
+        currentBranch = await getCurrentGitBranch(workspaceFolders[0].uri.fsPath);
+    }
 
     let previewMessage = `🚀 Ready to execute ${versionOps.length + gitOps.length} operation${versionOps.length + gitOps.length !== 1 ? 's' : ''}\n\n`;
 
@@ -46,13 +53,13 @@ export async function showBatchPreview(plan: BatchExecutionPlan): Promise<boolea
         if (pushOp) {
             let pushDescription = 'Push: ';
             if (branchOp && tagOp) {
-                pushDescription += 'branch and tag to remote';
+                pushDescription += `new branch "${branchOp.newValue}" and tag "${tagOp.newValue}" to remote`;
             } else if (branchOp) {
-                pushDescription += 'branch to remote';
+                pushDescription += `new branch "${branchOp.newValue}" to remote`;
             } else if (tagOp) {
-                pushDescription += 'tag to remote';
+                pushDescription += `current branch "${currentBranch || 'unknown'}" and tag "${tagOp.newValue}" to remote`;
             } else {
-                pushDescription += 'changes to remote';
+                pushDescription += `current branch "${currentBranch || 'unknown'}" to remote`;
             }
             previewMessage += `${gitIndex++}. ${pushDescription}\n`;
         }

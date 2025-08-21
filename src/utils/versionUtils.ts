@@ -217,3 +217,13 @@ export async function getCustomBuildNumber(
     }
     return parseInt(customBuildNumber.trim());
 }
+
+export async function getCurrentGitBranch(rootPath: string): Promise<string> {
+    try {
+        const { stdout } = await execAsync('git branch --show-current', { cwd: rootPath });
+        return stdout.trim();
+    } catch (error) {
+        console.error('Error getting current branch:', error);
+        return '';
+    }
+}

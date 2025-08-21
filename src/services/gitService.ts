@@ -18,7 +18,7 @@ import {
 } from '../types';
 import { isExpoProject } from '../utils/fileUtils';
 import { getPlaceholderValues, replacePlaceholders } from '../utils/helperUtils';
-import { bumpSemanticVersion, getLatestGitTagVersion } from '../utils/versionUtils';
+import { bumpSemanticVersion, getCurrentGitBranch, getLatestGitTagVersion } from '../utils/versionUtils';
 
 const execAsync = promisify(exec);
 
@@ -430,7 +430,26 @@ export async function executeGitOperationsWithProgress(
                             if (gitConfig.shouldCreateBranch && gitConfig.branchName && branchCreated) {
                                 await execAsync(`git push origin "${gitConfig.branchName}"`, { cwd: rootPath });
                             } else {
-                                await execAsync('git push', { cwd: rootPath });
+                                const currentBranch = await getCurrentGitBranch(rootPath);
+                                if (currentBranch) {
+                                    try {
+                                        await execAsync('git push', { cwd: rootPath });
+                                    } catch (pushError) {
+                                        // If push fails due to no upstream, set upstream and push
+                                        if (
+                                            pushError instanceof Error &&
+                                            pushError.message.includes('no upstream branch')
+                                        ) {
+                                            await execAsync(`git push --set-upstream origin ${currentBranch}`, {
+                                                cwd: rootPath,
+                                            });
+                                        } else {
+                                            throw pushError;
+                                        }
+                                    }
+                                } else {
+                                    await execAsync('git push', { cwd: rootPath });
+                                }
                             }
 
                             if (gitConfig.shouldTag && gitConfig.tagName && tagSuccess) {
@@ -467,13 +486,17 @@ export async function executeGitOperationsWithProgress(
                     gitMessage += `<br><strong>Tag:</strong> ${tagSuccess ? `Tagged ${gitConfig.tagName}` : '❌ Failed to create tag'}`;
                 }
                 if (gitConfig.shouldPush) {
-                    let pushDescription = 'changes';
+                    let pushDescription = '';
+                    const currentBranch = await getCurrentGitBranch(rootPath);
+
                     if (gitConfig.shouldCreateBranch && tagSuccess) {
-                        pushDescription = 'branch and tag';
+                        pushDescription = `new branch "${gitConfig.branchName}" and tag "${gitConfig.tagName}"`;
                     } else if (gitConfig.shouldCreateBranch) {
-                        pushDescription = 'branch';
+                        pushDescription = `new branch "${gitConfig.branchName}"`;
                     } else if (tagSuccess) {
-                        pushDescription = 'tag';
+                        pushDescription = `current branch "${currentBranch}" and tag "${gitConfig.tagName}"`;
+                    } else {
+                        pushDescription = `current branch "${currentBranch}"`;
                     }
                     gitMessage += `<br><strong>Push:</strong> ${pushSuccess ? `Pushed ${pushDescription} to remote` : '❌ Failed to push to remote'}`;
                 }
@@ -917,7 +940,21 @@ export async function executeGitWorkflow(
                         cwd: rootPath,
                     });
                 } else {
-                    await execAsync(`git push`, { cwd: rootPath });
+                    const currentBranch = await getCurrentGitBranch(rootPath);
+                    if (currentBranch) {
+                        try {
+                            await execAsync(`git push`, { cwd: rootPath });
+                        } catch (pushError) {
+                            // If push fails due to no upstream, set upstream and push
+                            if (pushError instanceof Error && pushError.message.includes('no upstream branch')) {
+                                await execAsync(`git push --set-upstream origin ${currentBranch}`, { cwd: rootPath });
+                            } else {
+                                throw pushError;
+                            }
+                        }
+                    } else {
+                        await execAsync(`git push`, { cwd: rootPath });
+                    }
                 }
                 if (shouldTag && tagSuccess) {
                     await execAsync(`git push origin ${tagName}`, {
@@ -972,13 +1009,17 @@ export async function executeGitWorkflow(
             gitMessage += `<br><strong>Tag:</strong> ${tagSuccess ? `Tagged ${tagName}` : '❌ Failed to create tag'}`;
         }
         if (shouldPush) {
-            let pushDescription = 'changes';
+            let pushDescription = '';
+            const currentBranch = await getCurrentGitBranch(rootPath);
+
             if (shouldCreateBranch && tagSuccess) {
-                pushDescription = 'branch and tag';
+                pushDescription = `new branch "${branchName}" and tag "${tagName}"`;
             } else if (shouldCreateBranch) {
-                pushDescription = 'branch';
+                pushDescription = `new branch "${branchName}"`;
             } else if (tagSuccess) {
-                pushDescription = 'tag';
+                pushDescription = `current branch "${currentBranch}" and tag "${tagName}"`;
+            } else {
+                pushDescription = `current branch "${currentBranch}"`;
             }
             gitMessage += `<br><strong>Push:</strong> ${pushSuccess ? `Pushed ${pushDescription} to remote` : '❌ Failed to push to remote'}`;
         }
